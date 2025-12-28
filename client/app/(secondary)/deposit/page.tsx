@@ -46,7 +46,7 @@ const DepositPage = () => {
     ];
 
     const [activeCard, setActiveCard] = useState<cardsInerface>(cards[0]);
-    const [inputValue, setInputValue] = useState<string>(1);
+    const [inputValue, setInputValue] = useState<number>(1);
 
     const buttons = [
         10,
@@ -85,7 +85,7 @@ const DepositPage = () => {
                     value={inputValue} 
                     onChange={(e) => {
                         const value = e.target.value.replace(/\D/g, '');
-                        setInputValue(value);
+                        setInputValue(Number(value));
                     }} 
                     className={cls.input}
                 />
@@ -94,7 +94,7 @@ const DepositPage = () => {
             <div className={cls.buttons}>
                 {
                     buttons.map(el => 
-                        <button key={el} className={cls.button} onClick={() => setInputValue(String(el))}>{el}</button>
+                        <button key={el} className={cls.button} onClick={() => setInputValue(Number(el))}>{el}</button>
                     )
                 }
             </div>
