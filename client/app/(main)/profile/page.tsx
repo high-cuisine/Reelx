@@ -11,46 +11,66 @@ import copyImage from '@/assets/copyId.svg'
 
 const ProfilePage = () => {
     const [usernameInitial, setUsernameInitial] = useState('T'); // fallback
+    const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
     useEffect(() => {
         const initTelegram = () => {
-            if (window.Telegram?.WebApp) {
-                // Вызываем ready() для инициализации WebApp
-                window.Telegram.WebApp.ready();
-                
-                const username = window.Telegram.WebApp.initDataUnsafe?.user?.username;
+            if (typeof window === 'undefined' || !window.Telegram?.WebApp) {
+                return;
+            }
+
+            // Вызываем ready() для инициализации WebApp
+            window.Telegram.WebApp.ready();
+            
+            const user = window.Telegram.WebApp.initDataUnsafe?.user;
+            if (user) {
+                const username = user.username;
                 const initial = (username || 'T').slice(0, 1).toUpperCase();
                 setUsernameInitial(initial);
-            } else {
-                // Если Telegram объект еще не загружен, ждем
-                const checkInterval = setInterval(() => {
-                    if (window.Telegram?.WebApp) {
-                        clearInterval(checkInterval);
-                        window.Telegram.WebApp.ready();
-                        
-                        const username = window.Telegram.WebApp.initDataUnsafe?.user?.username;
-                        const initial = (username || 'T').slice(0, 1).toUpperCase();
-                        setUsernameInitial(initial);
-                    }
-                }, 100);
 
-                // Очищаем интервал через 5 секунд, если Telegram так и не загрузился
-                setTimeout(() => {
-                    clearInterval(checkInterval);
-                }, 5000);
+                // Парсим initData для получения photo_url
+                try {
+                    const initData = window.Telegram.WebApp.initData;
+                    const params = new URLSearchParams(initData);
+                    const userParam = params.get('user');
+                    if (userParam) {
+                        const userData = JSON.parse(decodeURIComponent(userParam));
+                        if (userData.photo_url) {
+                            setPhotoUrl(`https://reelx.online/api/users/photo/${userData.photo_url}`);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Failed to parse photo_url from initData:', e);
+                }
             }
         };
 
         // Проверяем сразу и при загрузке скрипта
-        if (document.readyState === 'complete') {
-            initTelegram();
-        } else {
-            window.addEventListener('load', initTelegram);
-        }
+        if (typeof window !== 'undefined') {
+            if (document.readyState === 'complete') {
+                initTelegram();
+            } else {
+                window.addEventListener('load', initTelegram);
+            }
 
-        return () => {
-            window.removeEventListener('load', initTelegram);
-        };
+            // Также проверяем через интервал на случай, если скрипт загрузится позже
+            const checkInterval = setInterval(() => {
+                if (window.Telegram?.WebApp) {
+                    clearInterval(checkInterval);
+                    initTelegram();
+                }
+            }, 100);
+
+            // Очищаем интервал через 5 секунд
+            setTimeout(() => {
+                clearInterval(checkInterval);
+            }, 5000);
+
+            return () => {
+                window.removeEventListener('load', initTelegram);
+                clearInterval(checkInterval);
+            };
+        }
     }, []);
 
   return (
@@ -63,11 +83,13 @@ const ProfilePage = () => {
 
        <div className={cls.upContainer}>
             <div className={cls.headerPhoto} style={{backgroundColor: getAvatarColor()}}>
-               {window.Telegram?.WebApp ?
-                <Image src={String(window.Telegram.WebApp.initDataUnsafe)} alt=''/> :
+               {photoUrl ? (
+                <Image src={photoUrl} alt='' width={60} height={60} style={{borderRadius: '50%'}}/>
+               ) : (
                 <span className={cls.profileHeader}>
                     {usernameInitial.slice(0,1).toUpperCase()}
-                </span>}
+                </span>
+               )}
             </div>
             <div className={cls.balance}>
                 <div className={cls.profileBalance}>
