@@ -139,4 +139,40 @@ export class TelegramBotService {
       throw new Error('Failed to create invoice link');
     }
   }
+
+  async handlePreCheckoutQuery(queryId: string): Promise<void> {
+    try {
+      await this.bot.telegram.answerPreCheckoutQuery(queryId, true);
+    } catch (error) {
+      console.error('Error answering pre-checkout query:', error);
+      try {
+        await this.bot.telegram.answerPreCheckoutQuery(queryId, false, 'Произошла ошибка при обработке платежа');
+      } catch (err) {
+        console.error('Error sending error response:', err);
+      }
+    }
+  }
+
+  async handleSuccessfulPayment(userId: string, amount: number): Promise<void> {
+    try {
+      await this.userService.updateStarsBalance(userId, amount);
+    } catch (error) {
+      console.error('Error updating user balance:', error);
+      throw error;
+    }
+  }
+
+  parsePayload(payload: string): { userId: string } | null {
+    try {
+      // payload формат: payment_${userId}_${timestamp}
+      const parts = payload.split('_');
+      if (parts.length >= 2 && parts[0] === 'payment') {
+        return { userId: parts[1] };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error parsing payload:', error);
+      return null;
+    }
+  }
 }

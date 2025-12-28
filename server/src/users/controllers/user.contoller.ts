@@ -109,5 +109,30 @@ export class UserController {
         };
     }
 
+    @Get('/balance')
+    @UseGuards(JwtAuthGuard)
+    async getBalance(
+        @CurrentUser() userId: string,
+    ) {
+        return this.userService.getBalance(userId);
+    }
+
+    @Get('/transactions')
+    @UseGuards(JwtAuthGuard)
+    async getTransactions(
+        @CurrentUser() userId: string,
+    ) {
+        return this.userService.getTransactionsByUserId(userId);
+    }
+
+    @Get('/latest-transaction')
+    @UseGuards(JwtAuthGuard)
+    async getLatestTransaction(
+        @CurrentUser() userId: string,
+    ) {
+        const transaction = await this.userService.getLatestTransaction(userId);
+        return transaction;
+    }
+
 }
 

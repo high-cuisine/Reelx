@@ -15,9 +15,32 @@ model User {
   username  String 
   telegramId String? @unique
   photoUrl   String?
+
+  tonBalance  Float    @default(0)
+  starsBalance Float   @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  transactions Transaction[]
 
   @@map("users")
 }
 
+model Transaction {
+  id        String          @id @default(uuid())
+  userId    String
+  amount    Float
+  type      TransactionType
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
+
+enum TransactionType {
+  stars
+  ton
+}
