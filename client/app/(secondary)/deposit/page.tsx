@@ -15,6 +15,7 @@ interface cardsInerface {
 const DepositPage = () => {
 
     const [activeCard, setActiveCard] = useState<string | null>(null);
+    const [inputValue, setInputValue] = useState<string>('');
 
     const cards = [
         {
@@ -24,13 +25,22 @@ const DepositPage = () => {
         }
     ];
 
+    const buttons = [
+        10,
+        25,
+        50,
+        100,
+        250,
+        500
+    ]
+
     useEffect(() => {
         setActiveCard(cards[0].state)
     }, []);
 
     return (
         <div className={cls.deposit}>
-            <h2>Депозит</h2>
+            <h2 className={cls.header}>Депозит</h2>
             <div className={cls.cards}>
                 {
                     cards.map(el => 
@@ -38,6 +48,17 @@ const DepositPage = () => {
                             <Image src={starImage} alt={el.title} width={30} height={30}/>
                             <span>{el.title}</span>
                         </div>
+                    )
+                }
+            </div>
+            <div className={cls.inputContainer}>
+                <input value={inputValue} onChange={(e) => setInputValue(e.target.value)}/>
+            </div>
+
+            <div className={cls.buttons}>
+                {
+                    buttons.map(el => 
+                        <button key={el} onClick={() => setInputValue(String(el))}>{el}</button>
                     )
                 }
             </div>
