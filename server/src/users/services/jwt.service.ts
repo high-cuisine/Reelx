@@ -34,7 +34,7 @@ export class JwtService {
 
   private generateToken(payload: TokenPayload, expiresIn: string): string {
     const secret = this.getJwtSecret();
-    return jwt.sign(payload, secret, { expiresIn });
+    return jwt.sign(payload, secret, { expiresIn } as jwt.SignOptions);
   }
 
   private getJwtSecret(): string {

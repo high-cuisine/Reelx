@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci
+RUN npm install
 
 # Copy Prisma schema
 COPY libs/infrustructure/prisma ./libs/infrustructure/prisma
@@ -33,7 +33,7 @@ COPY package*.json ./
 COPY libs/infrustructure/prisma ./libs/infrustructure/prisma
 
 # Install only production dependencies
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
