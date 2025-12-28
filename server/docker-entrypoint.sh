@@ -7,8 +7,10 @@ if [ -z "$DATABASE_URL" ]; then
   exit 1
 fi
 
+echo "DATABASE_URL is set (credentials hidden for security)"
+
 echo "Waiting for database to be ready..."
-sleep 3
+sleep 5
 
 echo "Running database migrations or pushing schema..."
 npx prisma migrate deploy --schema=./libs/infrustructure/prisma/schema.prisma 2>/dev/null || \
