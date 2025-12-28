@@ -1,67 +1,78 @@
 //create hook for payment and i want that we send user by link
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { paymentService } from '@/features/payment/payment';
 import { usePaymentStore } from '@/entites/payment/model/payment';
 
 export const usePayment = () => {
     const [isChecking, setIsChecking] = useState(false);
     const lastTransactionIdRef = useRef<string | null>(null);
-    const { starsBalance, setStarsBalance } = usePaymentStore();
+    const isCheckingRef = useRef(false);
+    const { setStarsBalance } = usePaymentStore();
 
-    // Проверяем баланс и транзакции при монтировании и при возврате на страницу
-    useEffect(() => {
-        const checkPayment = async () => {
-            if (isChecking) return;
+    const checkPayment = useCallback(async () => {
+        if (isCheckingRef.current) return;
+        
+        try {
+            isCheckingRef.current = true;
+            setIsChecking(true);
             
-            try {
-                setIsChecking(true);
-                const [balance, latestTransaction] = await Promise.all([
-                    paymentService.getBalance(),
-                    paymentService.getLatestTransaction(),
-                ]);
+            const [balance, latestTransaction] = await Promise.all([
+                paymentService.getBalance(),
+                paymentService.getLatestTransaction(),
+            ]);
 
-                setStarsBalance(balance.starsBalance);
+            setStarsBalance(balance.starsBalance);
 
-                // Если появилась новая транзакция после последней проверки, значит платеж успешен
-                if (latestTransaction && latestTransaction.id !== lastTransactionIdRef.current) {
-                    if (lastTransactionIdRef.current !== null) {
-                        console.log(`✅ Платеж успешно обработан! Транзакция: ${latestTransaction.amount} ${latestTransaction.type}`);
-                    }
-                    lastTransactionIdRef.current = latestTransaction.id;
-                } else if (latestTransaction && !lastTransactionIdRef.current) {
-                    // Первая загрузка - сохраняем ID последней транзакции
-                    lastTransactionIdRef.current = latestTransaction.id;
+            if (latestTransaction && latestTransaction.id !== lastTransactionIdRef.current) {
+                if (lastTransactionIdRef.current !== null) {
+                    console.log(`✅ Платеж успешно обработан! Транзакция: ${latestTransaction.amount} ${latestTransaction.type}`);
                 }
-            } catch (error) {
-                console.error('Error checking payment:', error);
-            } finally {
-                setIsChecking(false);
+                lastTransactionIdRef.current = latestTransaction.id;
+            } else if (latestTransaction && !lastTransactionIdRef.current) {
+                // Первая загрузка - сохраняем ID последней транзакции
+                lastTransactionIdRef.current = latestTransaction.id;
             }
-        };
+        } catch (error) {
+            console.error('Error checking payment:', error);
+        } finally {
+            isCheckingRef.current = false;
+            setIsChecking(false);
+        }
+    }, [setStarsBalance]);
 
-        // Проверяем сразу при монтировании
+    useEffect(() => {
         checkPayment();
+    }, [checkPayment]);
 
-        // Проверяем при возврате на страницу (visibility change)
+    useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
+
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
-                checkPayment();
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => {
+                    checkPayment();
+                }, 500);
             }
         };
 
-        // Проверяем при фокусе окна
         const handleFocus = () => {
-            checkPayment();
+            // Добавляем небольшую задержку, чтобы избежать частых запросов
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                checkPayment();
+            }, 500);
         };
 
         document.addEventListener('visibilitychange', handleVisibilityChange);
         window.addEventListener('focus', handleFocus);
 
         return () => {
+            clearTimeout(timeoutId);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('focus', handleFocus);
         };
-    }, [setStarsBalance, isChecking]);
+    }, [checkPayment]);
    
     async function handlePayment(amount: number, type: 'stars') {
         try {
