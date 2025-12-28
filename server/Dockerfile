@@ -3,8 +3,10 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install OpenSSL for Prisma
-RUN apk add --no-cache openssl1.1-compat
+# Install OpenSSL and compatibility layer for Prisma
+RUN apk add --no-cache openssl openssl-dev gcompat && \
+    ln -s /usr/lib/libssl.so.3 /usr/lib/libssl.so.1.1 || true && \
+    ln -s /usr/lib/libcrypto.so.3 /usr/lib/libcrypto.so.1.1 || true
 
 # Copy package files
 COPY package*.json ./
@@ -34,8 +36,10 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Install OpenSSL for Prisma
-RUN apk add --no-cache openssl1.1-compat
+# Install OpenSSL and compatibility layer for Prisma
+RUN apk add --no-cache openssl openssl-dev gcompat && \
+    ln -s /usr/lib/libssl.so.3 /usr/lib/libssl.so.1.1 || true && \
+    ln -s /usr/lib/libcrypto.so.3 /usr/lib/libcrypto.so.1.1 || true
 
 # Copy package files
 COPY package*.json ./
