@@ -1,7 +1,7 @@
 
 import axios, { InternalAxiosRequestConfig } from 'axios';
 
-const baseURL = process.env.NEXT_PUBLIC_APP_URL_DEV + '/api';
+const baseURL = '/api';
 
 const $host = axios.create({
     baseURL: baseURL
