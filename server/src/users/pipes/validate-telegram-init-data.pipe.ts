@@ -21,19 +21,30 @@ export class ValidateTelegramInitDataPipe
 
   private validateInitData(initData: string): boolean {
     try {
-      // Парсим query string
-      const params = new URLSearchParams(initData);
-      const hash = params.get('hash');
+      // Парсим initData вручную, чтобы сохранить исходные закодированные значения
+      // для проверки hash (Telegram требует использовать исходные значения)
+      const parts = initData.split('&');
+      const paramsMap = new Map<string, string>();
+      let hash = '';
+
+      for (const part of parts) {
+        const [key, ...valueParts] = part.split('=');
+        const value = valueParts.join('='); // На случай если в значении есть =
+        
+        if (key === 'hash') {
+          hash = value;
+        } else {
+          paramsMap.set(key, value);
+        }
+      }
 
       if (!hash) {
         return false;
       }
 
-      // Удаляем hash из параметров для проверки
-      params.delete('hash');
-
       // Сортируем параметры по ключу и создаем строку для проверки
-      const dataCheckString = Array.from(params.entries())
+      // Используем исходные закодированные значения
+      const dataCheckString = Array.from(paramsMap.entries())
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([key, value]) => `${key}=${value}`)
         .join('\n');
@@ -58,11 +69,16 @@ export class ValidateTelegramInitDataPipe
 
       // Сравниваем хеши
       if (calculatedHash !== hash) {
+        console.error('Hash mismatch:', {
+          calculated: calculatedHash,
+          received: hash,
+          dataCheckString: dataCheckString.substring(0, 100) + '...',
+        });
         return false;
       }
 
       // Проверяем время (auth_date не должен быть старше 24 часов)
-      const authDate = params.get('auth_date');
+      const authDate = paramsMap.get('auth_date');
       if (authDate) {
         const authTimestamp = parseInt(authDate, 10);
         const currentTimestamp = Math.floor(Date.now() / 1000);
@@ -82,6 +98,7 @@ export class ValidateTelegramInitDataPipe
 
   private extractUserData(initData: string): UserLoginInterface {
     try {
+      // Используем URLSearchParams для декодирования значений
       const params = new URLSearchParams(initData);
       const userParam = params.get('user');
 
@@ -89,7 +106,8 @@ export class ValidateTelegramInitDataPipe
         throw new BadRequestException('User data not found in initData');
       }
 
-      const userData = JSON.parse(decodeURIComponent(userParam));
+      // userParam уже декодирован URLSearchParams, парсим JSON
+      const userData = JSON.parse(userParam);
 
       if (!userData.id) {
         throw new BadRequestException('Telegram user ID not found');
@@ -98,7 +116,7 @@ export class ValidateTelegramInitDataPipe
       return {
         telegramId: String(userData.id),
         username: userData.username || '',
-        photoUrl: '',
+        photoUrl: userData.photo_url || '',
       };
     } catch (error) {
       if (error instanceof BadRequestException) {
