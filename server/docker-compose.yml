@@ -67,6 +67,7 @@ services:
       - gifts-network
     volumes:
       - ./libs/infrustructure/prisma:/app/libs/infrustructure/prisma
+      - ./libs/statics:/app/libs/statics
 
 volumes:
   postgres_data:

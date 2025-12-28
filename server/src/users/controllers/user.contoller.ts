@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Delete, Param, Body, UseGuards, Res, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Put, Delete, Param, Body, UseGuards, Res, NotFoundException, BadRequestException, Post } from '@nestjs/common';
 import { Response } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -6,13 +6,18 @@ import { ChangeUsernameDto } from '../dto/change-username.dto';
 import { UsersService } from '../services/users.service';
 import { JwtAuthGuard } from '../../../libs/common/guard/jwt-auth.guard.guard';
 import { CurrentUser } from '../../../libs/common/decorators/current-user.decorator';
+import { PaymentDto } from '../dto/payment.dto';
+import { TelegramBotService } from '../../telegram-bot/services/telegram-bot.service';
 
 @Controller('users')
 export class UserController {
     private readonly staticsPath = path.join(process.cwd(), 'libs', 'statics');
     private readonly allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 
-    constructor(private readonly userService: UsersService) {}
+    constructor(
+        private readonly userService: UsersService,
+        private readonly telegramBotService: TelegramBotService,
+    ) {}
 
     @Get('/photo/:filename')
     async getPhoto(@Param('filename') filename: string, @Res() res: Response) {
@@ -77,6 +82,32 @@ export class UserController {
       return this.userService.changeUsername(userId, changeUsernameDto);
     }
 
+    @Post('/payment')
+    @UseGuards(JwtAuthGuard)
+    async payment(
+        @CurrentUser() userId: string,
+        @Body() paymentDto: PaymentDto,
+    ) {
+        if (paymentDto.type !== 'stars') {
+            throw new BadRequestException('Only stars payment type is supported');
+        }
+
+        if (!paymentDto.amount || paymentDto.amount <= 0) {
+            throw new BadRequestException('Amount must be greater than 0');
+        }
+
+        const payload = `payment_${userId}_${Date.now()}`;
+        const invoiceLink = await this.telegramBotService.createInvoiceLink(
+            paymentDto.amount,
+            payload,
+        );
+
+        return {
+            invoiceLink,
+            amount: paymentDto.amount,
+            type: paymentDto.type,
+        };
+    }
 
 }
 

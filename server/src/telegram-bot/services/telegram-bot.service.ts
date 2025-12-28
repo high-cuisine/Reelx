@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Context } from 'telegraf';
+import { InjectBot } from 'nestjs-telegraf';
+import { Telegraf } from 'telegraf';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as https from 'https';
@@ -10,6 +12,7 @@ export class TelegramBotService {
   private readonly staticsPath = path.join(process.cwd(), 'libs', 'statics');
 
   constructor(
+    @InjectBot() private readonly bot: Telegraf,
     private readonly userService: UsersService
   ) {
     if (!fs.existsSync(this.staticsPath)) {
@@ -112,5 +115,28 @@ export class TelegramBotService {
         ],
       },
     };
+  }
+
+  async createInvoiceLink(starsAmount: number, payload?: string): Promise<string> {
+    try {
+      const invoiceLink = await this.bot.telegram.createInvoiceLink({
+        title: 'Пополнение баланса',
+        description: `Пополнение баланса на ${starsAmount} звезд`,
+        payload: payload || `stars_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+        provider_token: '', // Для Telegram Stars не требуется
+        currency: 'XTR', // XTR - валюта Telegram Stars
+        prices: [
+          {
+            label: `${starsAmount} звезд`,
+            amount: starsAmount, // Количество звезд
+          },
+        ],
+      });
+
+      return invoiceLink;
+    } catch (error) {
+      console.error('Error creating invoice link:', error);
+      throw new Error('Failed to create invoice link');
+    }
   }
 }

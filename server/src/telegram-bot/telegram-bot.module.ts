@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TelegrafModule } from 'nestjs-telegraf';
 import { TelegramBotService } from './services/telegram-bot.service';
 import { TelegramBotUpdate } from './update/telegram-bot.update';
@@ -17,7 +17,7 @@ import { UsersModule } from '../users/users.module';
         };
       },
     }),
-    UsersModule
+    forwardRef(() => UsersModule)
   ],
   providers: [TelegramBotService, TelegramBotUpdate],
   exports: [TelegramBotService],

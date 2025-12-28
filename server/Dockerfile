@@ -56,6 +56,9 @@ RUN npx prisma generate --schema=./libs/infrustructure/prisma/schema.prisma
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
 
+# Copy statics folder for images
+COPY libs/statics ./libs/statics
+
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
