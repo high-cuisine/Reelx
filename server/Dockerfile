@@ -47,8 +47,8 @@ COPY package*.json ./
 # Copy Prisma schema
 COPY libs/infrustructure/prisma ./libs/infrustructure/prisma
 
-# Install only production dependencies
-RUN npm install --omit=dev
+# Install production dependencies and Prisma CLI
+RUN npm install --omit=dev && npm install -g prisma@5.20.0
 
 # Generate Prisma Client in production stage
 RUN npx prisma generate --schema=./libs/infrustructure/prisma/schema.prisma
@@ -56,12 +56,19 @@ RUN npx prisma generate --schema=./libs/infrustructure/prisma/schema.prisma
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
 
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # Verify files are copied
 RUN ls -la dist/ || (echo "Copy failed - dist directory not found" && exit 1)
 RUN test -f dist/src/main.js || (echo "Copy failed - dist/src/main.js not found" && exit 1)
 
 # Expose port
 EXPOSE 3000
+
+# Set entrypoint
+ENTRYPOINT ["docker-entrypoint.sh"]
 
 # Start the application
 CMD ["npm", "run", "start:prod"]
