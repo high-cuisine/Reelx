@@ -3,19 +3,18 @@ import cls from './deposit.module.scss';
 import Image from 'next/image';
 
 import starImage from '@/assets/star.svg';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+
+import tonImage from '@/assets/ton.svg'
 
 interface cardsInerface {
     title:string;
-    image:unknown;
+    image:string;
     state:string
 
 }
 
 const DepositPage = () => {
-
-    const [activeCard, setActiveCard] = useState<string | null>(null);
-    const [inputValue, setInputValue] = useState<string>('');
 
     const cards = [
         {
@@ -24,6 +23,9 @@ const DepositPage = () => {
             state:'stars'
         }
     ];
+
+    const [activeCard, setActiveCard] = useState<cardsInerface>(cards[0]);
+    const [inputValue, setInputValue] = useState<string>('');
 
     const buttons = [
         10,
@@ -34,17 +36,13 @@ const DepositPage = () => {
         500
     ]
 
-    useEffect(() => {
-        setActiveCard(cards[0].state)
-    }, []);
-
     return (
         <div className={cls.deposit}>
             <h2 className={cls.header}>Депозит</h2>
             <div className={cls.cards}>
                 {
                     cards.map(el => 
-                        <div className={`${cls.card} ${el.state === activeCard ? cls.active : null}`}>
+                        <div key={el.state} className={`${cls.card} ${el.state === activeCard.state ? cls.active : null}`}>
                             <Image src={starImage} alt={el.title} width={30} height={30}/>
                             <span>{el.title}</span>
                         </div>
@@ -52,7 +50,8 @@ const DepositPage = () => {
                 }
             </div>
             <div className={cls.inputContainer}>
-                <input value={inputValue} onChange={(e) => setInputValue(e.target.value)}/>
+                <Image className={cls.inputImage} src={activeCard.image} width={16} height={16} alt=''></Image>
+                <input value={inputValue} onChange={(e) => setInputValue(e.target.value)} className={cls.input}/>
             </div>
 
             <div className={cls.buttons}>
@@ -62,6 +61,8 @@ const DepositPage = () => {
                     )
                 }
             </div>
+
+
         </div>
     )
 }

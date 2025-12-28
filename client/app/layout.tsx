@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Montserrat } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -59,9 +60,12 @@ export default function RootLayout({
       <body
         className={`${montserrat.variable} antialiased`}
       >
+        <Script
+          src="https://telegram.org/js/telegram-web-app.js"
+          strategy="afterInteractive"
+        />
         {children}
       </body>
-      <script src="https://telegram.org/js/telegram-web-app.js"></script>
     </html>
   );
 }

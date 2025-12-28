@@ -5,4 +5,43 @@
         font-weight: 600;
         font-size: 20px;
     }
+
+    & .cards {
+        
+        & .card {
+            width:80px;
+            height: 80px;
+            display:flex;
+            justify-content:center;
+            align-items: center;
+            gap:10px;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 10px;
+            background: #222541;
+            flex-direction: column;
+        }
+    }
+
+    & .inputContainer {
+        position: relative;
+
+        & .inputImage {
+            position: absolute;
+            left:12px;
+            top:50%;
+            transform: translateY(-50%);
+        }
+
+        & .input {
+            width: 100%;
+            background: none;
+            border: 1px solid #ffffff50;
+            border-radius: 10px;
+            padding-left: 34px;
+            height: 40px;
+            padding-top: 10px;
+            padding-bottom: 10px;
+        }
+    }
 }

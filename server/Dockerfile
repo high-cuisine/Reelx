@@ -23,7 +23,8 @@ RUN npm run build || (echo "Build failed!" && exit 1)
 
 # Verify build output
 RUN ls -la dist/ || (echo "Build failed - dist directory not found" && exit 1)
-RUN test -f dist/main.js || (echo "Build failed - dist/main.js not found" && exit 1)
+RUN echo "Searching for main.js..." && find dist -name "main.js" -type f || true
+RUN if [ ! -f dist/src/main.js ]; then echo "Build failed - dist/src/main.js not found" && echo "Contents of dist:" && ls -la dist/ && echo "Contents of dist/src:" && (ls -la dist/src/ 2>/dev/null || echo "dist/src does not exist") && exit 1; fi
 
 # Production stage
 FROM node:20-alpine AS production
@@ -47,7 +48,7 @@ COPY --from=builder /app/dist ./dist
 
 # Verify files are copied
 RUN ls -la dist/ || (echo "Copy failed - dist directory not found" && exit 1)
-RUN test -f dist/main.js || (echo "Copy failed - dist/main.js not found" && exit 1)
+RUN test -f dist/src/main.js || (echo "Copy failed - dist/src/main.js not found" && exit 1)
 
 # Expose port
 EXPOSE 3000
