@@ -23,10 +23,10 @@ export function AuthInit() {
                 return;
             }
 
-            const existingToken = localStorage.getItem('accessToken');
-            if (existingToken) {
-                return;
-            }
+          //  const existingToken = localStorage.getItem('accessToken');
+            // if (existingToken) {
+            //     return;
+            // }
 
             authService.login(initData)
                 .catch((error) => {
