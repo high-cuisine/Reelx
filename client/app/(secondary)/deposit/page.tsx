@@ -31,25 +31,29 @@ const DepositPage = () => {
             title:'TG Stars',
             image:starImage,
             state:'stars',
-            item:'stars'
+            item:'stars',
+            active: true
         },
         {
             title:'TON Pay',
             image:tonImage,
             state:'stars1',
-            item:'stars'
+            item:'stars',
+            active: false
         },
         {
             title:'CryptoBot',
             image:cryptoImage,
             state:'stars2',
-            item:'stars'
+            item:'stars',
+            active: false
         },
         {
             title:'Картой',
             image:cardImage,
             state:'stars3',
-            item:'stars'
+            item:'stars',
+            active: false
         }
     ];
 
@@ -78,7 +82,7 @@ const DepositPage = () => {
             <div className={cls.cards}>
                 {
                     cards.map(el => 
-                        <div key={el.state} className={`${cls.card} ${el.state === activeCard.state ? cls.active : null}`}>
+                        <div style={{opacity: el.active ? 1 : 0.6}} key={el.state} className={`${cls.card} ${el.state === activeCard.state ? cls.active : null}`}>
                             <Image src={el.image} alt={el.title} width={30} height={30}/>
                             <span>{el.title}</span>
                         </div>

@@ -11,4 +11,9 @@
     font-weight: 600;
     letter-spacing: 0%;
     text-align: center;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.button:active {
+    opacity: 0.6;
 }
