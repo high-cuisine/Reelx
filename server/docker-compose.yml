@@ -78,7 +78,7 @@ services:
       - ./server/.env
     environment:
       NODE_ENV: ${NODE_ENV}
-      PORT: ${NFTBUYBER_PORT:-3001}
+      PORT: ${NFTBUYBER_PORT:-3334}
       TONCENTER_URL: ${TONCENTER_URL}
       TONCENTER_API_KEY: ${TONCENTER_API_KEY}
       TON_API_URL: ${TON_API_URL}
