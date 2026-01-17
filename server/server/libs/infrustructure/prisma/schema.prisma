@@ -67,7 +67,7 @@ model GameMembers {
   id        String   @id @default(uuid())
   gameId    String
   userId    String
-  status    GameMemberStatus default(player)
+  status    GameMemberStatus @default(player)
   
   createdAt DateTime @default(now())
   

@@ -29,7 +29,7 @@ RUN npm run build || (echo "Build failed!" && exit 1)
 # Verify build output
 RUN ls -la dist/ || (echo "Build failed - dist directory not found" && exit 1)
 RUN echo "Searching for main.js..." && find dist -name "main.js" -type f || true
-RUN if [ ! -f dist/src/main.js ]; then echo "Build failed - dist/src/main.js not found" && echo "Contents of dist:" && ls -la dist/ && echo "Contents of dist/src:" && (ls -la dist/src/ 2>/dev/null || echo "dist/src does not exist") && exit 1; fi
+RUN if [ ! -f dist/src/main.js ]; then echo "Build failed - dist/src/main.js not found" && ls -la dist/ && exit 1; fi
 
 # Production stage
 FROM node:20-alpine AS production
@@ -48,7 +48,7 @@ COPY package*.json ./
 COPY libs/infrustructure/prisma ./libs/infrustructure/prisma
 
 # Install production dependencies and Prisma CLI
-RUN npm install --omit=dev && npm install -g prisma@5.20.0
+RUN npm install --legacy-peer-deps && npm install -g prisma@5.20.0
 
 # Generate Prisma Client in production stage
 RUN npx prisma generate --schema=./libs/infrustructure/prisma/schema.prisma
