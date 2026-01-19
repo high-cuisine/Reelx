@@ -66,15 +66,28 @@ const Bets = ({
     return (
         <div className={cls.bets}>
             <div className={cls.topRow}>
-                <button 
-                    className={`${cls.iconButton} ${cls.currencyButton}`} 
-                    onClick={onToggleCurrency}
-                    title={`Переключить на ${currency === 'stars' ? 'TON' : 'STARS'}`}
-                >
-                    {renderCurrencyIcon()}
-                </button>
+                <div className={cls.currencyButtonWrapper}>
+                    <button 
+                        className={`${cls.iconButton} ${cls.currencyButton}`} 
+                        onClick={onToggleCurrency}
+                        title={`Переключить на ${currency === 'stars' ? 'TON' : 'STARS'}`}
+                    >
+                        {renderCurrencyIcon()}
+                    </button>
+                </div>
 
                 <div className={cls.rollSelector}>
+                    
+                    {currency === 'stars' && totalPrice > 10 && (
+                        <div className={`${cls.currencyBadge} ${cls.multyBadge}`}>
+                            Multy
+                        </div>
+                    )}
+                    {currency === 'ton' && totalPrice > 50 && (
+                        <div className={`${cls.currencyBadge} ${cls.mysteryBadge}`}>
+                            Mystery
+                        </div>
+                    )}
                     <button 
                         className={cls.controlButton}
                         onClick={onDecreaseRolls}

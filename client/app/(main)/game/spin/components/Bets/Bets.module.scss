@@ -34,6 +34,11 @@
     }
 }
 
+.currencyButtonWrapper {
+    position: relative;
+    flex-shrink: 0;
+}
+
 .currencyButton {
     position: relative;
     
@@ -51,6 +56,31 @@
     }
 }
 
+.currencyBadge {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.multyBadge {
+    background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%);
+    color: #1E293B;
+}
+
+.mysteryBadge {
+    background: linear-gradient(135deg, #A78BFA 0%, #8B5CF6 100%);
+    color: white;
+}
+
 .rollSelector {
     background: #ffffff0d;
     border-radius: 12px;
@@ -63,6 +93,7 @@
     justify-content: center;
     width: 12vw;
     justify-content: center;
+    position: relative;
 }
 
 .controlButton {

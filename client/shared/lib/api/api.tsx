@@ -1,7 +1,7 @@
 
 import axios, { InternalAxiosRequestConfig } from 'axios';
 
-const baseURL = 'http://localhost:3333/api';
+const baseURL = '/api';
 
 const $host = axios.create({
     baseURL: baseURL
