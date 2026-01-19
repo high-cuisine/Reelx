@@ -92,10 +92,20 @@ export const useGameResult = () => {
             return targetIndex;
         } catch (error: any) {
             console.error('Ошибка при старте игры:', error);
+            
+            // Обрабатываем ошибку недостаточного баланса
+            if (error?.response?.status === 402 || error?.response?.status === 400) {
+                const errorMessage = error?.response?.data?.message || error?.message || 'Недостаточный баланс';
+                alert(errorMessage);
+            } else {
+                const errorMessage = error?.message || 'Ошибка при старте игры';
+                alert(errorMessage);
+            }
+            
             setStartGameState(prev => ({
                 ...prev,
                 isLoading: false,
-                error: error?.message || 'Ошибка при старте игры',
+                error: error?.response?.data?.message || error?.message || 'Ошибка при старте игры',
             }));
             return null;
         }

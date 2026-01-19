@@ -7,6 +7,7 @@ import { UsersService } from '../services/users.service';
 import { JwtAuthGuard } from '../../../libs/common/guard/jwt-auth.guard.guard';
 import { CurrentUser } from '../../../libs/common/decorators/current-user.decorator';
 import { PaymentDto } from '../dto/payment.dto';
+import { DepositTonDto } from '../dto/deposit-ton.dto';
 import { TelegramBotService } from '../../telegram-bot/services/telegram-bot.service';
 
 @Controller('users')
@@ -132,6 +133,24 @@ export class UserController {
     ) {
         const transaction = await this.userService.getLatestTransaction(userId);
         return transaction;
+    }
+
+    @Post('/deposit-ton')
+    @UseGuards(JwtAuthGuard)
+    async depositTon(
+        @CurrentUser() userId: string,
+        @Body() depositTonDto: DepositTonDto,
+    ) {
+        if (!depositTonDto.amount || depositTonDto.amount <= 0) {
+            throw new BadRequestException('Amount must be greater than 0');
+        }
+
+        await this.userService.depositTon(userId, depositTonDto.amount);
+        
+        return {
+            success: true,
+            message: 'TON balance updated successfully',
+        };
     }
 
 }

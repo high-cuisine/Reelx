@@ -27,6 +27,23 @@ export class UsersService {
         await this.userRepository.createTransaction(userId, amount, TransactionType.stars);
     }
 
+    async updateTonBalance(userId: string, amount: number): Promise<void> {
+        // Обновляем баланс и создаем транзакцию
+        await this.userRepository.updateTonBalance(userId, amount);
+        await this.userRepository.createTransaction(userId, amount, TransactionType.ton);
+    }
+
+    async createUserGift(data: {
+        userId: string;
+        giftName: string;
+        giftAddress: string;
+        collectionAddress?: string;
+        image?: string;
+        price?: number;
+    }) {
+        return await this.userRepository.createUserGift(data);
+    }
+
     async findUserById(userId: string) {
         return (await this.userRepository.findUserById(userId));
     }
@@ -48,6 +65,12 @@ export class UsersService {
 
     async getTransactionsByUserId(userId: string) {
         return (await this.userRepository.getTransactionsByUserId(userId));
+    }
+
+    async depositTon(userId: string, amount: number): Promise<void> {
+        // Инкрементируем баланс TON и создаем транзакцию
+        await this.userRepository.updateTonBalance(userId, amount);
+        await this.userRepository.createTransaction(userId, amount, TransactionType.ton);
     }
 }
 

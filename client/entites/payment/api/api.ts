@@ -21,6 +21,11 @@ class PaymentService {
         return response.data;
     }
 
+    async depositTon(amount: number): Promise<{ success: boolean; message: string }> {
+        const response = await api.$authHost.post(`/users/deposit-ton`, { amount });
+        return response.data;
+    }
+
     async getBalance(): Promise<BalanceResponse> {
         const response = await api.$authHost.get(`/users/balance`);
         return response.data;

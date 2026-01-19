@@ -10,7 +10,7 @@ import { formatSecrets } from './helpers/formatSecrets.helper';
 import { convertAmountToTon } from './helpers/convertAmountToTon.helper';
 import { RedisService } from '../../libs/infrustructure/redis/redis.service';
 import { formatWheelItem } from './helpers/formatWheelItem.helper';
-import { WheelItem } from './interfaces/wheel-item.interface';
+import { WheelItem, WheelGiftItem, WheelMoneyItem, WheelSecretItem } from './interfaces/wheel-item.interface';
 import { formatMinimalPrize } from './helpers/formatMinimalPrize.helper';
 import { StartGameResponseDto } from './dto/start-game-response.dto';
 import { UsersService } from '../users/services/users.service';
@@ -238,47 +238,13 @@ export class GiftsService {
         );
       }
 
-      const wheelItems: WheelItem[] = JSON.parse(wheelData);
-
-      if (!wheelItems || wheelItems.length === 0) {
-        throw new HttpException(
-          'Wheel is empty. Please generate a new wheel first.',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      // Случайный выбор приза
-      const randomIndex = Math.floor(Math.random() * wheelItems.length);
-      const selectedPrize = wheelItems[randomIndex];
-
-      this.logger.debug(
-        `User ${userId} selected prize at index ${randomIndex}: ${selectedPrize.type}`,
-      );
-
-      // Форматируем в минимальный формат для клиента
-      return formatMinimalPrize(selectedPrize);
-    } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      this.logger.error(`Error starting game for user ${userId}: ${error.message}`);
-      throw new HttpException(
-        'Failed to start game',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  async claimPrize(userId: string): Promise<{ success: boolean; message: string }> {
-    try {
       // Получаем сохраненный amount из Redis
       const amountKey = `wheel:amount:${userId}`;
       const amountData = await this.redisService.get(amountKey);
 
       if (!amountData) {
         throw new HttpException(
-          'Game amount not found. Please start a new game.',
+          'Game amount not found. Please generate a new wheel first.',
           HttpStatus.NOT_FOUND,
         );
       }
@@ -305,21 +271,126 @@ export class GiftsService {
         `User ${userId} has sufficient balance: ${userBalance} ${currencyType} >= ${amount} ${currencyType}`,
       );
 
-      // Здесь можно добавить логику выдачи приза (списание средств, начисление приза и т.д.)
-      // Пока просто возвращаем успех
+      const wheelItems: WheelItem[] = JSON.parse(wheelData);
 
-      return {
-        success: true,
-        message: 'Prize claimed successfully',
-      };
+      if (!wheelItems || wheelItems.length === 0) {
+        throw new HttpException(
+          'Wheel is empty. Please generate a new wheel first.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      // Случайный выбор приза
+      const randomIndex = Math.floor(Math.random() * wheelItems.length);
+      const selectedPrize = wheelItems[randomIndex];
+
+      this.logger.debug(
+        `User ${userId} selected prize at index ${randomIndex}: ${selectedPrize.type}`,
+      );
+
+      // Списываем стоимость игры с баланса пользователя
+      if (currencyType === 'stars') {
+        await this.usersService.updateStarsBalance(userId, -amount);
+      } else {
+        await this.usersService.updateTonBalance(userId, -amount);
+      }
+
+      this.logger.debug(
+        `User ${userId} paid ${amount} ${currencyType} for the game`,
+      );
+
+      // Обрабатываем выигрыш в зависимости от типа приза
+      if (selectedPrize.type === 'money') {
+        const moneyPrize = selectedPrize as WheelMoneyItem;
+        const prizeAmount = moneyPrize.amount;
+        const prizeCurrencyType = moneyPrize.currencyType;
+
+        // Инкрементируем баланс пользователя
+        if (prizeCurrencyType === 'star') {
+          await this.usersService.updateStarsBalance(userId, prizeAmount);
+        } else {
+          await this.usersService.updateTonBalance(userId, prizeAmount);
+        }
+
+        this.logger.debug(
+          `User ${userId} won ${prizeAmount} ${prizeCurrencyType}`,
+        );
+      } else if (selectedPrize.type === 'gift') {
+        const giftPrize = selectedPrize as WheelGiftItem;
+        
+        // Создаем запись в UserGifts
+        await this.usersService.createUserGift({
+          userId,
+          giftName: giftPrize.name,
+          giftAddress: giftPrize.address,
+          collectionAddress: giftPrize.collection.address,
+          image: giftPrize.image,
+          price: giftPrize.price,
+        });
+
+        this.logger.debug(
+          `User ${userId} won gift: ${giftPrize.name}`,
+        );
+      } else if (selectedPrize.type === 'secret') {
+        const secretPrize = selectedPrize as WheelSecretItem;
+        
+        if (secretPrize.realType === 'money') {
+          const prizeAmount = secretPrize.amount || 0;
+          const prizeCurrencyType = secretPrize.currencyType;
+
+          if (!prizeCurrencyType) {
+            this.logger.error(`Secret prize with realType='money' missing currencyType`);
+            throw new HttpException(
+              'Invalid secret prize configuration',
+              HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+          }
+
+          // Инкрементируем баланс пользователя
+          if (prizeCurrencyType === 'star') {
+            await this.usersService.updateStarsBalance(userId, prizeAmount);
+          } else {
+            await this.usersService.updateTonBalance(userId, prizeAmount);
+          }
+
+          this.logger.debug(
+            `User ${userId} won secret money: ${prizeAmount} ${prizeCurrencyType}`,
+          );
+        } else if (secretPrize.realType === 'gift') {
+          if (!secretPrize.address || !secretPrize.name) {
+            this.logger.error(`Secret prize with realType='gift' missing required fields`);
+            throw new HttpException(
+              'Invalid secret gift prize configuration',
+              HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+          }
+
+          // Создаем запись в UserGifts
+          await this.usersService.createUserGift({
+            userId,
+            giftName: secretPrize.name,
+            giftAddress: secretPrize.address,
+            collectionAddress: secretPrize.collection?.address,
+            image: secretPrize.image,
+            price: secretPrize.price,
+          });
+
+          this.logger.debug(
+            `User ${userId} won secret gift: ${secretPrize.name}`,
+          );
+        }
+      }
+
+      // Форматируем в минимальный формат для клиента
+      return formatMinimalPrize(selectedPrize);
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
       }
 
-      this.logger.error(`Error claiming prize for user ${userId}: ${error.message}`);
+      this.logger.error(`Error starting game for user ${userId}: ${error.message}`);
       throw new HttpException(
-        'Failed to claim prize',
+        'Failed to start game',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

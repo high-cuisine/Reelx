@@ -41,6 +41,28 @@ export class UserRepository {
         }));
     }
 
+    async updateTonBalance(userId: string, amount: number): Promise<User> {
+        return (await this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                tonBalance: { increment: amount },
+            },
+        }));
+    }
+
+    async createUserGift(data: {
+        userId: string;
+        giftName: string;
+        giftAddress: string;
+        collectionAddress?: string;
+        image?: string;
+        price?: number;
+    }) {
+        return (await this.prisma.userGifts.create({
+            data,
+        }));
+    }
+
     async findUserById(userId: string): Promise<User | null> {
         return (await this.prisma.user.findUnique({
             where: { id: userId },

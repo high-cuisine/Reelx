@@ -4,6 +4,9 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { Button } from '@/shared/ui/Button/Button';
 import { usePayment } from './hooks/usePayment';
+import useSendTONTransaction from '@/shared/lib/hooks/useSendTonTransaction';
+import { paymentService } from '@/features/payment/payment';
+import { useUserStore } from '@/entites/user/model/user';
 
 import starImage from '@/assets/star.svg';
 import tonImage from '@/assets/ton.svg'
@@ -15,37 +18,86 @@ interface cardsInerface {
     image:string;
     state:string
     item:string;
-
+    type: 'stars' | 'ton';
+    active: boolean;
 }
 
 const DepositPage = () => {
-
+    // Адрес кошелька для пополнения TON (нужно будет вынести в конфиг)
+    const ADMIN_WALLET_ADDRESS = process.env.NEXT_PUBLIC_TON_WALLET_ADDRESS || 'EQD...'; // Замените на реальный адрес
+    
     const { handlePayment } = usePayment();
+    const { sendTransaction, loading: tonLoading, error: tonError } = useSendTONTransaction(ADMIN_WALLET_ADDRESS);
+    const { updateBalance } = useUserStore();
+    const [isProcessing, setIsProcessing] = useState(false);
 
-    const handlePaymentClick = async (amount: number, type: 'stars') => {
-        await handlePayment(amount, type);
+    const handlePaymentClick = async (amount: number, type: 'stars' | 'ton') => {
+        if (type === 'stars') {
+            await handlePayment(amount, 'stars');
+        } else if (type === 'ton') {
+            await handleTonDeposit(amount);
+        }
     }
 
-    const cards = [
+    const handleTonDeposit = async (amount: number) => {
+        if (isProcessing || tonLoading) return;
+        
+        try {
+            setIsProcessing(true);
+            
+            // Отправляем транзакцию через TON Connect
+            const result = await sendTransaction(amount.toString());
+            
+            if (result.success) {
+                // После успешной транзакции вызываем API для пополнения баланса
+                try {
+                    const depositResult = await paymentService.depositTon(amount);
+                    
+                    if (depositResult.success) {
+                        // Обновляем баланс в store
+                        updateBalance(amount, 'ton');
+                        alert(`Баланс успешно пополнен на ${amount} TON!`);
+                    } else {
+                        alert('Ошибка при пополнении баланса. Обратитесь в поддержку.');
+                    }
+                } catch (error: any) {
+                    console.error('Error depositing TON:', error);
+                    alert('Ошибка при пополнении баланса. Транзакция отправлена, но баланс не обновлен. Обратитесь в поддержку.');
+                }
+            } else {
+                alert(result.error || 'Ошибка при отправке транзакции');
+            }
+        } catch (error: any) {
+            console.error('Error in TON deposit:', error);
+            alert(error?.message || 'Ошибка при пополнении TON');
+        } finally {
+            setIsProcessing(false);
+        }
+    }
+
+    const cards: cardsInerface[] = [
         {
             title:'TG Stars',
             image:starImage,
             state:'stars',
             item:'stars',
+            type: 'stars',
             active: true
         },
         {
             title:'TON Pay',
             image:tonImage,
-            state:'stars1',
-            item:'stars',
-            active: false
+            state:'ton',
+            item:'TON',
+            type: 'ton',
+            active: true
         },
         {
             title:'CryptoBot',
             image:cryptoImage,
             state:'stars2',
             item:'stars',
+            type: 'stars',
             active: false
         },
         {
@@ -53,6 +105,7 @@ const DepositPage = () => {
             image:cardImage,
             state:'stars3',
             item:'stars',
+            type: 'stars',
             active: false
         }
     ];
@@ -82,7 +135,12 @@ const DepositPage = () => {
             <div className={cls.cards}>
                 {
                     cards.map(el => 
-                        <div style={{opacity: el.active ? 1 : 0.6}} key={el.state} className={`${cls.card} ${el.state === activeCard.state ? cls.active : null}`}>
+                        <div 
+                            style={{opacity: el.active ? 1 : 0.6}} 
+                            key={el.state} 
+                            className={`${cls.card} ${el.state === activeCard.state ? cls.active : null}`}
+                            onClick={() => el.active && setActiveCard(el)}
+                        >
                             <Image src={el.image} alt={el.title} width={30} height={30}/>
                             <span>{el.title}</span>
                         </div>
@@ -111,8 +169,24 @@ const DepositPage = () => {
                 }
             </div>
         
-            <div onClick={() => handlePaymentClick(inputValue, 'stars')}>
-                <Button customClass={cls.depositButton} text={`Пополнить на ${inputValue} ${activeCard.item}`}></Button>
+            {tonError && (
+                <div style={{ color: 'red', marginBottom: '10px', textAlign: 'center' }}>
+                    {tonError}
+                </div>
+            )}
+            
+            <div 
+                onClick={() => !isProcessing && !tonLoading && handlePaymentClick(inputValue, activeCard.type)}
+                style={{ opacity: isProcessing || tonLoading ? 0.6 : 1, cursor: isProcessing || tonLoading ? 'not-allowed' : 'pointer' }}
+            >
+                <Button 
+                    customClass={cls.depositButton} 
+                    text={
+                        isProcessing || tonLoading 
+                            ? 'Обработка...' 
+                            : `Пополнить на ${inputValue} ${activeCard.item}`
+                    }
+                ></Button>
             </div>
 
         </div>

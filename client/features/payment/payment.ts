@@ -30,6 +30,16 @@ class PaymentService {
             throw error;
         }
     }
+
+    async depositTon(amount: number): Promise<{ success: boolean; message: string }> {
+        try {
+            const response = await paymentServiceApi.depositTon(amount);
+            return response;
+        } catch (error) {
+            console.error('Error depositing TON:', error);
+            throw error;
+        }
+    }
 }
 
 export const paymentService = new PaymentService();
