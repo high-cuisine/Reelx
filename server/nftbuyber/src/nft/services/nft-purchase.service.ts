@@ -1,9 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TonClient, WalletContractV4, Address } from '@ton/ton';
-import { internal } from '@ton/core';
+import { internal, beginCell } from '@ton/core';
 import { mnemonicToWalletKey } from 'ton-crypto';
 import { BuyNftResponse } from '../dto/buy-nft.dto';
+import { TransferNftResponse } from '../dto/transfer-nft.dto';
+import { SendTonResponse } from '../dto/send-ton.dto';
 
 @Injectable()
 export class NftPurchaseService {
@@ -322,6 +324,291 @@ export class NftPurchaseService {
       }
 
       this.logger.error(`Failed to buy NFT: ${error.message}`);
+      return {
+        success: false,
+        error: error.message || 'Unknown error occurred',
+      };
+    }
+  }
+
+  /**
+   * Переводит NFT на новый кошелек
+   */
+  async transferNft(
+    nftAddress: string,
+    newOwnerAddress: string,
+    queryId?: string,
+    forwardAmount?: string,
+  ): Promise<TransferNftResponse> {
+    try {
+      // Проверяем наличие @ton/ton модуля
+      if (!this.client) {
+        return {
+          success: false,
+          error: 'TON client not initialized. Please install dependencies: npm install --legacy-peer-deps',
+        };
+      }
+
+      // Проверяем наличие mnemonic
+      if (!this.mnemonic || this.mnemonic.length !== 24) {
+        return {
+          success: false,
+          error: 'Wallet mnemonic not configured. Set WALLET_MNEMONIC in environment variables.',
+        };
+      }
+
+      // Валидируем адреса
+      let nftAddr: Address;
+      let newOwnerAddr: Address;
+      try {
+        nftAddr = Address.parse(nftAddress);
+        newOwnerAddr = Address.parse(newOwnerAddress);
+      } catch (error) {
+        return {
+          success: false,
+          error: `Invalid address format: ${error.message}`,
+        };
+      }
+
+      // Проверяем, что текущий кошелек является владельцем NFT
+      try {
+        const nftData = await this.retryOnRateLimit(
+          () => this.client.runMethod(nftAddr, 'get_nft_data'),
+          'get_nft_data'
+        );
+        
+        nftData.stack.readNumber(); // init
+        nftData.stack.readNumber(); // index
+        nftData.stack.readAddress(); // collection
+        const currentOwner = nftData.stack.readAddress(); // owner
+
+        // Получаем адрес кошелька из mnemonic для проверки
+        const keyPair = await mnemonicToWalletKey(this.mnemonic);
+        const wallet = WalletContractV4.create({
+          workchain: 0,
+          publicKey: keyPair.publicKey,
+        });
+        const walletAddress = wallet.address;
+
+        // Проверяем, что текущий владелец - это наш кошелек
+        const currentOwnerStr = currentOwner.toString({ urlSafe: true, bounceable: false });
+        const walletAddressStr = walletAddress.toString({ urlSafe: true, bounceable: false });
+        
+        if (currentOwnerStr !== walletAddressStr) {
+          // Проверяем разные форматы адресов
+          const currentOwnerStrBounceable = currentOwner.toString({ urlSafe: true, bounceable: true });
+          const walletAddressStrBounceable = walletAddress.toString({ urlSafe: true, bounceable: true });
+          
+          if (currentOwnerStrBounceable !== walletAddressStrBounceable) {
+            this.logger.warn(`NFT owner mismatch. Current owner: ${currentOwnerStr}, Wallet: ${walletAddressStr}`);
+            return {
+              success: false,
+              error: 'Current wallet is not the owner of this NFT',
+            };
+          }
+        }
+      } catch (error: any) {
+        this.logger.warn(`Failed to verify NFT ownership: ${error.message}`);
+        // Не блокируем перевод - проверка может быть слишком строгой
+      }
+
+      // Создаем кошелек
+      const keyPair = await mnemonicToWalletKey(this.mnemonic);
+      const wallet = WalletContractV4.create({
+        workchain: 0,
+        publicKey: keyPair.publicKey,
+      });
+
+      const walletContract = this.client.open(wallet);
+      
+      // Получаем seqno с retry логикой
+      const seqno = await this.retryOnRateLimit(
+        () => walletContract.getSeqno(),
+        'getSeqno'
+      );
+
+      // Создаем тело сообщения transfer
+      // op: 0x5fcc3d14 (transfer op code)
+      // query_id: uint64
+      // new_owner: MsgAddress
+      // response_destination: MsgAddress (null)
+      // custom_payload: Cell (null)
+      // forward_amount: Coins
+      // forward_payload: Cell (null)
+      const transferOp = 0x5fcc3d14; // transfer op code
+      const queryIdValue = queryId ? BigInt(queryId) : BigInt(Date.now());
+      const forwardAmountNano = forwardAmount ? BigInt(forwardAmount) : 0n;
+
+      const transferBody = beginCell()
+        .storeUint(transferOp, 32) // op
+        .storeUint(queryIdValue, 64) // query_id
+        .storeAddress(newOwnerAddr) // new_owner
+        .storeAddress(null) // response_destination (null)
+        .storeRef(beginCell().endCell()) // custom_payload (null)
+        .storeCoins(forwardAmountNano) // forward_amount
+        .storeRef(beginCell().endCell()) // forward_payload (null)
+        .endCell();
+
+      this.logger.log(`Transferring NFT on-chain…`);
+      this.logger.log(`NFT: ${nftAddress}`);
+      this.logger.log(`New owner: ${newOwnerAddress}`);
+      this.logger.log(`Query ID: ${queryIdValue.toString()}`);
+
+      // Отправляем транзакцию с retry логикой
+      await this.retryOnRateLimit(
+        () => walletContract.sendTransfer({
+          seqno,
+          secretKey: keyPair.secretKey,
+          messages: [
+            internal({
+              to: nftAddress,
+              value: forwardAmountNano > 0n ? forwardAmountNano : 50000000n, // Минимальная сумма для газа, если forward_amount не указан
+              bounce: true,
+              body: transferBody,
+            }),
+          ],
+        }),
+        'sendTransfer'
+      );
+
+      this.logger.log('Transfer transaction sent successfully');
+
+      return {
+        success: true,
+        message: 'Transfer transaction sent successfully. Check the blockchain for confirmation.',
+      };
+    } catch (error: any) {
+      const isRateLimit = 
+        error?.status === 429 || 
+        error?.response?.status === 429 ||
+        error?.message?.includes('429') ||
+        error?.message?.includes('rate limit') ||
+        error?.message?.includes('Too Many Requests');
+
+      if (isRateLimit) {
+        this.logger.error(`Rate limit (429) when transferring NFT. Please wait and try again.`);
+        return {
+          success: false,
+          error: 'Rate limit exceeded (429). Please wait a few seconds and try again. Too many requests to TON API.',
+        };
+      }
+
+      this.logger.error(`Failed to transfer NFT: ${error.message}`);
+      return {
+        success: false,
+        error: error.message || 'Unknown error occurred',
+      };
+    }
+  }
+
+  /**
+   * Отправляет TON на указанный адрес
+   */
+  async sendTon(toAddress: string, amount: string): Promise<SendTonResponse> {
+    try {
+      // Проверяем наличие @ton/ton модуля
+      if (!this.client) {
+        return {
+          success: false,
+          error: 'TON client not initialized. Please install dependencies: npm install --legacy-peer-deps',
+        };
+      }
+
+      // Проверяем наличие mnemonic
+      if (!this.mnemonic || this.mnemonic.length !== 24) {
+        return {
+          success: false,
+          error: 'Wallet mnemonic not configured. Set WALLET_MNEMONIC in environment variables.',
+        };
+      }
+
+      // Валидируем адрес получателя
+      let toAddr: Address;
+      try {
+        toAddr = Address.parse(toAddress);
+      } catch (error) {
+        return {
+          success: false,
+          error: `Invalid recipient address format: ${toAddress}`,
+        };
+      }
+
+      // Валидируем сумму
+      let amountInNano: bigint;
+      try {
+        amountInNano = BigInt(amount);
+        if (amountInNano <= 0n) {
+          return {
+            success: false,
+            error: 'Amount must be greater than 0',
+          };
+        }
+      } catch (error) {
+        return {
+          success: false,
+          error: `Invalid amount format: ${amount}`,
+        };
+      }
+
+      // Создаем кошелек
+      const keyPair = await mnemonicToWalletKey(this.mnemonic);
+      const wallet = WalletContractV4.create({
+        workchain: 0,
+        publicKey: keyPair.publicKey,
+      });
+
+      const walletContract = this.client.open(wallet);
+      
+      // Получаем seqno с retry логикой
+      const seqno = await this.retryOnRateLimit(
+        () => walletContract.getSeqno(),
+        'getSeqno'
+      );
+
+      this.logger.log(`Sending TON on-chain…`);
+      this.logger.log(`To: ${toAddress}`);
+      this.logger.log(`Amount: ${amountInNano.toString()} nanotons`);
+
+      // Отправляем транзакцию с retry логикой
+      await this.retryOnRateLimit(
+        () => walletContract.sendTransfer({
+          seqno,
+          secretKey: keyPair.secretKey,
+          messages: [
+            internal({
+              to: toAddress,
+              value: amountInNano,
+              bounce: false, // Обычно для обычных переводов bounce = false
+              body: null,
+            }),
+          ],
+        }),
+        'sendTransfer'
+      );
+
+      this.logger.log('TON transfer transaction sent successfully');
+
+      return {
+        success: true,
+        message: 'TON transfer transaction sent successfully. Check the blockchain for confirmation.',
+      };
+    } catch (error: any) {
+      const isRateLimit = 
+        error?.status === 429 || 
+        error?.response?.status === 429 ||
+        error?.message?.includes('429') ||
+        error?.message?.includes('rate limit') ||
+        error?.message?.includes('Too Many Requests');
+
+      if (isRateLimit) {
+        this.logger.error(`Rate limit (429) when sending TON. Please wait and try again.`);
+        return {
+          success: false,
+          error: 'Rate limit exceeded (429). Please wait a few seconds and try again. Too many requests to TON API.',
+        };
+      }
+
+      this.logger.error(`Failed to send TON: ${error.message}`);
       return {
         success: false,
         error: error.message || 'Unknown error occurred',

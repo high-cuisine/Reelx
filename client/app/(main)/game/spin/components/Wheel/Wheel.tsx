@@ -8,18 +8,17 @@ import { calculateSegmentAngle } from '../../helpers/calculateSegmentAngle';
 import { generateConicGradient } from '../../helpers/generateConicGradient';
 import { calculateSegmentPosition } from '../../helpers/calculateSegmentPosition';
 import { calculateSelectedSegment } from '../../helpers/calculateSelectedSegment';
+import { GiftItem } from '@/entites/gifts/interfaces/giftItem.interface';
+import { MoneyBadge } from './MoneyBadge';
 
 interface WheelProps {
-    items: {
-        price?: number;
-        image?: string;
-        name: string;
-    }[];
+    items: GiftItem[];
     isSpinning?: boolean;
-    onSpinComplete?: (selectedItem: { name: string; price?: number; image?: string }) => void;
+    onSpinComplete?: (selectedItem: GiftItem) => void;
+    targetIndex?: number | null;
 }
 
-const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete }: WheelProps) => {
+const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIndex }: WheelProps) => {
     const [manualRotation, setManualRotation] = useState(0);
     
     const handleSpinComplete = (rotation: number) => {
@@ -30,7 +29,7 @@ const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete }: WheelP
         }
     };
 
-    const { rotation: spinRotation, isSpinning } = useWheelSpin(externalIsSpinning, handleSpinComplete);
+    const { rotation: spinRotation, isSpinning } = useWheelSpin(externalIsSpinning, handleSpinComplete, targetIndex, items.length);
     
     const { 
         wheelRef, 
@@ -66,8 +65,8 @@ const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete }: WheelP
                 <g filter="url(#filter0_d_1107_1888)">
                     <path d="M17.665 18C16.5103 20 13.6235 20 12.4688 18L6.40664 7.5C5.25194 5.5 6.69532 3 9.00472 3L21.1291 3C23.4385 3 24.8819 5.5 23.7271 7.5L17.665 18Z" fill="white"/></g>
                     <defs>
-                        <filter id="filter0_d_1107_1888" x="0" y="0" width="30.1338" height="28.5" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-                        <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+                        <filter id="filter0_d_1107_1888" x="0" y="0" width="30.1338" height="28.5" filterUnits="userSpaceOnUse">
+                        <feFlood floodOpacity="0" result="BackgroundImageFix"/>
                         <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
                         <feOffset dy="3"/>
                         <feGaussianBlur stdDeviation="3"/>
@@ -106,7 +105,9 @@ const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete }: WheelP
                                 transform: 'translate(-50%, -50%)',
                             }}
                         >
-                            {item.image ? (
+                            {item.type === 'money' ? (
+                                <MoneyBadge item={item} />
+                            ) : item.image ? (
                                 <Image 
                                     src={item.image} 
                                     alt={item.name} 

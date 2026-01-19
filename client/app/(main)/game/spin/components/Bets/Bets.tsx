@@ -4,7 +4,7 @@ import cls from './Bets.module.scss';
 import starIcon from '@/assets/star.svg';
 import { Button } from '@/shared/ui/Button/Button';
 import { eventBus, MODAL_EVENTS } from '@/features/eventBus/eventBus';
-import type { CurrencyType } from '../../page';
+import type { CurrencyType } from '../../hooks/useCurrency';
 
 interface WheelItem {
     name: string;

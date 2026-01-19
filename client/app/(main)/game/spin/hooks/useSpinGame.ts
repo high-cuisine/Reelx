@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { calculateTotalPrice } from '../helpers/calculateTotalPrice';
 import { validateRolls } from '../helpers/validateRolls';
+import { GiftItem } from '@/entites/gifts/interfaces/giftItem.interface';
 
 interface SpinGameConfig {
     defaultRolls?: number;
@@ -12,11 +13,7 @@ interface SpinGameConfig {
 }
 
 interface SpinGameResult {
-    selectedItem: {
-        name: string;
-        price?: number;
-        image?: string;
-    };
+    selectedItem: GiftItem;
     rolls: number;
     totalPrice: number;
 }
@@ -30,9 +27,10 @@ interface UseSpinGameReturn {
     canPlay: boolean;
     handleIncreaseRolls: () => void;
     handleDecreaseRolls: () => void;
-    handlePlay: () => void;
-    onSpinComplete: (selectedItem: { name: string; price?: number; image?: string }) => void;
+    handlePlay: (wheelItems: GiftItem[], startGame: (items: GiftItem[]) => Promise<number | null>) => Promise<void>;
+    onSpinComplete: (selectedItem: GiftItem) => void;
     setGiftCount: (count: number) => void;
+    targetIndex: number | null;
 }
 
 export const useSpinGame = (
@@ -51,6 +49,7 @@ export const useSpinGame = (
     const [rolls, setRolls] = useState(defaultRolls);
     const [isSpinning, setIsSpinning] = useState(false);
     const [giftCount, setGiftCount] = useState(initialGiftCount);
+    const [targetIndex, setTargetIndex] = useState<number | null>(null);
 
     const totalPrice = calculateTotalPrice(rolls, pricePerRoll);
     const canPlay = !isSpinning && validateRolls(rolls, minRolls, maxRolls);
@@ -87,15 +86,33 @@ export const useSpinGame = (
         });
     }, [isSpinning, minRolls, rollStep]);
 
-    const handlePlay = useCallback(() => {
-        if (!canPlay) return;
-        console.log('🎮 handlePlay: Начало игры, устанавливаем isSpinning = true');
+    const handlePlay = useCallback(async (
+        wheelItems: GiftItem[],
+        startGame: (items: GiftItem[]) => Promise<number | null>
+    ) => {
+        if (!canPlay || wheelItems.length === 0) return;
+        
+        console.log('🎮 handlePlay: Начало игры, запрашиваем результат с сервера');
+        
+        // Получаем целевой индекс с сервера
+        const index = await startGame(wheelItems);
+        
+        if (index === null) {
+            console.error('Не удалось получить результат игры с сервера');
+            return;
+        }
+        
+        setTargetIndex(index);
+        console.log(`🎯 handlePlay: Устанавливаем целевой индекс: ${index}`);
+        
+        // Запускаем спин
         setIsSpinning(true);
     }, [canPlay]);
 
-    const onSpinComplete = useCallback((selectedItem: { name: string; price?: number; image?: string }) => {
+    const onSpinComplete = useCallback((selectedItem: GiftItem) => {
         console.log('✅ onSpinComplete: Завершение спина, устанавливаем isSpinning = false', selectedItem);
         setIsSpinning(false);
+        setTargetIndex(null); // Сбрасываем целевой индекс после завершения
         
         const result: SpinGameResult = {
             selectedItem,
@@ -120,6 +137,7 @@ export const useSpinGame = (
         handlePlay,
         onSpinComplete,
         setGiftCount,
+        targetIndex,
     };
 };
 

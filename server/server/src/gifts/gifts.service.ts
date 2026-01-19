@@ -1,14 +1,30 @@
-import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, Logger, HttpException, HttpStatus, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
+import { getCurrentType } from './helpers/getCurrectType.helper';
+import { getCountGifts } from './helpers/getCountGifts.helper';
+import { getMoneyPrices } from './helpers/getMoneyPrices.helper';
+import { combineGiftsAndMoney } from './helpers/combineGiftsAndMoney.helper';
+import { formatGiftItem, formatMoneyItems } from './helpers/formatGiftItem.helper';
+import { formatSecrets } from './helpers/formatSecrets.helper';
+import { convertAmountToTon } from './helpers/convertAmountToTon.helper';
+import { RedisService } from '../../libs/infrustructure/redis/redis.service';
+import { formatWheelItem } from './helpers/formatWheelItem.helper';
+import { WheelItem } from './interfaces/wheel-item.interface';
+import { formatMinimalPrize } from './helpers/formatMinimalPrize.helper';
+import { StartGameResponseDto } from './dto/start-game-response.dto';
 
 @Injectable()
 export class GiftsService {
   private readonly logger = new Logger(GiftsService.name);
   private readonly axiosInstance: AxiosInstance;
   private readonly nftBuyerUrl: string;
+  private readonly WHEEL_TTL_SECONDS = 10 * 60; // 10 минут
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private redisService: RedisService,
+  ) {
     this.nftBuyerUrl = this.configService.get<string>('NFT_BUYER_URL', 'http://localhost:3001');
     
     if (!this.nftBuyerUrl) {
@@ -23,20 +39,64 @@ export class GiftsService {
     });
   }
 
-  async getGiftsByPrice(body?: { amount?: number }): Promise<any> {
+  async getGiftsByPrice(
+    body?: { amount?: number; type?: 'ton' | 'stars' },
+    userId?: string,
+  ): Promise<any> {
     try {
-      const url = `${this.nftBuyerUrl}/api/nft/gifts/by-price`;
+      const amount = Number(body?.amount || 0);
+      const currencyType = body?.type; // 'ton' | 'stars' из запроса
       
-      this.logger.debug(`Proxying request to ${url} with body: ${JSON.stringify(body)}`);
+      // Определяем тип подарков на основе amount
+      const giftType = getCurrentType(amount);
 
-      const response = await this.axiosInstance.post(url, body || {});
+      this.logger.debug(`Getting gifts by type: ${giftType} for amount: ${amount}, currency: ${currencyType || 'not specified'}`);
 
-      return response.data;
+      let result: any;
+      let originalData: any[] = [];
+
+      switch (giftType) {
+        case 'common':
+          const commonResult = await this.getGiftsPrices(amount, currencyType, (data) => {
+            originalData = data;
+          });
+          result = commonResult;
+          break;
+        
+        case 'multi':
+          result = this.getMoneyPrices(amount);
+          // Для money создаем оригинальные данные из отформатированных
+          originalData = result.map((item: any) => ({
+            type: item.name === 'TON' ? 'ton' : 'star',
+            price: item.price,
+          }));
+          break;
+        
+        case 'secret':
+          const secretResult = await this.getSecretsPrices(amount, (data) => {
+            originalData = data;
+          });
+          result = secretResult;
+          break;
+        
+        default:
+          this.logger.warn(`Unknown type: ${giftType}, falling back to common`);
+          const defaultResult = await this.getGiftsPrices(amount, currencyType, (data) => {
+            originalData = data;
+          });
+          result = defaultResult;
+      }
+
+      // Сохраняем барабан в Redis, если есть userId
+      if (userId && result && Array.isArray(result)) {
+        await this.saveWheelToRedis(userId, result, originalData);
+      }
+
+      return result;
     } catch (error) {
       this.logger.error(`Error proxying request to NFT buyer: ${error.message}`);
       
       if (error.response) {
-        // Если есть ответ от сервера, пробрасываем его статус и данные
         throw new HttpException(
           error.response.data || 'Error from NFT buyer service',
           error.response.status || HttpStatus.INTERNAL_SERVER_ERROR,
@@ -48,5 +108,155 @@ export class GiftsService {
         HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
+  }
+
+  private async getGiftsPrices(
+    amount: number,
+    currencyType?: 'ton' | 'stars',
+    onOriginalData?: (data: any[]) => void,
+  ) {
+    const url = `${this.nftBuyerUrl}/api/nft/gifts/by-price`;
+      
+    const inputCurrency = currencyType === 'stars' ? 'stars' : 'ton';
+    const amountTon = convertAmountToTon(amount, inputCurrency);
+
+    // В nftbuyber отправляем ТОЛЬКО amount в TON
+    this.logger.debug(
+      `Proxying request to ${url} with body: ${JSON.stringify({ amount: amountTon })} (from ${amount} ${inputCurrency})`,
+    );
+
+    const response = await this.axiosInstance.post(url, { amount: amountTon });
+
+    //if(response.status !== 200) throw new InternalServerErrorException()
+
+    const type = getCurrentType(Number(amount));
+
+    const originalGifts = response.data.gifts.slice(0, getCountGifts(amount));
+    
+    // Сохраняем оригинальные данные для Redis
+    if (onOriginalData) {
+      onOriginalData(originalGifts);
+    }
+
+    const gifts = originalGifts.map((g: any) => formatGiftItem(g, type === 'secret' ? 'secret' : 'gift'));
+
+    return gifts;
+  }
+
+  private getRawMoneyPrices(amount: number) {
+    return getMoneyPrices(amount);
+  }
+
+  private getMoneyPrices(amount: number) {
+    return formatMoneyItems(this.getRawMoneyPrices(amount));
+  }
+
+  private async getSecretsPrices(
+    amount: number,
+    onOriginalData?: (data: any[]) => void,
+  ) {
+    let originalGiftsData: any[] = [];
+    
+    const gifts = await this.getGiftsPrices(amount, undefined, (data) => {
+      originalGiftsData = data;
+    });
+    
+    const moneyPrices = this.getRawMoneyPrices(amount);
+
+    const secrets = combineGiftsAndMoney(originalGiftsData, moneyPrices, 8);
+    
+    // Сохраняем комбинированные оригинальные данные
+    if (onOriginalData) {
+      onOriginalData(secrets);
+    }
+    
+    return formatSecrets(secrets);
+  }
+
+  private async saveWheelToRedis(
+    userId: string,
+    formattedItems: any[],
+    originalData: any[],
+  ): Promise<void> {
+    try {
+      const wheelItems: WheelItem[] = formattedItems.map((item, index) => {
+        // Для secret элементов нужно найти соответствующий оригинальный элемент
+        let original = originalData[index];
+        
+        // Если это secret и originalData содержит комбинированные данные
+        if (item.type === 'secret' && originalData.length > 0) {
+          // Ищем элемент в originalData по типу
+          const matchingOriginal = originalData.find((orig: any) => {
+            if (item.name === 'TON' || item.name === 'STARS') {
+              return orig.type === 'ton' || orig.type === 'star';
+            }
+            return orig.address || orig.collection?.address;
+          });
+          if (matchingOriginal) {
+            original = matchingOriginal;
+          }
+        }
+        
+        return formatWheelItem(item, original || item);
+      });
+
+      const key = `wheel:${userId}`;
+      const value = JSON.stringify(wheelItems);
+
+      await this.redisService.set(key, value, this.WHEEL_TTL_SECONDS);
+      
+      this.logger.debug(`Saved wheel for user ${userId} with ${wheelItems.length} items`);
+    } catch (error) {
+      this.logger.error(`Failed to save wheel to Redis for user ${userId}: ${error.message}`);
+      // Не прерываем выполнение, если не удалось сохранить в Redis
+    }
+  }
+
+  async startGame(userId: string): Promise<StartGameResponseDto> {
+    try {
+      const key = `wheel:${userId}`;
+      const wheelData = await this.redisService.get(key);
+
+      if (!wheelData) {
+        throw new HttpException(
+          'Wheel not found. Please generate a new wheel first.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      const wheelItems: WheelItem[] = JSON.parse(wheelData);
+
+      if (!wheelItems || wheelItems.length === 0) {
+        throw new HttpException(
+          'Wheel is empty. Please generate a new wheel first.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      // Случайный выбор приза
+      const randomIndex = Math.floor(Math.random() * wheelItems.length);
+      const selectedPrize = wheelItems[randomIndex];
+
+      this.logger.debug(
+        `User ${userId} selected prize at index ${randomIndex}: ${selectedPrize.type}`,
+      );
+
+      // Форматируем в минимальный формат для клиента
+      return formatMinimalPrize(selectedPrize);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      this.logger.error(`Error starting game for user ${userId}: ${error.message}`);
+      throw new HttpException(
+        'Failed to start game',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  private setPricesInCache() {
+
   }
 }
