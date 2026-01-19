@@ -22,4 +22,10 @@ export class GiftsController {
   async startGame(@CurrentUser() userId: string) {
     return this.giftsService.startGame(userId);
   }
+
+  @Post('claim-prize')
+  @UseGuards(JwtAuthGuard)
+  async claimPrize(@CurrentUser() userId: string) {
+    return this.giftsService.claimPrize(userId);
+  }
 }

@@ -31,7 +31,7 @@ interface StartGameResponse {
 
 class GiftsService {
     async getGiftsByPrice(body?: { amount?: number; type?: 'ton' | 'stars' }): Promise<GiftItem[]> {
-        const response = await api.$host.post('/gifts/by-price', body || {});
+        const response = await api.$authHost.post('/gifts/by-price', body || {});
 
         const rawData = response.data as unknown;
         const rawGifts: RawGift[] = Array.isArray(rawData)

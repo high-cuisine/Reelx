@@ -13,6 +13,7 @@ import { formatWheelItem } from './helpers/formatWheelItem.helper';
 import { WheelItem } from './interfaces/wheel-item.interface';
 import { formatMinimalPrize } from './helpers/formatMinimalPrize.helper';
 import { StartGameResponseDto } from './dto/start-game-response.dto';
+import { UsersService } from '../users/services/users.service';
 
 @Injectable()
 export class GiftsService {
@@ -24,6 +25,7 @@ export class GiftsService {
   constructor(
     private configService: ConfigService,
     private redisService: RedisService,
+    private usersService: UsersService,
   ) {
     this.nftBuyerUrl = this.configService.get<string>('NFT_BUYER_URL', 'http://localhost:3001');
     
@@ -89,7 +91,7 @@ export class GiftsService {
 
       // Сохраняем барабан в Redis, если есть userId
       if (userId && result && Array.isArray(result)) {
-        await this.saveWheelToRedis(userId, result, originalData);
+        await this.saveWheelToRedis(userId, result, originalData, amount, currencyType);
       }
 
       return result;
@@ -177,6 +179,8 @@ export class GiftsService {
     userId: string,
     formattedItems: any[],
     originalData: any[],
+    amount?: number,
+    currencyType?: 'ton' | 'stars',
   ): Promise<void> {
     try {
       const wheelItems: WheelItem[] = formattedItems.map((item, index) => {
@@ -200,10 +204,20 @@ export class GiftsService {
         return formatWheelItem(item, original || item);
       });
 
-      const key = `wheel:${userId}`;
-      const value = JSON.stringify(wheelItems);
+      const wheelKey = `wheel:${userId}`;
+      const wheelValue = JSON.stringify(wheelItems);
+      await this.redisService.set(wheelKey, wheelValue, this.WHEEL_TTL_SECONDS);
 
-      await this.redisService.set(key, value, this.WHEEL_TTL_SECONDS);
+      // Сохраняем amount и currencyType отдельно
+      if (amount !== undefined) {
+        const amountKey = `wheel:amount:${userId}`;
+        const amountData = JSON.stringify({
+          amount,
+          currencyType: currencyType || 'ton',
+        });
+        await this.redisService.set(amountKey, amountData, this.WHEEL_TTL_SECONDS);
+        this.logger.debug(`Saved amount ${amount} ${currencyType || 'ton'} for user ${userId}`);
+      }
       
       this.logger.debug(`Saved wheel for user ${userId} with ${wheelItems.length} items`);
     } catch (error) {
@@ -251,6 +265,61 @@ export class GiftsService {
       this.logger.error(`Error starting game for user ${userId}: ${error.message}`);
       throw new HttpException(
         'Failed to start game',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async claimPrize(userId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      // Получаем сохраненный amount из Redis
+      const amountKey = `wheel:amount:${userId}`;
+      const amountData = await this.redisService.get(amountKey);
+
+      if (!amountData) {
+        throw new HttpException(
+          'Game amount not found. Please start a new game.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      const { amount, currencyType } = JSON.parse(amountData);
+
+      // Получаем баланс пользователя из базы данных
+      const balance = await this.usersService.getBalance(userId);
+
+      // Проверяем баланс в зависимости от типа валюты
+      const userBalance = currencyType === 'stars' ? balance.starsBalance : balance.tonBalance;
+
+      if (userBalance < amount) {
+        this.logger.warn(
+          `User ${userId} has insufficient balance. Required: ${amount} ${currencyType}, Available: ${userBalance}`,
+        );
+        throw new HttpException(
+          `Insufficient balance. Required: ${amount} ${currencyType}, Available: ${userBalance}`,
+          HttpStatus.PAYMENT_REQUIRED,
+        );
+      }
+
+      this.logger.debug(
+        `User ${userId} has sufficient balance: ${userBalance} ${currencyType} >= ${amount} ${currencyType}`,
+      );
+
+      // Здесь можно добавить логику выдачи приза (списание средств, начисление приза и т.д.)
+      // Пока просто возвращаем успех
+
+      return {
+        success: true,
+        message: 'Prize claimed successfully',
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      this.logger.error(`Error claiming prize for user ${userId}: ${error.message}`);
+      throw new HttpException(
+        'Failed to claim prize',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
