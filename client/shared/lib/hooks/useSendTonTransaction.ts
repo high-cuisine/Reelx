@@ -35,7 +35,14 @@ const useSendTONTransaction = (adminAddress: string) => {
       }
 
       if (!wallet) {
-        throw new Error("Wallet is not connected");
+        try {
+          const ui = tonConnectUI as any;
+          ui.openModal?.();
+          ui.connectWallet?.();
+        } catch (e) {
+        } finally {
+          return { success: false };
+        }
       }
 
       const amountTON = parseFloat(amount);

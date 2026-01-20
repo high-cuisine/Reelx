@@ -24,10 +24,10 @@ interface cardsInerface {
 
 const DepositPage = () => {
     // Адрес кошелька для пополнения TON (нужно будет вынести в конфиг)
-    const ADMIN_WALLET_ADDRESS = process.env.NEXT_PUBLIC_TON_WALLET_ADDRESS || 'EQD...'; // Замените на реальный адрес
+    const ADMIN_WALLET_ADDRESS = process.env.NEXT_PUBLIC_TON_WALLET_ADDRESS; // Замените на реальный адрес
     
     const { handlePayment } = usePayment();
-    const { sendTransaction, loading: tonLoading, error: tonError } = useSendTONTransaction(ADMIN_WALLET_ADDRESS);
+    const { sendTransaction, loading: tonLoading, error: tonError } = useSendTONTransaction(String(ADMIN_WALLET_ADDRESS));
     const { updateBalance } = useUserStore();
     const [isProcessing, setIsProcessing] = useState(false);
 

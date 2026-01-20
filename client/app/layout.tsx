@@ -58,8 +58,9 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Manifest URL для TonConnect (нужно будет настроить)
-  const manifestUrl = process.env.NEXT_PUBLIC_TONCONNECT_MANIFEST_URL || 'https://raw.githubusercontent.com/ton-community/tutorials/main/03-client/test/public/tonconnect-manifest.json';
+  // Manifest URL для TonConnect (храним в public/tonconnect-manifest.json)
+  // Если нужен абсолютный URL (production), можно переопределить через NEXT_PUBLIC_TONCONNECT_MANIFEST_URL
+  const manifestUrl = process.env.NEXT_PUBLIC_TONCONNECT_MANIFEST_URL || '/tonconnect-manifest.json';
   
   return (
     <html lang="en">

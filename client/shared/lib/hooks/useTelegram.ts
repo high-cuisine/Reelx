@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useContext } from 'react';
+import { TonConnectUIContext, useTonWallet } from '@tonconnect/ui-react';
 
 interface TelegramUser {
   id: number;
@@ -21,6 +22,10 @@ export const useTelegram = (): UseTelegramReturn => {
   const [username, setUsername] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [initData, setInitData] = useState<string | null>(null);
+
+  const tonConnectUI = useContext(TonConnectUIContext);
+  const wallet = useTonWallet();
+  const didOpenTonConnectRef = useRef(false);
 
   useEffect(() => {
     const initTelegram = () => {
@@ -70,6 +75,25 @@ export const useTelegram = (): UseTelegramReturn => {
       };
     }
   }, []);
+
+  // Автоматически открываем TonConnect, если кошелёк не подключен
+  useEffect(() => {
+    if (!isLoaded) return; // ждём инициализацию Telegram WebApp (чтобы не мешать SSR/обычному браузеру)
+    if (!tonConnectUI) return;
+    if (wallet) return;
+    if (didOpenTonConnectRef.current) return;
+
+    didOpenTonConnectRef.current = true;
+
+    try {
+      // TonConnect UI модалка
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (tonConnectUI as any).openModal?.();
+    } catch (e) {
+      // Если openModal недоступен — просто игнорируем, пользователь подключит вручную
+      // console.warn('Failed to auto-open TonConnect modal', e);
+    }
+  }, [isLoaded, tonConnectUI, wallet]);
 
   return {
     username,
