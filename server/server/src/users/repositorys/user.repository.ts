@@ -96,4 +96,24 @@ export class UserRepository {
             orderBy: { createdAt: 'desc' },
         }));
     }
+
+    async getUserGifts(userId: string): Promise<Array<{
+        id: string;
+        giftName: string;
+        image: string | null;
+        price: number | null;
+        createdAt: Date;
+    }>> {
+        return (await this.prisma.userGifts.findMany({
+            where: { userId },
+            select: {
+                id: true,
+                giftName: true,
+                image: true,
+                price: true,
+                createdAt: true,
+            },
+            orderBy: { createdAt: 'desc' },
+        }));
+    }
 }

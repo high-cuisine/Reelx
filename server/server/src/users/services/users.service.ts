@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { UserRepository } from '../repositorys/user.repository';
 import { ChangeUsernameDto } from '../dto/change-username.dto';
 import { TransactionType } from '@prisma/client';
+import { UserGiftRto } from '../rto/user-gift.rto';
 
 @Injectable()
 export class UsersService {
@@ -71,6 +72,10 @@ export class UsersService {
         // Инкрементируем баланс TON и создаем транзакцию
         await this.userRepository.updateTonBalance(userId, amount);
         await this.userRepository.createTransaction(userId, amount, TransactionType.ton);
+    }
+
+    async getUserGifts(userId: string): Promise<UserGiftRto[]> {
+        return await this.userRepository.getUserGifts(userId);
     }
 }
 

@@ -153,5 +153,13 @@ export class UserController {
         };
     }
 
+    @Get('/gifts')
+    @UseGuards(JwtAuthGuard)
+    async getUserGifts(
+        @CurrentUser() userId: string,
+    ) {
+        return this.userService.getUserGifts(userId);
+    }
+
 }
 
