@@ -75,7 +75,14 @@ export class UsersService {
     }
 
     async getUserGifts(userId: string): Promise<UserGiftRto[]> {
-        return await this.userRepository.getUserGifts(userId);
+        const gifts = await this.userRepository.getUserGifts(userId);
+        return gifts.map(gift => ({
+            id: gift.id,
+            giftName: gift.giftName,
+            image: gift.image ?? undefined,
+            price: gift.price ?? undefined,
+            createdAt: gift.createdAt,
+        }));
     }
 }
 
