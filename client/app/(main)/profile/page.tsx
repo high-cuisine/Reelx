@@ -5,6 +5,7 @@ import ton from '@/assets/ton.svg';
 import {getAvatarColor} from '@/shared/lib/helpers/getAvatarColor'
 import { Deposit } from './components/deposit/deposit';
 import { Promocodes } from './components/promocodes/promocodes';
+import { Inventory } from './components/inventory/inventory';
 import { useTelegram } from '@/shared/lib/hooks/useTelegram';
 
 import copyImage from '@/assets/copyId.svg'
@@ -51,6 +52,7 @@ const ProfilePage = () => {
 
         <Deposit tonBalance={user?.tonBalance || 0} starsBalance={user?.starsBalance || 0}></Deposit>
         <Promocodes></Promocodes>
+        <Inventory></Inventory>
     </div>
   );
 };

@@ -3,5 +3,6 @@ export class UserGiftRto {
     giftName: string;
     image?: string;
     price?: number;
+    isOut: boolean;
     createdAt: Date;
 }

@@ -102,6 +102,7 @@ export class UserRepository {
         giftName: string;
         image: string | null;
         price: number | null;
+        isOut: boolean;
         createdAt: Date;
     }>> {
         return (await this.prisma.userGifts.findMany({
@@ -111,6 +112,7 @@ export class UserRepository {
                 giftName: true,
                 image: true,
                 price: true,
+                isOut: true,
                 createdAt: true,
             },
             orderBy: { createdAt: 'desc' },
