@@ -420,12 +420,6 @@ export class NftPurchaseService {
       });
 
       const walletContract = this.client.open(wallet);
-      
-      // Получаем seqno с retry логикой
-      const seqno = await this.retryOnRateLimit(
-        () => walletContract.getSeqno(),
-        'getSeqno'
-      );
 
       // Создаем тело сообщения transfer
       // op: 0x5fcc3d14 (transfer op code)
@@ -437,7 +431,7 @@ export class NftPurchaseService {
       // forward_payload: Cell (null)
       const transferOp = 0x5fcc3d14; // transfer op code
       const queryIdValue = queryId ? BigInt(queryId) : BigInt(Date.now());
-      const forwardAmountNano = forwardAmount ? BigInt(forwardAmount) : 0n;
+      const forwardAmountNano = forwardAmount ? BigInt(forwardAmount) : 50000000n; // Минимальная сумма для газа
 
       const transferBody = beginCell()
         .storeUint(transferOp, 32) // op
@@ -455,19 +449,24 @@ export class NftPurchaseService {
       this.logger.log(`Query ID: ${queryIdValue.toString()}`);
 
       // Отправляем транзакцию с retry логикой
+      // Важно: получаем seqno внутри retry, чтобы он был актуальным при каждой попытке
       await this.retryOnRateLimit(
-        () => walletContract.sendTransfer({
-          seqno,
-          secretKey: keyPair.secretKey,
-          messages: [
-            internal({
-              to: nftAddress,
-              value: forwardAmountNano > 0n ? forwardAmountNano : 50000000n, // Минимальная сумма для газа, если forward_amount не указан
-              bounce: true,
-              body: transferBody,
-            }),
-          ],
-        }),
+        async () => {
+          // Получаем актуальный seqno перед каждой попыткой отправки
+          const currentSeqno = await walletContract.getSeqno();
+          await walletContract.sendTransfer({
+            seqno: currentSeqno,
+            secretKey: keyPair.secretKey,
+            messages: [
+              internal({
+                to: nftAddr, // Используем объект Address, а не строку
+                value: forwardAmountNano,
+                bounce: true,
+                body: transferBody,
+              }),
+            ],
+          });
+        },
         'sendTransfer'
       );
 

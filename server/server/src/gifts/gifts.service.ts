@@ -295,6 +295,33 @@ export class GiftsService {
         `User ${userId} selected prize at index ${randomIndex}: ${selectedPrize.type}`,
       );
 
+      // Если приз — NFT (есть ownerAddress, который у нас равен sale_address), пытаемся купить его
+      if ((selectedPrize as any).ownerAddress && typeof (selectedPrize as any).price === 'number') {
+        try {
+          const url = `${this.nftBuyerUrl}/api/nft/purchase`;
+
+          // price в колесе хранится в TON → конвертим в nanoTON и добавляем комиссию
+          const priceTon = (selectedPrize as any).price as number;
+          const basePriceNano = BigInt(Math.round(priceTon * 1_000_000_000));
+          const feeNano = 300000000n; // ~0.3 TON комиссии
+          const priceNano = (basePriceNano + feeNano).toString();
+
+          await this.axiosInstance.post(url, {
+            sale_address: (selectedPrize as any).ownerAddress, // ownerAddress == sale_address
+            price: priceNano,
+          });
+
+          this.logger.debug(
+            `Requested NFT purchase for user ${userId}, sale_address=${(selectedPrize as any).ownerAddress}, price=${priceNano}`,
+          );
+        } catch (error: any) {
+          this.logger.error(
+            `Failed to purchase NFT for user ${userId}: ${error?.message || error}`,
+          );
+          // Игру не роняем, просто логируем ошибку покупки
+        }
+      }
+
       // Списываем стоимость игры с баланса пользователя
       if (currencyType === 'stars') {
         await this.usersService.updateStarsBalance(userId, -amount);
