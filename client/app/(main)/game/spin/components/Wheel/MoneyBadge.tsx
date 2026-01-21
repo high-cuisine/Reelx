@@ -8,8 +8,8 @@ interface MoneyBadgeProps {
 }
 
 export const MoneyBadge = ({ item }: MoneyBadgeProps) => {
-    const isTon = item.name === 'TON';
-    const isStars = item.name === 'STARS';
+    const isTon = item.name === 'TON' || item.name?.toUpperCase() === 'TON';
+    const isStars = item.name === 'STARS' || item.name?.toUpperCase() === 'STARS';
     const rawPrice = item.price ?? 0;
     const displayPrice = isTon ? rawPrice.toFixed(2) : Math.round(rawPrice).toString();
     
