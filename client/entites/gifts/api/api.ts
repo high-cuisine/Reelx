@@ -53,7 +53,17 @@ class GiftsService {
             const isMoney = rawType === 'ton' || rawType === 'star' || rawType === 'money';
 
             if (isMoney) {
-                const currencyLabel = rawType === 'STARS' ? 'STARS' : 'TON';
+                // Проверяем name, если он уже есть и это STARS или TON, используем его
+                // Иначе определяем по rawType или по умолчанию TON
+                let currencyLabel = 'TON';
+                if (rawName && (rawName.toUpperCase() === 'STARS' || rawName.toUpperCase() === 'TON')) {
+                    currencyLabel = rawName.toUpperCase();
+                } else if (rawType === 'star' || rawType === 'STARS') {
+                    currencyLabel = 'STARS';
+                } else if (rawType === 'ton' || rawType === 'TON') {
+                    currencyLabel = 'TON';
+                }
+                
                 return {
                     type: 'money',
                     price: priceNumber,
