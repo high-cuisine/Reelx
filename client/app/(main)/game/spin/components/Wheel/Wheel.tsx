@@ -10,6 +10,7 @@ import { calculateSegmentPosition } from '../../helpers/calculateSegmentPosition
 import { calculateSelectedSegment } from '../../helpers/calculateSelectedSegment';
 import { GiftItem } from '@/entites/gifts/interfaces/giftItem.interface';
 import { MoneyBadge } from './MoneyBadge';
+import secretIcon from '@/assets/icons/secret.svg';
 
 interface WheelProps {
     items: GiftItem[];
@@ -105,7 +106,15 @@ const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIn
                                 transform: 'translate(-50%, -50%)',
                             }}
                         >
-                            {item.type === 'money' ? (
+                            {item.type === 'secret' || item.type === 'mystery' ? (
+                                <Image 
+                                    src={secretIcon} 
+                                    alt="Secret" 
+                                    width={50} 
+                                    height={50}
+                                    className={cls.segmentImage}
+                                />
+                            ) : item.type === 'money' ? (
                                 <MoneyBadge item={item} />
                             ) : item.image ? (
                                 <Image 
