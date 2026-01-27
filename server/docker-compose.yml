@@ -110,10 +110,10 @@ services:
     networks:
       - gifts-network
     volumes:
-      - ./adminClient/vite-project:/app
+      - ./adminClient:/app
       - /app/node_modules
     environment:
-      VITE_API_BASE: ${VITE_API_BASE:-http://server:3002/api/admin-c7ad44cbad762a5da0a4/admin}
+      VITE_API_BASE: ${VITE_API_BASE:-https://reelx.online/api/admin-c7ad44cbad762a5da0a4/admin}
     depends_on:
       - server
 
