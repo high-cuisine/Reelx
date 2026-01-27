@@ -51,14 +51,14 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV}
       PORT: ${PORT}
-      ADMIN_PORT: ${ADMIN_PORT:-3001}
+      ADMIN_PORT: ${ADMIN_PORT:-3333}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
     ports:
       - '${PORT}:${PORT}'
-      - '${ADMIN_PORT:-3001}:${ADMIN_PORT:-3001}'
+      - '${ADMIN_PORT:-3333}:${ADMIN_PORT:-3333}'
     depends_on:
       postgres:
         condition: service_healthy
@@ -81,7 +81,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV}
       # Внутри контейнера приложение слушает 3001 (см. nftbuyber/src/main.ts)
-      PORT: 3001
+      PORT: 3002
       TONCENTER_URL: ${TONCENTER_URL}
       TONCENTER_API_KEY: ${TONCENTER_API_KEY}
       TON_API_URL: ${TON_API_URL}
@@ -113,7 +113,7 @@ services:
       - ./adminClient/vite-project:/app
       - /app/node_modules
     environment:
-      VITE_API_BASE: ${VITE_API_BASE:-http://server:3001/api/admin-c7ad44cbad762a5da0a4/admin}
+      VITE_API_BASE: ${VITE_API_BASE:-http://server:3002/api/admin-c7ad44cbad762a5da0a4/admin}
     depends_on:
       - server
 
