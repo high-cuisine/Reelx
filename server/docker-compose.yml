@@ -80,7 +80,8 @@ services:
       - ./server/.env
     environment:
       NODE_ENV: ${NODE_ENV}
-      PORT: ${NFTBUYBER_PORT:-3334}
+      # Внутри контейнера приложение слушает 3001 (см. nftbuyber/src/main.ts)
+      PORT: 3001
       TONCENTER_URL: ${TONCENTER_URL}
       TONCENTER_API_KEY: ${TONCENTER_API_KEY}
       TON_API_URL: ${TON_API_URL}
@@ -90,7 +91,8 @@ services:
       REDIS_URL: redis://redis:6379
       GETGEMS_API_KEY: ${GETGEMS_API_KEY}
     ports:
-      - '${NFTBUYBER_PORT:-3001}:3002'
+      # Хост-порт по умолчанию 3002, чтобы не конфликтовать с client (3001)
+      - '${NFTBUYBER_PORT:-3002}:3001'
     networks:
       - gifts-network
     depends_on:
