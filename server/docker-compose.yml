@@ -90,7 +90,7 @@ services:
       REDIS_URL: redis://redis:6379
       GETGEMS_API_KEY: ${GETGEMS_API_KEY}
     ports:
-      - '${NFTBUYBER_PORT:-3001}:3001'
+      - '${NFTBUYBER_PORT:-3001}:3002'
     networks:
       - gifts-network
     depends_on:
