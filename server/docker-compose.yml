@@ -101,7 +101,7 @@ services:
 
   admin-client:
     build:
-      context: ./adminClient/vite-project
+      context: ./adminClient
       dockerfile: Dockerfile
     container_name: gifts-admin-client
     restart: unless-stopped
