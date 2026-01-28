@@ -51,6 +51,12 @@
     object-fit: contain;
 }
 
+.giftImageBase {
+    object-fit: none;
+    width: 54%;
+    height: 70%;
+}
+
 .bottomBar {
     display: flex;
     align-items: center;

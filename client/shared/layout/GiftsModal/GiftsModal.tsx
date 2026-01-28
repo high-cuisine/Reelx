@@ -5,7 +5,7 @@ import { eventBus, MODAL_EVENTS } from '@/features/eventBus/eventBus';
 import cls from './GiftsModal.module.scss';
 import TonIcon from '@/assets/ton.svg';
 import StarIcon from '@/assets/star.svg';
-import NoLootIcon from '@/assets/NO_LOOT.svg';
+import NoLootIcon from '@/assets/NO_LOOT_1.svg';
 
 interface GiftItem {
     name: string;
@@ -97,6 +97,13 @@ const GiftsModal = ({ gifts = [] }: GiftsModalProps) => {
                                 }
                             }
 
+                            const isSpecialIcon =
+                                icon === TonIcon || icon === StarIcon || icon === NoLootIcon;
+                            const size = isSpecialIcon ? 40 : 70;
+                            const imageClassName = isSpecialIcon
+                                ? `${cls.giftImage} ${cls.giftImageBase}`
+                                : cls.giftImage;
+
                             return (
                                 <div 
                                     key={index} 
@@ -110,11 +117,11 @@ const GiftsModal = ({ gifts = [] }: GiftsModalProps) => {
                                     {icon ? (
                                         <div className={cls.giftImageWrapper}>
                                             <Image 
-                                                src={icon} 
+                                                src={icon}
                                                 alt={gift.name}
-                                                width={70}
-                                                height={70}
-                                                className={cls.giftImage}
+                                                width={size}
+                                                height={size}
+                                                className={imageClassName}
                                             />
                                         </div>
                                     ) : (

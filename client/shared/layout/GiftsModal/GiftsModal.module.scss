@@ -183,6 +183,12 @@
     object-fit: cover;
 }
 
+.giftImageBase {
+    object-fit: none;
+    width: 54%;
+    height: 70%;
+}
+
 .giftPlaceholder {
     width: 70px;
     height: 70px;
