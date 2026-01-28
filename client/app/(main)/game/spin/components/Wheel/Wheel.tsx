@@ -1,16 +1,13 @@
 'use client'
-import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import cls from './Wheel.module.scss'
-import { useWheelSpin } from '../../hooks/useWheelSpin';
-import { useWheelDrag } from '../../hooks/useWheelDrag';
 import { calculateSegmentAngle } from '../../helpers/calculateSegmentAngle';
 import { generateConicGradient } from '../../helpers/generateConicGradient';
 import { calculateSegmentPosition } from '../../helpers/calculateSegmentPosition';
-import { calculateSelectedSegment } from '../../helpers/calculateSelectedSegment';
 import { GiftItem } from '@/entites/gifts/interfaces/giftItem.interface';
 import { MoneyBadge } from './MoneyBadge';
 import secretIcon from '@/assets/icons/secret.svg';
+import { useWheelLogic } from '../../hooks/useWheelLogic';
 
 interface WheelProps {
     items: GiftItem[];
@@ -21,38 +18,19 @@ interface WheelProps {
 }
 
 const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIndex, mode }: WheelProps) => {
-    const [manualRotation, setManualRotation] = useState(0);
-    
-    const handleSpinComplete = (rotation: number) => {
-        if (onSpinComplete) {
-            const selectedIndex = calculateSelectedSegment(rotation, items.length);
-            const selectedItem = items[selectedIndex];
-            onSpinComplete(selectedItem);
-        }
-    };
-
-    const { rotation: spinRotation, isSpinning } = useWheelSpin(externalIsSpinning, handleSpinComplete, targetIndex, items.length);
-    
-    const { 
-        wheelRef, 
-        isDragging, 
-        handleMouseDown, 
-        handleTouchStart 
-    } = useWheelDrag({
+    const {
+        wheelRef,
+        isDragging,
+        handleMouseDown,
+        handleTouchStart,
+        rotation,
         isSpinning,
-        currentRotation: manualRotation,
-        onRotationChange: setManualRotation,
+    } = useWheelLogic({
+        items,
+        externalIsSpinning,
+        onSpinComplete,
+        targetIndex,
     });
-
-    // Используем rotation от спина или ручное вращение
-    const rotation = isSpinning ? spinRotation : manualRotation;
-
-    // Синхронизируем manual rotation после окончания спина
-    useEffect(() => {
-        if (!isSpinning && spinRotation !== 0) {
-            setManualRotation(spinRotation);
-        }
-    }, [isSpinning, spinRotation]);
 
     const segmentAngle = calculateSegmentAngle(items.length);
     const conicGradient = generateConicGradient(items.length);
@@ -82,7 +60,7 @@ const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIn
             </div>
          
 
-            <div 
+            <div
                 ref={wheelRef}
                 className={`${cls.wheel} ${isDragging ? cls.dragging : ''} ${!isSpinning ? cls.interactive : ''}`}
                 style={{

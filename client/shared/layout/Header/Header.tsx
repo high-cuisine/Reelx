@@ -5,6 +5,7 @@ import { useUserStore } from '@/entites/user/model/user';
 import { useTelegram } from '@/shared/lib/hooks/useTelegram';
 import tonIcon from '@/assets/ton.svg';
 import starIcon from '@/assets/star.svg';
+import Link from 'next/link';
 
 const Header = () => {
     const { user } = useUserStore();
@@ -30,7 +31,7 @@ const Header = () => {
 
          <div className={cls.rightContainer}>
 
-             <div className={cls.avatar}>
+             <Link href="/profile" className={cls.avatar}>
                  {photoUrl ? (
                      <Image 
                          src={photoUrl} 
@@ -44,7 +45,7 @@ const Header = () => {
                          {usernameInitial.slice(0, 1).toUpperCase()}
                      </span>
                  )}
-             </div>
+             </Link>
          </div>
      </header>
     )
