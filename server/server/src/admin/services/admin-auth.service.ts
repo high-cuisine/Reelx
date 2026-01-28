@@ -17,10 +17,18 @@ export class AdminAuthService {
 
   async login(loginDto: AdminLoginDto): Promise<AdminLoginResponse> {
     const adminLogin = this.configService.get<string>('ADMIN_LOGIN');
-    const adminPasswordHash = this.configService.get<string>('ADMIN_PASSWORD_HASH');
+    // Получаем хэш пароля - используем process.env напрямую, так как ConfigService может обрезать значения с $
+    const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH || this.configService.get<string>('ADMIN_PASSWORD_HASH');
 
     if (!adminLogin || !adminPasswordHash) {
       this.logger.error('ADMIN_LOGIN or ADMIN_PASSWORD_HASH not configured');
+      throw new UnauthorizedException('Admin configuration error');
+    }
+    
+    // Проверяем, что хэш имеет правильный формат bcrypt (должен начинаться с $2b$ или $2a$)
+    if (!adminPasswordHash.startsWith('$2b$') && !adminPasswordHash.startsWith('$2a$')) {
+      this.logger.error(`Invalid password hash format. Hash length: ${adminPasswordHash.length}, starts with: ${adminPasswordHash.substring(0, 10)}`);
+      this.logger.error('Make sure ADMIN_PASSWORD_HASH in .env file is wrapped in quotes or $ symbols are escaped');
       throw new UnauthorizedException('Admin configuration error');
     }
 
@@ -32,9 +40,6 @@ export class AdminAuthService {
 
     // Проверяем пароль (сравниваем хэш)
     const isPasswordValid = await bcrypt.compare(loginDto.password, adminPasswordHash);
-    this.logger.warn('passwords dont compate');
-    this.logger.warn(loginDto.password);
-    this.logger.warn(adminPasswordHash);
 
     if (!isPasswordValid) {
       this.logger.warn(`Failed login attempt with login: ${loginDto.login}`);
