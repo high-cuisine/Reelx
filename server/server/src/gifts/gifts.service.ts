@@ -160,16 +160,43 @@ export class GiftsService {
         formatGiftItem(g, type === 'secret' ? 'secret' : 'gift'),
       );
 
+      const totalSlots = 20;
+      const noLootShare = 0.6; // 60% слотов — no-loot
+      const noLootSlotsCount = Math.round(totalSlots * noLootShare); // 12 из 20
+      let giftSlotsToDistribute = Math.max(0, totalSlots - noLootSlotsCount); // оставшиеся 8 слотов под подарки
+
       const slots: any[] = [];
 
-      // Добавляем по одному слоту для каждого доступного подарка
-      for (let i = 0; i < formattedGifts.length; i++) {
-        slots.push(formattedGifts[i]);
+      // Если подарков нет — весь барабан no-loot
+      if (formattedGifts.length === 0) {
+        for (let i = 0; i < totalSlots; i++) {
+          slots.push({
+            type: 'no-loot',
+            price: 0,
+            image: '',
+            name: 'No loot',
+          });
+        }
+        return slots;
       }
 
-      // Остальные слоты забиваем no-loot, всего 20 слотов
-      const totalSlots = 20;
-      const noLootSlotsCount = Math.max(0, totalSlots - slots.length);
+      // Распределяем оставшиеся слоты равномерно между подарками
+      const baseSlotsPerGift = Math.floor(giftSlotsToDistribute / formattedGifts.length);
+      let extraSlots = giftSlotsToDistribute % formattedGifts.length;
+
+      formattedGifts.forEach((gift) => {
+        let slotsForThisGift = baseSlotsPerGift;
+        if (extraSlots > 0) {
+          slotsForThisGift += 1;
+          extraSlots -= 1;
+        }
+
+        for (let i = 0; i < slotsForThisGift; i++) {
+          slots.push(gift);
+        }
+      });
+
+      // Добавляем no-loot слоты (60% от барабана)
       for (let i = 0; i < noLootSlotsCount; i++) {
         slots.push({
           type: 'no-loot',
