@@ -17,9 +17,10 @@ interface WheelProps {
     isSpinning?: boolean;
     onSpinComplete?: (selectedItem: GiftItem) => void;
     targetIndex?: number | null;
+    mode: 'normal' | 'mystery' | 'multy';
 }
 
-const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIndex }: WheelProps) => {
+const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIndex, mode }: WheelProps) => {
     const [manualRotation, setManualRotation] = useState(0);
     
     const handleSpinComplete = (rotation: number) => {
@@ -106,7 +107,7 @@ const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIn
                                 transform: 'translate(-50%, -50%)',
                             }}
                         >
-                            {item.type === 'secret' ? (
+                            {mode === 'mystery' ? (
                                 <Image 
                                     src={secretIcon} 
                                     alt="Secret" 
@@ -114,7 +115,7 @@ const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIn
                                     height={50}
                                     className={cls.segmentImage}
                                 />
-                            ) : item.type === 'money' ? (
+                            ) : mode === 'multy' && item.type === 'money' ? (
                                 <MoneyBadge item={item} />
                             ) : item.image ? (
                                 <Image 

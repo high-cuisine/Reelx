@@ -5,6 +5,7 @@ import { GiftsModal } from '@/shared/layout/GiftsModal/GiftsModal';
 import { WinModal } from '@/shared/layout/WinModal/WinModal';
 import { useSpinPage } from './hooks/useSpinPage';
 import cls from './spin.module.scss';
+import { getMode } from './helpers/getMode.helper';
 
 export default function SpinPage() {
     const {
@@ -33,6 +34,7 @@ export default function SpinPage() {
                     isSpinning={isSpinning}
                     onSpinComplete={onSpinComplete}
                     targetIndex={targetIndex}
+                    mode={getMode(currency, totalPrice)}
                 />
                 <Bets
                     rolls={rolls}
