@@ -5,8 +5,20 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.settings-note {
+  margin: 0 0 24px 0;
+  font-size: 14px;
+  color: #666;
+}
+
 .settings-form {
   margin-bottom: 32px;
+}
+
+.form-section-desc {
+  margin: -8px 0 16px 0;
+  font-size: 13px;
+  color: #666;
 }
 
 .form-section {

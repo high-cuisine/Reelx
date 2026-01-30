@@ -246,16 +246,19 @@ export class AdminController {
     }));
   }
 
-  // Settings endpoints
+  // Settings endpoints (только Redis, БД не используется)
   @Get('settings')
   @UseGuards(AdminSessionGuard)
   async getSettings() {
     return this.settingsRepository.getSettings();
   }
 
+  /** Обновляет настройки только в Redis (запись admin:game:settings) */
   @Patch('settings')
   @UseGuards(AdminSessionGuard)
-  async updateSettings(@Body() body: { soloRTP?: number; upgradeRTP?: number; pvpRake?: number }) {
+  async updateSettings(
+    @Body() body: { soloRTP?: number; upgradeRTP?: number; wheelRTP?: number; pvpRake?: number },
+  ) {
     return this.settingsRepository.setSettings(body);
   }
 

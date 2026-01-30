@@ -3,6 +3,7 @@ import api from './api';
 export interface GameSettings {
   soloRTP: number;
   upgradeRTP: number;
+  wheelRTP: number;
   pvpRake: number;
 }
 

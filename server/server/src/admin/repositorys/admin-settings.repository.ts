@@ -4,6 +4,7 @@ import { RedisService } from '../../../libs/infrustructure/redis/redis.service';
 export interface GameSettings {
   soloRTP: number;
   upgradeRTP: number;
+  wheelRTP: number;
   pvpRake: number;
 }
 
@@ -33,6 +34,7 @@ export class AdminSettingsRepository {
     const defaultSettings: GameSettings = {
       soloRTP: 95,
       upgradeRTP: 90,
+      wheelRTP: 95,
       pvpRake: 5,
     };
 
