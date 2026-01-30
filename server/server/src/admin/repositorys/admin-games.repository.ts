@@ -18,17 +18,13 @@ export class AdminGamesRepository {
       if (filters.to) where.createdAt.lte = filters.to;
     }
 
-    return this.prisma.games.findMany({
+    return this.prisma.userGames.findMany({
       where,
       include: {
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                username: true,
-              },
-            },
+        user: {
+          select: {
+            id: true,
+            username: true,
           },
         },
       },
@@ -49,16 +45,16 @@ export class AdminGamesRepository {
       if (filters.to) where.createdAt.lte = filters.to;
     }
 
-    const games = await this.prisma.games.findMany({ where });
+    const games = await this.prisma.userGames.findMany({ where });
 
     const totalGames = games.length;
-    const soloGames = games.filter(g => g.type === 'PRIVATE').length;
-    const pvpGames = games.filter(g => g.type === 'PUBLIC').length;
-    const upgradeGames = 0; // Нет такого типа в схеме
+    const soloGames = games.length; // все записи user_games — solo
+    const pvpGames = 0;
+    const upgradeGames = 0;
 
-    const totalRake = games.reduce((sum, game) => sum + game.bet, 0);
-    const totalTurnover = totalRake;
-    const totalRTP = 0; // Нужно будет рассчитать на основе выигрышей
+    const totalTurnover = games.reduce((sum, g) => sum + g.priceAmount, 0);
+    const totalRake = totalTurnover;
+    const totalRTP = 0;
 
     return {
       totalGames,

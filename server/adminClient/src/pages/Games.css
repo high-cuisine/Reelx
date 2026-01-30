@@ -71,3 +71,36 @@
   padding: 40px;
   color: #666;
 }
+
+.games-list-section {
+  margin-top: 32px;
+}
+
+.games-list-section h2 {
+  font-size: 18px;
+  margin-bottom: 16px;
+  color: #333;
+}
+
+.games-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.games-table th,
+.games-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.games-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #555;
+}
+
+.games-table tbody tr:hover {
+  background: #f8f9fa;
+}

@@ -80,4 +80,11 @@ export class AdminUsersRepository {
       orderBy: { createdAt: 'desc' },
     });
   }
+
+  async setBanned(userId: string, isBanned: boolean) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { isBanned },
+    });
+  }
 }

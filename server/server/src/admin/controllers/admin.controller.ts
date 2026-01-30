@@ -145,6 +145,7 @@ export class AdminController {
       photoUrl: user.photoUrl,
       tonBalance: user.tonBalance,
       starsBalance: user.starsBalance,
+      isBanned: user.isBanned,
       createdAt: user.createdAt.toISOString(),
     }));
   }
@@ -164,6 +165,7 @@ export class AdminController {
       photoUrl: user.photoUrl,
       tonBalance: user.tonBalance,
       starsBalance: user.starsBalance,
+      isBanned: user.isBanned,
       createdAt: user.createdAt.toISOString(),
     };
   }
@@ -171,15 +173,22 @@ export class AdminController {
   @Post('users/:userId/ban')
   @UseGuards(AdminSessionGuard)
   async banUser(@Param('userId') userId: string) {
-    // TODO: Реализовать бан пользователя (можно использовать Redis или добавить поле в БД)
-    // Пока возвращаем успех
+    const user = await this.usersRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    await this.usersRepository.setBanned(userId, true);
     return { success: true };
   }
 
   @Post('users/:userId/unban')
   @UseGuards(AdminSessionGuard)
   async unbanUser(@Param('userId') userId: string) {
-    // TODO: Реализовать разбан пользователя
+    const user = await this.usersRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    await this.usersRepository.setBanned(userId, false);
     return { success: true };
   }
 

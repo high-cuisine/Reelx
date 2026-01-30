@@ -38,11 +38,13 @@ export default function Users() {
   };
 
   const handleUnban = async (userId: string) => {
-    try {
-      await usersService.unbanUser(userId);
-      loadUsers();
-    } catch (error) {
-      alert('Ошибка при разбане пользователя');
+    if (confirm('Разбанить пользователя?')) {
+      try {
+        await usersService.unbanUser(userId);
+        loadUsers();
+      } catch (error) {
+        alert('Ошибка при разбане пользователя');
+      }
     }
   };
 
@@ -112,20 +114,26 @@ export default function Users() {
                 <th>ID</th>
                 <th>Ник</th>
                 <th>Telegram ID</th>
-                <th>TON баланс</th>
-                <th>STARS баланс</th>
+                <th>TON</th>
+                <th>STARS</th>
+                <th>Статус</th>
                 <th>Дата регистрации</th>
                 <th>Действия</th>
               </tr>
             </thead>
             <tbody>
               {users.map((user) => (
-                <tr key={user.id}>
+                <tr key={user.id} className={user.isBanned ? 'user-banned' : ''}>
                   <td>{user.id.slice(0, 8)}...</td>
                   <td>{user.username}</td>
                   <td>{user.telegramId || '-'}</td>
                   <td>{user.tonBalance.toFixed(2)}</td>
                   <td>{user.starsBalance.toFixed(2)}</td>
+                  <td>
+                    <span className={user.isBanned ? 'status-banned' : 'status-ok'}>
+                      {user.isBanned ? 'Забанен' : 'Активен'}
+                    </span>
+                  </td>
                   <td>{new Date(user.createdAt).toLocaleDateString('ru-RU')}</td>
                   <td>
                     <div className="action-buttons">
@@ -135,18 +143,21 @@ export default function Users() {
                       >
                         Баланс
                       </button>
-                      <button
-                        onClick={() => handleBan(user.id)}
-                        className="btn btn-danger"
-                      >
-                        Бан
-                      </button>
-                      <button
-                        onClick={() => handleUnban(user.id)}
-                        className="btn btn-success"
-                      >
-                        Разбан
-                      </button>
+                      {user.isBanned ? (
+                        <button
+                          onClick={() => handleUnban(user.id)}
+                          className="btn btn-success"
+                        >
+                          Разбан
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleBan(user.id)}
+                          className="btn btn-danger"
+                        >
+                          Бан
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

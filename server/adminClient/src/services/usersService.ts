@@ -7,6 +7,7 @@ export interface User {
   photoUrl: string | null;
   tonBalance: number;
   starsBalance: number;
+  isBanned: boolean;
   createdAt: string;
 }
 

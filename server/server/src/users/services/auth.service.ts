@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { UserLoginInterface } from '../interface/user-login.interface';
 import { UserRepository } from '../repositorys/user.repository';
 import { JwtService } from './jwt.service';
@@ -19,6 +19,10 @@ export class AuthService {
 
     if(!user) {
       user = await this.userRepository.createUser(userData);
+    }
+
+    if(user.isBanned) {
+      throw new BadRequestException('is Banned');
     }
 
     const { accessToken, refreshToken } = this.jwtService.generateTokens(user);
