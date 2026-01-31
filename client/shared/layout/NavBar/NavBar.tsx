@@ -14,7 +14,7 @@ const NavBar = () => {
             title:'Играть',
             image:playImage,
             imageActive:playActiveImage,
-            link:'/game',
+            link:'/game/spin',
             isMainPage:true,
         },
         {

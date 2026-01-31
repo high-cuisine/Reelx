@@ -72,4 +72,11 @@
             }
         }
     }
+
+    & .errorMessage {
+        margin: 10px 0 0;
+        font-size: 12px;
+        font-weight: 500;
+        color: #ff6b6b;
+    }
 }
