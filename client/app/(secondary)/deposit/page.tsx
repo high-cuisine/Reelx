@@ -21,9 +21,11 @@ const DepositPage = () => {
     handleSubmit,
     walletConnected,
     handleConnectWallet,
+    walletBalance,
+    insufficientBalance,
   } = useDeposit();
 
-  const isDisabled = isProcessing || tonLoading;
+  const isDisabled = isProcessing || tonLoading || insufficientBalance;
 
   return (
     <div className={cls.deposit}>
@@ -74,6 +76,18 @@ const DepositPage = () => {
             customClass={cls.depositButton}
             text={isDisabled ? 'Обработка...' : `Пополнить на ${inputValue} ${activeCard.item}`}
           />
+        </div>
+      )}
+
+      {activeCard.type === 'ton' && walletConnected && walletBalance !== null && (
+        <div style={{ marginTop: '12px', textAlign: 'center', fontSize: '12px', color: '#aaa' }}>
+          Баланс кошелька: {walletBalance.toFixed(2)} TON
+        </div>
+      )}
+
+      {insufficientBalance && (
+        <div style={{ color: '#ff6b6b', marginTop: '8px', textAlign: 'center', fontSize: '13px' }}>
+          Недостаточно средств на кошельке
         </div>
       )}
 

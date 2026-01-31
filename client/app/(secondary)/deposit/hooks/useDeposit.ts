@@ -1,9 +1,9 @@
-import { useState, useCallback, useContext } from 'react';
+import { useState, useCallback, useContext, useEffect } from 'react';
 import { usePayment } from './usePayment';
 import useSendTONTransaction from '@/shared/lib/hooks/useSendTonTransaction';
 import { paymentService } from '@/features/payment/payment';
 import { useUserStore } from '@/entites/user/model/user';
-import { TonConnectUIContext, useTonWallet } from '@tonconnect/ui-react';
+import { TonConnectUIContext, useTonWallet, useTonAddress } from '@tonconnect/ui-react';
 import {
   DEPOSIT_CARDS,
   DEPOSIT_PRESET_AMOUNTS,
@@ -24,6 +24,20 @@ interface UseDepositReturn {
   handleSubmit: () => Promise<void>;
   walletConnected: boolean;
   handleConnectWallet: () => void;
+  walletBalance: number | null;
+  insufficientBalance: boolean;
+}
+
+async function fetchWalletBalance(address: string): Promise<number | null> {
+  try {
+    const res = await fetch(`https://tonapi.io/v2/accounts/${address}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const balanceNano = data?.balance ?? 0;
+    return Number(balanceNano) / 1e9;
+  } catch {
+    return null;
+  }
 }
 
 export const useDeposit = (): UseDepositReturn => {
@@ -34,6 +48,7 @@ export const useDeposit = (): UseDepositReturn => {
 
   const tonConnectUI = useContext(TonConnectUIContext);
   const wallet = useTonWallet();
+  const walletAddress = useTonAddress();
 
   const { sendTransaction, loading: tonLoading, error: tonError } = useSendTONTransaction(
     String(ADMIN_WALLET_ADDRESS || ''),
@@ -42,8 +57,24 @@ export const useDeposit = (): UseDepositReturn => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeCard, setActiveCard] = useState<DepositCard>(DEPOSIT_CARDS[0]);
   const [inputValue, setInputValue] = useState<number>(1);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
 
   const walletConnected = !!wallet;
+
+  // Загружаем баланс кошелька при подключении
+  useEffect(() => {
+    if (walletAddress) {
+      fetchWalletBalance(walletAddress).then(setWalletBalance);
+    } else {
+      setWalletBalance(null);
+    }
+  }, [walletAddress]);
+
+  const insufficientBalance =
+    activeCard.type === 'ton' &&
+    walletConnected &&
+    walletBalance !== null &&
+    walletBalance < inputValue;
 
   const handleConnectWallet = useCallback(() => {
     if (!tonConnectUI) return;
@@ -126,6 +157,8 @@ export const useDeposit = (): UseDepositReturn => {
     handleSubmit,
     walletConnected,
     handleConnectWallet,
+    walletBalance,
+    insufficientBalance,
   };
 };
 
