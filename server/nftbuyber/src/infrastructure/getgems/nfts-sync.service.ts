@@ -1,11 +1,11 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy, Inject, forwardRef } from '@nestjs/common';
+import { Address } from '@ton/ton';
 import { GetGemsApiClient } from './getgems-api.client';
 import { RedisService } from '../redis/redis.service';
 import { GiftsSyncService } from './gifts-sync.service';
 import { NftOnSaleData, NftOnSale, GetGemsNftListing } from './interfaces/getgems-response.interface';
-import { isGetGemsV4SaleFromGetGemsApi } from './getgems-v4.filter';
 import { TonApiClient } from '../tonapi/tonapi.client';
-import { isGetGemsV4Sale, tonApiNftToGetGemsListing } from './getgems-v4.filter';
+import { NftPurchaseService } from '../../nft/services/nft-purchase.service';
 
 @Injectable()
 export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
@@ -21,6 +21,8 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
     private readonly redisService: RedisService,
     private readonly giftsSyncService: GiftsSyncService,
     private readonly tonApiClient: TonApiClient,
+    @Inject(forwardRef(() => NftPurchaseService))
+    private readonly nftPurchaseService: NftPurchaseService,
   ) {}
 
   async onModuleInit() {
@@ -112,8 +114,19 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
       
       let saved = 0;
       for (const nft of nfts) {
-        if (!isGetGemsV4SaleFromGetGemsApi(nft.sale)) {
-          this.logger.debug(`Skipping NFT ${nft.address}: not nft_sale_getgems_v4`);
+        const saleAddress = nft.sale?.contractAddress;
+        if (!saleAddress) {
+          this.logger.debug(`Skipping NFT ${nft.address}: no sale contract address`);
+          continue;
+        }
+        try {
+          const isGetGemsV4 = await this.nftPurchaseService.checkNftContractType(Address.parse(saleAddress));
+          if (!isGetGemsV4) {
+            this.logger.debug(`Skipping NFT ${nft.address}: not nft_sale_getgems_v4 (code hash check)`);
+            continue;
+          }
+        } catch (e) {
+          this.logger.debug(`Skipping NFT ${nft.address}: checkNftContractType failed`);
           continue;
         }
         await this.saveNftToRedis(nft, collectionName);
@@ -184,14 +197,9 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
   async refreshNftFromTonApi(nftAddress: string): Promise<GetGemsNftListing | null> {
     try {
       const item = await this.tonApiClient.getNftByAddress(nftAddress);
-      if (!item || !item.sale || !isGetGemsV4Sale(item.sale)) {
-        return null;
-      }
-      const listing = tonApiNftToGetGemsListing(item);
-      if (listing) {
-        await this.saveGetGemsListingToRedis(listing);
-        return listing;
-      }
+      this.logger.debug(`TonApi item: ${JSON.stringify(item)}`);
+      
+      
       return null;
     } catch (error: any) {
       this.logger.warn(`Refresh NFT from TonApi ${nftAddress}: ${error.message}`);
@@ -211,16 +219,7 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
       try {
         const items = await this.tonApiClient.getAccountNfts(accountAddress);
         total += items.length;
-        for (const item of items) {
-          if (!item.sale || !isGetGemsV4Sale(item.sale)) {
-            continue;
-          }
-          const listing = tonApiNftToGetGemsListing(item);
-          if (listing) {
-            await this.saveGetGemsListingToRedis(listing);
-            saved++;
-          }
-        }
+        
         await new Promise((r) => setTimeout(r, 300));
       } catch (error: any) {
         this.logger.warn(`TonApi sync for account ${accountAddress}: ${error.message}`);
@@ -381,4 +380,5 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
       return { totalNfts: 0, lastUpdated: null };
     }
   }
+  
 }

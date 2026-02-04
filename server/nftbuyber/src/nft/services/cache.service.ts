@@ -13,6 +13,10 @@ export class CacheService {
   private readonly cache = new Map<string, CacheEntry>();
   private readonly defaultTtl = 5 * 60 * 1000; // 5 минут по умолчанию
 
+  constructor() {
+    this.cleanup();
+  }
+
   get(key: string): NftResponseDto | null {
     const entry = this.cache.get(key);
     

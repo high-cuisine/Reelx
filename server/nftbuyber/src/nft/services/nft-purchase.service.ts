@@ -1,12 +1,13 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TonClient, WalletContractV4, Address } from '@ton/ton';
-import { internal, beginCell, toNano } from '@ton/core';
+import { internal, beginCell, toNano, Cell } from '@ton/core';
 import { mnemonicToWalletKey } from 'ton-crypto';
 import { getHttpEndpoint } from '@orbs-network/ton-access';
 import axios from 'axios';
 import { BuyNftResponse } from '../dto/buy-nft.dto';
 import { TransferNftResponse } from '../dto/transfer-nft.dto';
+import { hexContractType } from '@/src/infrastructure/getgems/constants/hexContractType.contant';
 
 @Injectable()
 export class NftPurchaseService implements OnModuleInit {
@@ -525,6 +526,19 @@ export class NftPurchaseService implements OnModuleInit {
     }
   }
   
-  
+  async checkNftContractType(address: Address) {
+    try {
+      const contractState = await this.client!.getContractState(address);
+      const codeCell = Cell.fromBoc(Buffer.from(contractState.code!))[0];
+      const codeHash = codeCell.hash().toString("hex");
+
+      const contractType = hexContractType[codeHash.toString()];
+      
+      return contractType && contractType.toString().includes('nft_sale_getgems');
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  }
 }
 
