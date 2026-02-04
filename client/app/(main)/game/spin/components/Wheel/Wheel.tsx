@@ -138,7 +138,7 @@ const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIn
                                 position: 'absolute',
                                 top: `${y}%`,
                                 left: `${x}%`,
-                                transform: 'translate(-50%, -50%)',
+                                transform: `translate(-50%, -50%) rotate(${-rotation}deg)`,
                             }}
                         >
                             {mode === 'mystery' ? (

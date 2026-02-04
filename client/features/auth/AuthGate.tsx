@@ -15,6 +15,10 @@ export function AuthGate({ children }: AuthGateProps) {
             <Error
                 errorText="Аккаунт заблокирован"
                 errorSubText="Ваш аккаунт был заблокирован. Обратитесь в поддержку."
+                button={{
+                    link: 'https://t.me/ReelX_admin',
+                    text: 'Написать в поддержку',
+                }}
             />
         );
     }

@@ -7,9 +7,13 @@ import Link from 'next/link';
 interface ErrorProps {
     errorText: string;
     errorSubText: string;
+    button?:{
+        link:string;
+        text:string
+    };
 }
 
-const Error = ({errorText, errorSubText}:ErrorProps) => {
+const Error = ({errorText, errorSubText, button}:ErrorProps) => {
 
     return (
         <div className={cls.error}>
@@ -20,8 +24,9 @@ const Error = ({errorText, errorSubText}:ErrorProps) => {
                 <p className={cls.content}>{errorSubText}</p>
             </div>
 
-            <Link className={cls.button} href='/'>
-                <Button text='Понятно'></Button>
+
+            <Link className={cls.button} href={button?.link ?? '/'}>
+                <Button text={button?.text ?? 'Понятно'}></Button>
             </Link>
         </div>
     )
