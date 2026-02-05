@@ -39,7 +39,7 @@ export const useSpinGame = (
 ): UseSpinGameReturn => {
     const {
         defaultRolls = 1,
-        pricePerRoll = 5,
+        pricePerRoll = 15,
         minRolls = 1,
         maxRolls,
         giftCount: initialGiftCount = 5,

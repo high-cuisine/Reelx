@@ -2,12 +2,16 @@ import { useCurrency } from './useCurrency';
 import { useGifts } from './useGifts';
 import { useGameResult } from './useGameResult';
 import { useSpinGame } from './useSpinGame';
+import { useMinPrice } from './useMinPrice';
 import { useUserStore } from '@/entites/user/model/user';
 
 export const useSpinPage = () => {
     const { currency, toggleCurrency } = useCurrency();
     const { startGame, handleGameComplete } = useGameResult();
     const { user } = useUserStore();
+    const { pricePerRollTon, pricePerRollStars } = useMinPrice();
+
+    const calibratedPricePerRoll = currency === 'ton' ? pricePerRollTon : pricePerRollStars;
 
     const {
         rolls,
@@ -23,11 +27,11 @@ export const useSpinPage = () => {
         targetIndex,
     } = useSpinGame(
         {
-            defaultRolls: currency === 'stars' ? 5 : 1,
-            pricePerRoll: 5,
-            minRolls: currency === 'stars' ? 5 : 1,
+            defaultRolls: 1,
+            pricePerRoll: calibratedPricePerRoll,
+            minRolls: 1,
             giftCount: 1,
-            rollStep: currency === 'stars' ? 5 : 1,
+            rollStep: 1,
         },
         handleGameComplete
     );

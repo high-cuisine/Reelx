@@ -4,6 +4,7 @@ import { useEffect, useContext, useState } from 'react';
 import Image from 'next/image';
 import { useTonWallet, TonConnectUIContext } from '@tonconnect/ui-react';
 import { UserGift } from '@/entites/user/api/api';
+import { useUserStore } from '@/entites/user/model/user';
 import { nftWithdrawService } from '@/features/nft/nft';
 import cls from './NftModal.module.scss';
 
@@ -42,7 +43,8 @@ export const NftModal = ({ isOpen, onClose, nft, onSell, onWithdraw }: NftModalP
         setSellError(null);
 
         try {
-            await nftWithdrawService.buyNft(nft.id);
+            const response = await nftWithdrawService.buyNft(nft.id);
+            useUserStore.getState().updateBalance(response.refundAmount, 'ton');
             onSell(nft);
             onClose();
         } catch (error: any) {

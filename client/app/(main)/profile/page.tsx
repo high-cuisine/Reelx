@@ -45,7 +45,7 @@ const ProfilePage = () => {
             <div className={cls.balance}>
                 <div className={cls.profileBalance}>
                     <Image src={ton} alt="balance" width={20} height={20} />
-                    <span className={cls.tonBalance}>{tonBalance}</span>
+                    <span className={cls.tonBalance}>{tonBalance.toFixed(2)}</span>
                 </div>
                 <span className={cls.balanceSubtitle}>Всего выиграно</span>
             </div>

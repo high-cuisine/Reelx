@@ -24,6 +24,9 @@ export class GiftsService {
   private readonly axiosInstance: AxiosInstance;
   private readonly nftBuyerUrl: string;
   private readonly WHEEL_TTL_SECONDS = 10 * 60; // 10 минут
+  private readonly MIN_PRICE_REDIS_KEY = 'gifts:min_price_ton';
+  private readonly MIN_PRICE_TTL_SECONDS = 5 * 60; // 5 минут
+  private readonly MIN_PRICE_PROBE_STEP = 0.5; // шаг увеличения ставки при поиске мин. цены (TON)
 
   constructor(
     private configService: ConfigService,
@@ -127,12 +130,13 @@ export class GiftsService {
     onOriginalData?: (data: any[]) => void,
   ) {
     const url = `${this.nftBuyerUrl}/api/nft/gifts/by-price`;
-      
     const inputCurrency = currencyType === 'stars' ? 'stars' : 'ton';
-    const amountTon = convertAmountToTon(amount, inputCurrency);
+    let amountTon = convertAmountToTon(amount, inputCurrency);
+    const minPriceTon = await this.getMinPriceTon();
+    amountTon = Math.max(amountTon, minPriceTon);
 
     this.logger.debug(
-      `Proxying request to ${url} with body: ${JSON.stringify({ amount: amountTon })} (from ${amount} ${inputCurrency})`,
+      `Proxying request to ${url} with body: ${JSON.stringify({ amount: amountTon })} (from ${amount} ${inputCurrency}, min ${minPriceTon})`,
     );
 
     const response = await this.axiosInstance.post(url, { amount: amountTon });
@@ -569,6 +573,66 @@ export class GiftsService {
       success: true,
       refundAmount,
       giftName: gift.giftName,
+    };
+  }
+
+  /**
+   * Получает минимальную ставку в TON, при которой nftBuyer возвращает непустой массив подарков.
+   * Результат кешируется в Redis на 5 минут.
+   */
+  async getMinPriceTon(): Promise<number> {
+    const cached = await this.redisService.get(this.MIN_PRICE_REDIS_KEY);
+    if (cached != null) {
+      const value = parseFloat(cached);
+      if (!Number.isNaN(value)) return value;
+    }
+
+    const url = `${this.nftBuyerUrl}/api/nft/gifts/by-price`;
+    let amountTon = this.MIN_PRICE_PROBE_STEP;
+
+    while (amountTon <= 100) {
+      try {
+        const response = await this.axiosInstance.post(url, { amount: amountTon });
+        const gifts: any[] = response.data?.gifts ?? [];
+        if (Array.isArray(gifts) && gifts.length > 0) {
+          await this.redisService.set(
+            this.MIN_PRICE_REDIS_KEY,
+            String(amountTon),
+            this.MIN_PRICE_TTL_SECONDS,
+          );
+          this.logger.debug(`Min price (TON) cached: ${amountTon}`);
+          return amountTon;
+        }
+      } catch (err) {
+        this.logger.warn(`Probe min price at ${amountTon} TON failed: ${(err as Error).message}`);
+      }
+      amountTon += this.MIN_PRICE_PROBE_STEP;
+    }
+
+    const fallback = 1;
+    await this.redisService.set(
+      this.MIN_PRICE_REDIS_KEY,
+      String(fallback),
+      this.MIN_PRICE_TTL_SECONDS,
+    );
+    return fallback;
+  }
+
+  /**
+   * Возвращает минимальную ставку в TON и в STARS для клиента (с учётом курса).
+   */
+  async getMinPrice(): Promise<{ ton: number; stars: number }> {
+    const minPriceTon = await this.getMinPriceTon();
+    const rates = await this.currancyService.getCurrancyRates();
+    // minPriceTon TON = minPriceTon * rates.ton USD; в STARS это (minPriceTon * rates.ton) / rates.stars
+    const minPriceStarsRaw =
+      rates.stars > 0
+        ? (minPriceTon * rates.ton) / rates.stars
+        : minPriceTon * 10;
+    const minPriceStars = Math.ceil(minPriceStarsRaw / 100) * 100;
+    return {
+      ton: Number(minPriceTon.toFixed(2)),
+      stars: minPriceStars,
     };
   }
 

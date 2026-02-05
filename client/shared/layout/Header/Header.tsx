@@ -25,7 +25,7 @@ const Header = () => {
              
              <div className={cls.starsBalance}>
                  <Image src={starIcon} alt="Stars" width={20} height={18} />
-                 <span className={cls.balanceValue}>{starsBalance}</span>
+                 <span className={cls.balanceValue}>{starsBalance.toFixed(2)}</span>
              </div>
         </div>
 

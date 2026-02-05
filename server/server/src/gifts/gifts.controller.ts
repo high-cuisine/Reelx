@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
 import { GiftsService } from './gifts.service';
 import { GetGiftsByPriceDto } from './dto/get-gifts-by-price.dto';
 import { WithdrawNftDto } from './dto/withdraw-nft.dto';
@@ -17,6 +17,11 @@ export class GiftsController {
     private readonly giftsService: GiftsService,
     private readonly withdrawGiftsService: WithdrawGiftsService,
   ) {}
+
+  @Get('min-price')
+  async getMinPrice() {
+    return this.giftsService.getMinPrice();
+  }
 
   @Post('by-price')
   @UseGuards(JwtAuthGuard)

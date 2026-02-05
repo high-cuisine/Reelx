@@ -18,11 +18,11 @@ const Deposit = ({ tonBalance, starsBalance }: DepositProps) => {
                 <h2 className={cls.header}>Баланс</h2>
                 <div className={cls.balances}>
                     <div className={cls.ton}>
-                        <span>{tonBalance}</span>
+                        <span>{tonBalance.toFixed(2)}</span>
                         <Image src={tonImage} alt="ton" width={20} height={20} />
                     </div>
                     <div className={cls.star}>
-                        <span>{starsBalance}</span>
+                        <span>{starsBalance.toFixed(2)}</span>
                         <Image src={starImage} alt="star" width={20} height={20} />
                     </div>
                 </div>

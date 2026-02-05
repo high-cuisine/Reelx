@@ -1,6 +1,11 @@
 import * as api from '@/shared/lib/api/api';
 import { GiftItem } from '../interfaces/giftItem.interface';
 
+export interface MinPriceResponse {
+    ton: number;
+    stars: number;
+}
+
 interface GetGiftsResponse {
     success: boolean;
     amount: number;
@@ -83,6 +88,11 @@ class GiftsService {
 
     async startGame(): Promise<StartGameResponse> {
         const response = await api.$authHost.post<StartGameResponse>('/gifts/start-game');
+        return response.data;
+    }
+
+    async getMinPrice(): Promise<MinPriceResponse> {
+        const response = await api.$host.get<MinPriceResponse>('/gifts/min-price');
         return response.data;
     }
 }

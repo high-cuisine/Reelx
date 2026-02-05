@@ -30,7 +30,6 @@ export class AdminSettingsRepository {
       return JSON.parse(settings);
     }
 
-    // Дефолтные значения
     const defaultSettings: GameSettings = {
       soloRTP: 95,
       upgradeRTP: 90,
@@ -38,7 +37,7 @@ export class AdminSettingsRepository {
       pvpRake: 5,
     };
 
-    await this.setSettings(defaultSettings);
+    await this.redisService.set(this.SETTINGS_KEY, JSON.stringify(defaultSettings));
     return defaultSettings;
   }
 
