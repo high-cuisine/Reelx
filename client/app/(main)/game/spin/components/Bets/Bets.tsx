@@ -16,6 +16,7 @@ interface BetsProps {
     rolls: number;
     pricePerRoll: number;
     totalPrice: number;
+    minStake?: number;
     giftCount: number;
     isSpinning: boolean;
     canPlay: boolean;
@@ -31,6 +32,7 @@ const Bets = ({
     rolls,
     pricePerRoll,
     totalPrice,
+    minStake = 1,
     giftCount,
     isSpinning,
     canPlay,
@@ -102,7 +104,7 @@ const Bets = ({
                     <button 
                         className={cls.controlButton}
                         onClick={onDecreaseRolls}
-                        disabled={isSpinning || rolls <= 1}
+                        disabled={isSpinning || totalPrice <= minStake}
                     >
                         <span className={cls.minus}>−</span>
                     </button>

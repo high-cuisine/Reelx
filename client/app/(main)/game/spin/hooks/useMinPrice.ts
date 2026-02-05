@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { giftsService, MinPriceResponse } from '@/entites/gifts/api/api';
 
+const MIN_STAKE_TON = 5;
 const STEP_TON = 15;
+const MIN_STAKE_STARS = 150;
+const STEP_STARS = 150;
 
 export const useMinPrice = () => {
     const [minPrice, setMinPrice] = useState<MinPriceResponse | null>(null);
@@ -19,7 +22,7 @@ export const useMinPrice = () => {
             } catch (error) {
                 console.error('Failed to fetch min price:', error);
                 if (!cancelled) {
-                    setMinPrice({ ton: STEP_TON, stars: STEP_TON * 10 });
+                    setMinPrice({ ton: MIN_STAKE_TON, stars: MIN_STAKE_STARS });
                 }
             } finally {
                 if (!cancelled) setIsLoading(false);
@@ -32,18 +35,12 @@ export const useMinPrice = () => {
         };
     }, []);
 
-    const pricePerRollTon = STEP_TON;
-    const pricePerRollStarsRaw = minPrice
-        ? STEP_TON * (minPrice.stars / minPrice.ton)
-        : STEP_TON * 10;
-    const pricePerRollStars = Math.ceil(pricePerRollStarsRaw / 100) * 100;
-
     return {
         minPrice,
         isLoading,
-        pricePerRollTon,
-        pricePerRollStars,
+        minStakeTon: MIN_STAKE_TON,
         stepTon: STEP_TON,
-        stepStars: pricePerRollStars,
+        minStakeStars: MIN_STAKE_STARS,
+        stepStars: STEP_STARS,
     };
 };

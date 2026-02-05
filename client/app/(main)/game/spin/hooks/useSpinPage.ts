@@ -9,9 +9,10 @@ export const useSpinPage = () => {
     const { currency, toggleCurrency } = useCurrency();
     const { startGame, handleGameComplete } = useGameResult();
     const { user } = useUserStore();
-    const { pricePerRollTon, pricePerRollStars } = useMinPrice();
+    const { minStakeTon, stepTon, minStakeStars, stepStars } = useMinPrice();
 
-    const calibratedPricePerRoll = currency === 'ton' ? pricePerRollTon : pricePerRollStars;
+    const minStake = currency === 'ton' ? minStakeTon : minStakeStars;
+    const step = currency === 'ton' ? stepTon : stepStars;
 
     const {
         rolls,
@@ -27,11 +28,9 @@ export const useSpinPage = () => {
         targetIndex,
     } = useSpinGame(
         {
-            defaultRolls: 1,
-            pricePerRoll: calibratedPricePerRoll,
-            minRolls: 1,
+            minStake,
+            step,
             giftCount: 1,
-            rollStep: 1,
         },
         handleGameComplete
     );
@@ -71,6 +70,7 @@ export const useSpinPage = () => {
         rolls,
         pricePerRoll,
         totalPrice,
+        minStake,
         giftCount,
         isSpinning,
         canPlay,

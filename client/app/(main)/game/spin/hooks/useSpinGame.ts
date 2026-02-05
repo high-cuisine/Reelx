@@ -1,14 +1,18 @@
 import { useState, useCallback, useEffect } from 'react';
-import { calculateTotalPrice } from '../helpers/calculateTotalPrice';
-import { validateRolls } from '../helpers/validateRolls';
 import { GiftItem } from '@/entites/gifts/interfaces/giftItem.interface';
 
 interface SpinGameConfig {
+    /** Минимальная ставка (старт) */
+    minStake?: number;
+    /** Шаг изменения ставки при + / - */
+    step?: number;
+    giftCount?: number;
+    /** @deprecated используется minStake/step */
     defaultRolls?: number;
+    /** @deprecated stake = totalPrice */
     pricePerRoll?: number;
     minRolls?: number;
     maxRolls?: number;
-    giftCount?: number;
     rollStep?: number;
 }
 
@@ -38,53 +42,34 @@ export const useSpinGame = (
     onGameComplete?: (result: SpinGameResult) => void
 ): UseSpinGameReturn => {
     const {
-        defaultRolls = 1,
-        pricePerRoll = 15,
-        minRolls = 1,
-        maxRolls,
+        minStake = 5,
+        step = 15,
         giftCount: initialGiftCount = 5,
-        rollStep = 1,
     } = config;
 
-    const [rolls, setRolls] = useState(defaultRolls);
+    const [stake, setStake] = useState(minStake);
     const [isSpinning, setIsSpinning] = useState(false);
     const [giftCount, setGiftCount] = useState(initialGiftCount);
     const [targetIndex, setTargetIndex] = useState<number | null>(null);
 
-    const totalPrice = calculateTotalPrice(rolls, pricePerRoll);
-    const canPlay = !isSpinning && validateRolls(rolls, minRolls, maxRolls);
+    const totalPrice = stake;
+    const rolls = 1;
+    const pricePerRoll = stake;
+    const canPlay = !isSpinning && stake >= minStake;
 
-    // Сбрасываем rolls при изменении rollStep (смена валюты)
     useEffect(() => {
-        setRolls(defaultRolls);
-    }, [rollStep, defaultRolls]);
-
-    // Логируем изменения isSpinning
-    useEffect(() => {
-        console.log('🎰 useSpinGame: isSpinning изменилось на', isSpinning);
-    }, [isSpinning]);
+        setStake(minStake);
+    }, [minStake]);
 
     const handleIncreaseRolls = useCallback(() => {
         if (isSpinning) return;
-        setRolls(prev => {
-            const newRolls = prev + rollStep;
-            if (maxRolls !== undefined && newRolls > maxRolls) {
-                return prev;
-            }
-            return newRolls;
-        });
-    }, [isSpinning, maxRolls, rollStep]);
+        setStake(prev => prev + step);
+    }, [isSpinning, step]);
 
     const handleDecreaseRolls = useCallback(() => {
         if (isSpinning) return;
-        setRolls(prev => {
-            const newRolls = prev - rollStep;
-            if (newRolls < minRolls) {
-                return prev;
-            }
-            return newRolls;
-        });
-    }, [isSpinning, minRolls, rollStep]);
+        setStake(prev => Math.max(minStake, prev - step));
+    }, [isSpinning, minStake, step]);
 
     const handlePlay = useCallback(async (
         wheelItems: GiftItem[],
