@@ -3,7 +3,7 @@ import { userService, UserGift } from '@/entites/user/api/api';
 import { useUserStore } from '@/entites/user/model/user';
 
 export const useInventory = () => {
-    const [activeTab, setActiveTab] = useState<'inventory' | 'history'>('history');
+    const [activeTab, setActiveTab] = useState<'inventory' | 'history'>('inventory');
     const [gifts, setGifts] = useState<UserGift[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { user, games } = useUserStore();

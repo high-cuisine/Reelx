@@ -11,10 +11,18 @@ import { useTelegram } from '@/shared/lib/hooks/useTelegram';
 import copyImage from '@/assets/copyId.svg'
 import { useUserStore } from '@/entites/user/model/user';
 import { copyToClipboard } from '@/shared/lib/helpers/copyToClipboard';
+import { useUserTotalWon } from './hooks/useUserTotalWon';
+import { useEffect } from 'react';
 
 const ProfilePage = () => {
     const { username, usernameInitial, photoUrl } = useTelegram();
-    const { user } = useUserStore();
+    const { user, games } = useUserStore();
+    const { tonBalance, setGames } = useUserTotalWon();
+
+    useEffect(() => {
+        setGames(games ?? []);
+    }, [games, setGames]);
+
 
   return (
     <div className={cls.profile}>
@@ -37,7 +45,7 @@ const ProfilePage = () => {
             <div className={cls.balance}>
                 <div className={cls.profileBalance}>
                     <Image src={ton} alt="balance" width={20} height={20} />
-                    <span className={cls.tonBalance}>{user?.tonBalance || 0}</span>
+                    <span className={cls.tonBalance}>{tonBalance}</span>
                 </div>
                 <span className={cls.balanceSubtitle}>Всего выиграно</span>
             </div>

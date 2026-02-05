@@ -12,11 +12,11 @@ export class PromocodeRepository {
     });
   }
 
-  async hasUserUsedPromocode(userId: string, promocodeId: string): Promise<boolean> {
+  async getUserPromocodes(userId: string, promocodeId: string) {
     const existing = await this.prisma.userPromocodes.findFirst({
       where: { userId, promocodeId },
     });
-    return !!existing;
+    return existing;
   }
 
   async createUserPromocode(userId: string, promocodeId: string) {

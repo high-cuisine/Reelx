@@ -100,6 +100,8 @@ model Promocodes {
   promocode   String        @unique
   currency    GameCurrancy
   amount      Float
+  countUser   Int           @default(1)
+  isInfinity  Boolean       @default(false)
 
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
@@ -113,6 +115,7 @@ model UserPromocodes {
   id          String      @id @default(uuid())
   userId      String
   promocodeId String
+  countOfUse  Int         @default(1)
 
   createdAt   DateTime    @default(now())
 

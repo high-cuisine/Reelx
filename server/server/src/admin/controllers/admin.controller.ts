@@ -57,6 +57,8 @@ export class AdminController {
           promocode: promo.promocode,
           currency: promo.currency,
           amount: promo.amount,
+          countUser: promo.countUser,
+          isInfinity: promo.isInfinity,
           createdAt: promo.createdAt.toISOString(),
           usageCount,
         };
@@ -68,11 +70,23 @@ export class AdminController {
 
   @Post('promocodes')
   @UseGuards(AdminSessionGuard)
-  async createPromocode(@Body() body: { promocode: string; currency: 'TON' | 'STARS'; amount: number; type?: 'balance' | 'deposit' }) {
+  async createPromocode(
+    @Body()
+    body: {
+      promocode: string;
+      currency: 'TON' | 'STARS';
+      amount: number;
+      type?: 'balance' | 'deposit';
+      countUser?: number;
+      isInfinity?: boolean;
+    },
+  ) {
     const promocode = await this.promocodesRepository.create({
       promocode: body.promocode,
       currency: body.currency as GameCurrancy,
       amount: body.amount,
+      countUser: body.countUser,
+      isInfinity: body.isInfinity,
     });
 
     return {
@@ -80,6 +94,8 @@ export class AdminController {
       promocode: promocode.promocode,
       currency: promocode.currency,
       amount: promocode.amount,
+      countUser: promocode.countUser,
+      isInfinity: promocode.isInfinity,
       createdAt: promocode.createdAt.toISOString(),
     };
   }

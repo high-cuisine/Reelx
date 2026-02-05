@@ -21,12 +21,12 @@ export class PromocodeService {
       throw new BadRequestException('Промокод не найден');
     }
 
-    const alreadyUsed = await this.promocodeRepository.hasUserUsedPromocode(
+    const userPromocode = await this.promocodeRepository.getUserPromocodes(
       userId,
       promo.id,
     );
 
-    if (alreadyUsed) {
+    if (userPromocode.countOfUse >= promo.countUser || !promo.isInfinity) {
       throw new BadRequestException('Промокод уже использован');
     }
 

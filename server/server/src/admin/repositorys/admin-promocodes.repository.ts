@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../libs/infrustructure/prisma/prisma.service';
-import { GameCurrancy } from '@prisma/client';
+import { GameCurrancy, Prisma } from '@prisma/client';
 
 @Injectable()
 export class AdminPromocodesRepository {
@@ -18,9 +18,22 @@ export class AdminPromocodesRepository {
     });
   }
 
-  async create(data: { promocode: string; currency: GameCurrancy; amount: number }) {
+  async create(data: {
+    promocode: string;
+    currency: GameCurrancy;
+    amount: number;
+    countUser?: number;
+    isInfinity?: boolean;
+  }) {
+    const createData: Prisma.PromocodesUncheckedCreateInput = {
+      promocode: data.promocode,
+      currency: data.currency,
+      amount: data.amount,
+      countUser: data.countUser ?? 1,
+      isInfinity: data.isInfinity ?? false,
+    };
     return this.prisma.promocodes.create({
-      data,
+      data: createData,
     });
   }
 

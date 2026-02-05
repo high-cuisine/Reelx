@@ -5,6 +5,8 @@ export interface Promocode {
   promocode: string;
   currency: 'TON' | 'STARS';
   amount: number;
+  countUser?: number;
+  isInfinity?: boolean;
   createdAt: string;
   usageCount?: number;
 }
@@ -13,7 +15,9 @@ export interface CreatePromocodeDto {
   promocode: string;
   currency: 'TON' | 'STARS';
   amount: number;
-  type: 'balance' | 'deposit'; // бонус к балансу или при пополнении
+  type?: 'balance' | 'deposit';
+  countUser?: number;
+  isInfinity?: boolean;
 }
 
 export const promocodesService = {
