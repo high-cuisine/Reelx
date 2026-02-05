@@ -24,7 +24,7 @@ RUN npx prisma generate --schema=./libs/infrustructure/prisma/schema.prisma
 COPY . .
 
 # Build the application
-RUN npm run build || (echo "Build failed!" && exit 1)
+RUN npm run prisma:migrate && npm run build || (echo "Build failed!" && exit 1)
 
 # Verify build output
 RUN ls -la dist/ || (echo "Build failed - dist directory not found" && exit 1)
