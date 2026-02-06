@@ -1,13 +1,8 @@
-import { CurrencyType } from "../hooks/useCurrency";
-
-export function getMode(currency: CurrencyType, totalPrice: number): 'normal' | 'mystery' | 'multy' {
-    if(currency === 'stars' && totalPrice > 250) {
+export function getModeByTon(totalTon: number): 'normal' | 'mystery' | 'multy' {
+    if (totalTon > 50) {
         return 'mystery';
-    } else if(currency === 'ton' && totalPrice > 50) {
-        return 'mystery';
-    } else if(currency === 'stars' && totalPrice > 50) {
-        return 'multy';
-    } else if(currency === 'ton' && totalPrice > 10) {
+    }
+    if (totalTon > 20) {
         return 'multy';
     }
     return 'normal';

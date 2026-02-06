@@ -3,6 +3,7 @@ import { useGifts } from './useGifts';
 import { useGameResult } from './useGameResult';
 import { useSpinGame } from './useSpinGame';
 import { useMinPrice } from './useMinPrice';
+import { getModeByTon } from '../helpers/getMode.helper';
 import { useUserStore } from '@/entites/user/model/user';
 
 export const useSpinPage = () => {
@@ -36,6 +37,15 @@ export const useSpinPage = () => {
     );
 
     const { wheelItems, isLoadingGifts } = useGifts(currency, totalPrice);
+
+    // Пересчитываем totalPrice в TON, чтобы режимы normal/multy/mystery
+    // зависели от диапазонов 0–20 / 20–50 / 50+ TON.
+    const tonEquivalent =
+        currency === 'ton'
+            ? totalPrice
+            : (minStakeStars > 0 ? (totalPrice * minStakeTon) / minStakeStars : 0);
+
+    const mode = getModeByTon(tonEquivalent);
 
     // Обертка для handlePlay с проверкой баланса и вызовом startGame
     const handlePlay = () => {
@@ -79,5 +89,6 @@ export const useSpinPage = () => {
         handlePlay,
         onSpinComplete,
         targetIndex,
+        mode,
     };
 };
