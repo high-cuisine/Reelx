@@ -5,6 +5,7 @@ import { useSpinGame } from './useSpinGame';
 import { useMinPrice } from './useMinPrice';
 import { getModeByTon } from '../helpers/getMode.helper';
 import { useUserStore } from '@/entites/user/model/user';
+import { updateUserBalance } from '@/features/user/user';
 
 export const useSpinPage = () => {
     const { currency, toggleCurrency } = useCurrency();
@@ -47,7 +48,7 @@ export const useSpinPage = () => {
 
     const mode = getModeByTon(tonEquivalent);
 
-    // Обертка для handlePlay с проверкой баланса и вызовом startGame
+    // Обертка для handlePlay с проверкой баланса, запуском игры и обновлением баланса в сторе
     const handlePlay = () => {
         // Проверяем баланс перед началом игры
         if (!user) {
@@ -70,6 +71,12 @@ export const useSpinPage = () => {
         }
 
         handlePlayInternal(wheelItems, startGame);
+
+        // Локально уменьшаем баланс пользователя, чтобы Header сразу обновился
+        updateUserBalance(
+            -totalPrice,
+            currency === 'stars' ? 'stars' : 'ton',
+        );
     };
 
     return {
