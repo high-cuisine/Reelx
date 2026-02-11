@@ -113,7 +113,7 @@ export class AdminController {
   async getGamesStats(@Query('from') from?: string, @Query('to') to?: string, @Query('type') type?: 'solo' | 'pvp' | 'upgrade') {
     const stats = await this.gamesRepository.getStats({
       from: from ? new Date(from) : undefined,
-      to: to ? new Date(to) : undefined,
+      to: to ? new Date(to + 'T23:59:59.999Z') : undefined,
       type,
     });
 
@@ -131,7 +131,7 @@ export class AdminController {
   async getGames(@Query('from') from?: string, @Query('to') to?: string, @Query('type') type?: 'solo' | 'pvp' | 'upgrade') {
     return this.gamesRepository.findAll({
       from: from ? new Date(from) : undefined,
-      to: to ? new Date(to) : undefined,
+      to: to ? new Date(to + 'T23:59:59.999Z') : undefined,
       type,
     });
   }
@@ -151,7 +151,7 @@ export class AdminController {
       minBalance: minBalance ? parseFloat(minBalance) : undefined,
       maxBalance: maxBalance ? parseFloat(maxBalance) : undefined,
       dateFrom: dateFrom ? new Date(dateFrom) : undefined,
-      dateTo: dateTo ? new Date(dateTo) : undefined,
+      dateTo: dateTo ? new Date(dateTo + 'T23:59:59.999Z') : undefined,
     });
 
     return users.map(user => ({
@@ -299,7 +299,7 @@ export class AdminController {
       userId,
       type,
       from: from ? new Date(from) : undefined,
-      to: to ? new Date(to) : undefined,
+      to: to ? new Date(to + 'T23:59:59.999Z') : undefined,
       minAmount: minAmount ? parseFloat(minAmount) : undefined,
       maxAmount: maxAmount ? parseFloat(maxAmount) : undefined,
     });

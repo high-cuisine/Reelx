@@ -103,7 +103,8 @@ export class GiftsService {
 
       // Сохраняем барабан в Redis, если есть userId
       if (userId && result && Array.isArray(result)) {
-        await this.saveWheelToRedis(userId, result, originalData, amount, 'ton');
+        // Передаем правильный currencyType из запроса (или 'ton' по умолчанию)
+        await this.saveWheelToRedis(userId, result, originalData, amount, currencyType || 'ton');
       }
 
       return result;
@@ -359,13 +360,33 @@ export class GiftsService {
         );
       }
 
-      const { amount, currencyType } = JSON.parse(amountData);
+      const { amount: rawAmount, currencyType } = JSON.parse(amountData);
+      
+      this.logger.debug(
+        `Starting game for user ${userId}: amount=${rawAmount}, currencyType=${currencyType}`,
+      );
+      
+      // Нормализуем amount в число
+      const amount = Number(rawAmount);
+      if (isNaN(amount) || amount <= 0) {
+        throw new HttpException(
+          'Invalid game amount',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
 
       // Получаем баланс пользователя из базы данных
       const balance = await this.usersService.getBalance(userId);
 
       // Проверяем баланс в зависимости от типа валюты
-      const userBalance = currencyType === 'stars' ? balance.starsBalance : balance.tonBalance;
+      // Нормализуем баланс: если null/undefined, считаем 0
+      const userBalance = currencyType === 'stars' 
+        ? (balance.starsBalance ?? 0) 
+        : (balance.tonBalance ?? 0);
+
+      this.logger.debug(
+        `User ${userId} balance check: currencyType=${currencyType}, userBalance=${userBalance}, requiredAmount=${amount}`,
+      );
 
       if (userBalance < amount) {
         this.logger.warn(

@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { eventBus, MODAL_EVENTS } from '@/features/eventBus/eventBus';
 import { giftsService } from '@/entites/gifts/api/api';
 import { GiftItem } from '@/entites/gifts/interfaces/giftItem.interface';
+import { updateUserBalance } from '@/features/user/user';
 
 interface GameResult {
     selectedItem: GiftItem;
@@ -35,6 +36,19 @@ export const useGameResult = () => {
         try {
             const result = await giftsService.startGame();
             
+            // При выигрыше валюты обновляем баланс пользователя в сторе
+            if (result.type === 'money' || (result.type === 'secret' && result.realType === 'money')) {
+                const amount = result.amount ?? result.price ?? 0;
+                const currency =
+                    result.currencyType === 'star'
+                        ? 'stars'
+                        : 'ton';
+
+                if (amount > 0 && currency) {
+                    updateUserBalance(amount, currency);
+                }
+            }
+
             // Находим индекс приза в колесе по имени и типу
             const targetIndex = wheelItems.findIndex((item) => {
                 if (result.type === 'money') {
