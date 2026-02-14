@@ -68,6 +68,7 @@ export class GiftsService {
 
       let result: any;
       let originalData: any[] = [];
+      let multiWeights: number[] | undefined;
 
       switch (giftType) {
         case 'common':
@@ -77,14 +78,16 @@ export class GiftsService {
           result = commonResult;
           break;
         
-        case 'multi':
-          result = await this.getMoneyPrices(tonAmount);
-          // Для money создаем оригинальные данные из отформатированных
+        case 'multi': {
+          const multiRaw = await this.getRawMoneyPrices(tonAmount);
+          result = formatMoneyItems(multiRaw.items);
           originalData = result.map((item: any) => ({
             type: item.name === 'TON' ? 'ton' : 'star',
             price: item.price,
           }));
+          multiWeights = multiRaw.weights;
           break;
+        }
         
         case 'secret':
           const secretResult = await this.getSecretsPrices(tonAmount, (data) => {
@@ -103,8 +106,7 @@ export class GiftsService {
 
       // Сохраняем барабан в Redis, если есть userId
       if (userId && result && Array.isArray(result)) {
-        // Передаем правильный currencyType из запроса (или 'ton' по умолчанию)
-        await this.saveWheelToRedis(userId, result, originalData, amount, currencyType || 'ton');
+        await this.saveWheelToRedis(userId, result, originalData, amount, currencyType || 'ton', multiWeights);
       }
 
       return result;
@@ -249,13 +251,13 @@ export class GiftsService {
 
   private async getRawMoneyPrices(amount: number) {
     const rates = await this.currancyService.getCurrancyRates();
-    // Курс конвертации: сколько STARS за 1 TON
     const tonToStarsRate = rates.ton / rates.stars;
     return getMoneyPrices(amount, tonToStarsRate);
   }
 
   private async getMoneyPrices(amount: number) {
-    return formatMoneyItems(await this.getRawMoneyPrices(amount));
+    const raw = await this.getRawMoneyPrices(amount);
+    return formatMoneyItems(raw.items);
   }
 
   private async getSecretsPrices(
@@ -268,9 +270,8 @@ export class GiftsService {
       originalGiftsData = data;
     });
     
-    const moneyPrices = await this.getRawMoneyPrices(amount);
-
-    const secrets = combineGiftsAndMoney(originalGiftsData, moneyPrices, 8);
+    const moneyRaw = await this.getRawMoneyPrices(amount);
+    const secrets = combineGiftsAndMoney(originalGiftsData, moneyRaw.items, 8);
     
     // Сохраняем комбинированные оригинальные данные
     if (onOriginalData) {
@@ -286,6 +287,7 @@ export class GiftsService {
     originalData: any[],
     amount?: number,
     currencyType?: 'ton' | 'stars',
+    weights?: number[],
   ): Promise<void> {
     try {
       const wheelItems: WheelItem[] = formattedItems.map((item, index) => {
@@ -328,6 +330,12 @@ export class GiftsService {
         });
         await this.redisService.set(amountKey, amountData, this.WHEEL_TTL_SECONDS);
         this.logger.debug(`Saved amount ${amount} ${currencyType || 'ton'} for user ${userId}`);
+      }
+
+      if (weights && weights.length === wheelItems.length) {
+        const weightsKey = `wheel:weights:${userId}`;
+        await this.redisService.set(weightsKey, JSON.stringify(weights), this.WHEEL_TTL_SECONDS);
+        this.logger.debug(`Saved ${weights.length} weights for user ${userId}`);
       }
       
       this.logger.debug(`Saved wheel for user ${userId} with ${wheelItems.length} items`);
@@ -411,8 +419,28 @@ export class GiftsService {
         );
       }
 
-      // Случайный выбор приза
-      const randomIndex = Math.floor(Math.random() * wheelItems.length);
+      let randomIndex: number;
+      const weightsKey = `wheel:weights:${userId}`;
+      const weightsData = await this.redisService.get(weightsKey);
+      if (weightsData) {
+        const weights: number[] = JSON.parse(weightsData);
+        if (weights.length === wheelItems.length) {
+          const total = weights.reduce((a, b) => a + b, 0);
+          let r = Math.random() * total;
+          randomIndex = weights.length - 1;
+          for (let i = 0; i < weights.length; i++) {
+            r -= weights[i];
+            if (r <= 0) {
+              randomIndex = i;
+              break;
+            }
+          }
+        } else {
+          randomIndex = Math.floor(Math.random() * wheelItems.length);
+        }
+      } else {
+        randomIndex = Math.floor(Math.random() * wheelItems.length);
+      }
       const selectedPrize = wheelItems[randomIndex];
 
       this.logger.debug(

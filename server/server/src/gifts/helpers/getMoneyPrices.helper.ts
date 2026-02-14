@@ -3,41 +3,63 @@ export interface MoneyPrice {
   price: number;
 }
 
+export interface MoneyPricesWithWeights {
+  items: MoneyPrice[];
+  weights: number[];
+}
+
+const RTP_DEFAULT = 0.6;
+
 /**
- * Генерирует 8 лотов:
- * - 4 пары, каждая пара суммарно равна переданному amount
- * - в паре: p1 = amount - n, p2 = n, где n — случайное число [0, amount]
- * - всего 8 лотов, из них половина в TON, половина в STARS
- * @param amount - сумма в TON
- * @param tonToStarsRate - курс конвертации TON в STARS (сколько STARS за 1 TON)
+ * RTP-барабан по логике:
+ * - Джекпот TON 5x, джекпот Stars 3x, возврат TON 1x, возврат Stars 1x (фиксированные веса)
+ * - 4 малых слота: множитель c/k, вес k*rtp (k случайный 0.1..0.2), c = 0.125
+ * EV = sum(multiplier * weight) ≈ rtp
+ *
+ * @param amount - ставка в TON
+ * @param tonToStarsRate - курс (сколько STARS за 1 TON)
+ * @param rtp - return to player, по умолчанию 0.6
  */
-export const getMoneyPrices = (amount: number, tonToStarsRate: number): MoneyPrice[] => {
-  const lotsPerPair = 2;
-  const totalLots = 8;
-  const pairCount = totalLots / lotsPerPair; // 4
+export const getMoneyPrices = (
+  amount: number,
+  tonToStarsRate: number,
+  rtp: number = RTP_DEFAULT,
+): MoneyPricesWithWeights => {
+  const jackpotTonW = 0.022 * rtp;
+  const jackpotStarsW = 0.056 * rtp;
+  const returnTonW = 0.111 * rtp;
+  const returnStarsW = 0.111 * rtp;
 
-  const lots: MoneyPrice[] = [];
+  // Малые слоты: m = c / k, w = k * rtp => вклад в EV = c * rtp каждый
+  // (1 - (0.022*5 + 0.056*3 + 0.111 + 0.111)) / 4 = 0.125
+  const c = (1 - (0.022 * 5 + 0.056 * 3 + 0.111 + 0.111)) / 4;
 
-  for (let i = 0; i < pairCount; i++) {
-    const n = Math.random() * amount;
-    const first = amount - n;
-    const second = n;
+  const k1 = 0.1 + Math.random() * 0.1;
+  const k2 = 0.1 + Math.random() * 0.1;
+  const k3 = 0.1 + Math.random() * 0.1;
+  const k4 = 0.1 + Math.random() * 0.1;
 
-    lots.push(
-      { type: 'ton', price: Number(first.toFixed(2)) },
-      { type: 'ton', price: Number(second.toFixed(2)) },
-    );
-  }
+  const items: MoneyPrice[] = [
+    { type: 'ton', price: Number((amount * 5).toFixed(2)) },
+    { type: 'star', price: Number((amount * 3 * tonToStarsRate).toFixed(2)) },
+    { type: 'ton', price: Number(amount.toFixed(2)) },
+    { type: 'star', price: Number((amount * tonToStarsRate).toFixed(2)) },
+    { type: 'ton', price: Number((amount * (c / k1)).toFixed(2)) },
+    { type: 'star', price: Number((amount * (c / k2) * tonToStarsRate).toFixed(2)) },
+    { type: 'ton', price: Number((amount * (c / k3)).toFixed(2)) },
+    { type: 'star', price: Number((amount * (c / k4) * tonToStarsRate).toFixed(2)) },
+  ];
 
-  // Половину лотов переводим в звезды с конвертацией цены
-  // Первые 4 оставляем TON, последние 4 конвертируем в STARS
-  return lots.map((lot, index) => {
-    if (index >= totalLots / 2) {
-      // Конвертируем цену из TON в STARS
-      const starsPrice = lot.price * tonToStarsRate;
-      return { type: 'star', price: Number(starsPrice.toFixed(2)) };
-    }
-    return lot;
-  });
+  const weights: number[] = [
+    jackpotTonW,
+    jackpotStarsW,
+    returnTonW,
+    returnStarsW,
+    k1 * rtp,
+    k2 * rtp,
+    k3 * rtp,
+    k4 * rtp,
+  ];
+
+  return { items, weights };
 };
-

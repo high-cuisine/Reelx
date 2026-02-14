@@ -1,9 +1,10 @@
 'use client'
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { eventBus, MODAL_EVENTS } from '@/features/eventBus/eventBus';
 import cls from './WinModal.module.scss';
-import { Button } from '@/shared/ui/Button/Button';
+
 
 interface WinData {
     selectedItem: {
@@ -16,8 +17,10 @@ interface WinData {
 }
 
 const WinModal = () => {
+    const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
     const [winData, setWinData] = useState<WinData | null>(null);
+    const isProfile = pathname?.includes('/profile') ?? false;
 
     useEffect(() => {
         const handleOpenModal = (data: WinData) => {
@@ -85,19 +88,15 @@ const WinModal = () => {
                 {!isNoLoot ? (
                     <>
                         {selectedItem.image ? (
-                            <div className={cls.nftBlur}>
-                                <Image 
-                                    src={selectedItem.image} 
-                                    alt={selectedItem.name}
-                                    width={100}
-                                    height={100}
-                                    className={cls.nftImage}
-                                />
-                            </div>
+                            <Image 
+                                src={selectedItem.image} 
+                                alt={selectedItem.name}
+                                width={167}
+                                height={191}
+                                className={cls.nftImage}
+                            />
                         ) : (
-                            <div className={cls.nftBlur}>
-                                <div className={cls.prizePlaceholder}>🎁</div>
-                            </div>
+                            <div className={cls.prizePlaceholder}>🎁</div>
                         )}
                         <div className={cls.giftName}>
                             {selectedItem.name.includes('#') ? (
@@ -112,9 +111,7 @@ const WinModal = () => {
                     </>
                 ) : (
                     <>
-                        <div className={cls.nftBlur}>
-                            <div className={cls.prizePlaceholder}>😔</div>
-                        </div>
+                        <div className={cls.prizePlaceholder}>😔</div>
                         <div className={cls.giftName}>NO LOOT</div>
                     </>
                 )}
@@ -155,18 +152,24 @@ const WinModal = () => {
                             <span>{claimPrice}</span>
                         </div>
                     </button>
-                    
-                    <button className={cls.backButton} onClick={handleClose}>
-                        Назад
-                    </button>
+                    {isProfile && (
+                        <button className={cls.backButton} onClick={handleClose}>
+                            Назад
+                        </button>
+                    )}
                 </div>
             )}
 
             {isNoLoot && (
                 <div className={cls.actions}>
-                    <button className={cls.backButton} onClick={handleClose}>
+                    <button className={cls.sellButton} onClick={handleClose}>
                         Попробовать снова
                     </button>
+                    {isProfile && (
+                        <button className={cls.backButton} onClick={handleClose}>
+                            Назад
+                        </button>
+                    )}
                 </div>
             )}
         </div>
