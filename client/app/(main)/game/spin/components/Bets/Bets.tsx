@@ -10,6 +10,7 @@ interface WheelItem {
     name: string;
     price?: number;
     image?: string;
+    lottie?: string;
 }
 
 interface BetsProps {

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import Image, { StaticImageData } from 'next/image';
 import { eventBus, MODAL_EVENTS } from '@/features/eventBus/eventBus';
+import { GiftImageOrLottie } from '@/shared/ui/GiftImageOrLottie/GiftImageOrLottie';
 import cls from './GiftsModal.module.scss';
 import TonIcon from '@/assets/ton.svg';
 import StarIcon from '@/assets/star.svg';
@@ -11,6 +12,7 @@ interface GiftItem {
     name: string;
     price?: number;
     image?: string | StaticImageData;
+    lottie?: string;
     color?: string;
 }
 
@@ -103,6 +105,7 @@ const GiftsModal = ({ gifts = [] }: GiftsModalProps) => {
                             const imageClassName = isSpecialIcon
                                 ? `${cls.giftImage} ${cls.giftImageBase}`
                                 : cls.giftImage;
+                            const useLottie = !isSpecialIcon && (gift.lottie || gift.image);
 
                             return (
                                 <div 
@@ -114,7 +117,19 @@ const GiftsModal = ({ gifts = [] }: GiftsModalProps) => {
                                             : undefined
                                     }}
                                 >
-                                    {icon ? (
+                                    {useLottie ? (
+                                        <div className={cls.giftImageWrapper}>
+                                            <GiftImageOrLottie
+                                                image={typeof gift.image === 'string' ? gift.image : gift.image}
+                                                lottieUrl={gift.lottie}
+                                                alt={gift.name}
+                                                width={size}
+                                                height={size}
+                                                imageClassName={imageClassName}
+                                                placeholder={<div className={cls.giftPlaceholder}>🎁</div>}
+                                            />
+                                        </div>
+                                    ) : icon ? (
                                         <div className={cls.giftImageWrapper}>
                                             <Image 
                                                 src={icon}
