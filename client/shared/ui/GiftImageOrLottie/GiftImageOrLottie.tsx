@@ -11,8 +11,10 @@ interface GiftImageOrLottieProps {
     image?: string | StaticImageData;
     lottieUrl?: string;
     alt: string;
-    width: number;
-    height: number;
+    width?: number;
+    height?: number;
+    /** Заполнять родительский контейнер (100% width/height). Для списка призов. */
+    fillContainer?: boolean;
     className?: string;
     imageClassName?: string;
     placeholder?: React.ReactNode;
@@ -25,8 +27,9 @@ export const GiftImageOrLottie = ({
     image,
     lottieUrl,
     alt,
-    width,
-    height,
+    width = 0,
+    height = 0,
+    fillContainer = false,
     className,
     imageClassName,
     placeholder,
@@ -52,22 +55,39 @@ export const GiftImageOrLottie = ({
         };
     }, [lottieUrl]);
 
+    const sizeStyle = fillContainer
+        ? { width: '100%', height: '100%' as const }
+        : { width, height };
+
     if (lottieData) {
         return (
             <div
-                className={`${cls.lottieWrap} ${className ?? ''}`}
-                style={{ width, height }}
+                className={`${cls.lottieWrap} ${fillContainer ? cls.fillContainer : ''} ${className ?? ''}`}
+                style={fillContainer ? sizeStyle : sizeStyle}
             >
                 <Lottie
                     animationData={lottieData}
                     loop
-                    style={{ width, height }}
+                    style={sizeStyle}
                 />
             </div>
         );
     }
 
     if (image) {
+        if (fillContainer) {
+            return (
+                <div className={`${cls.imageWrap} ${className ?? ''}`}>
+                    <Image
+                        src={image}
+                        alt={alt}
+                        fill
+                        sizes="(max-width: 480px) 33vw, 70px"
+                        className={imageClassName ?? cls.imageFill}
+                    />
+                </div>
+            );
+        }
         return (
             <Image
                 src={image}

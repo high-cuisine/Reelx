@@ -123,8 +123,7 @@ const GiftsModal = ({ gifts = [] }: GiftsModalProps) => {
                                                 image={typeof gift.image === 'string' ? gift.image : gift.image}
                                                 lottieUrl={gift.lottie}
                                                 alt={gift.name}
-                                                width={size}
-                                                height={size}
+                                                fillContainer
                                                 imageClassName={imageClassName}
                                                 placeholder={<div className={cls.giftPlaceholder}>🎁</div>}
                                             />

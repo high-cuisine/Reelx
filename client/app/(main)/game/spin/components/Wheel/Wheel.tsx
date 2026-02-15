@@ -5,6 +5,7 @@ import { calculateSegmentAngle } from '../../helpers/calculateSegmentAngle';
 import { generateConicGradient } from '../../helpers/generateConicGradient';
 import { calculateSegmentPosition } from '../../helpers/calculateSegmentPosition';
 import { GiftItem } from '@/entites/gifts/interfaces/giftItem.interface';
+import { GiftImageOrLottie } from '@/shared/ui/GiftImageOrLottie/GiftImageOrLottie';
 import { MoneyBadge } from './MoneyBadge';
 import secretIcon from '@/assets/icons/secret.svg';
 import { useWheelLogic } from '../../hooks/useWheelLogic';
@@ -151,14 +152,17 @@ const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIn
                                 />
                             ) : mode === 'multy' && item.type === 'money' ? (
                                 <MoneyBadge item={item} />
-                            ) : item.image ? (
-                                <Image 
-                                    src={item.image} 
-                                    alt={item.name} 
-                                    width={50} 
-                                    height={50}
-                                    className={cls.segmentImage}
-                                />
+                            ) : item.image || item.lottie ? (
+                                <div className={cls.segmentMedia}>
+                                    <GiftImageOrLottie
+                                        image={item.image}
+                                        lottieUrl={item.lottie}
+                                        alt={item.name}
+                                        width={56}
+                                        height={56}
+                                        imageClassName={cls.segmentImage}
+                                    />
+                                </div>
                             ) : (
                                 <span className={cls.segmentText}>
                                     {item.name.includes('#') ? (

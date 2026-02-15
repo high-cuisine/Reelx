@@ -65,10 +65,22 @@
     z-index: 2;
 }
 
+.segmentMedia {
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+}
+
 .segmentImage {
-    width: 40px;
-    height: 40px;
-    border-radius: 100%;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
     object-fit: contain;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
 }
