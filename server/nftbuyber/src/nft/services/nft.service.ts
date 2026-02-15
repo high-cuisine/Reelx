@@ -179,6 +179,12 @@ export class NftService {
       name = nftAddress;
     }
 
+    // Lottie из TonCenter metadata (pre-indexed token_info[0].extra)
+    const lottieUrl = tonData?.tonCenterExtra?.lottie;
+    if (lottieUrl && typeof metadata === 'object') {
+      metadata.lottie = lottieUrl;
+    }
+
     // Формируем ответ
     const response: NftResponseDto = {
       address: nftAddress,
@@ -190,6 +196,7 @@ export class NftService {
       media: {
         image: imageUrl || '',
         raw_image: rawImageUrl || '',
+        ...(lottieUrl && { lottie: lottieUrl }),
       },
       metadata,
       sources,
@@ -248,6 +255,7 @@ export class NftService {
           image: nft.image,
           ownerAddress: nft.ownerAddress,
           actualOwnerAddress: nft.actualOwnerAddress,
+          ...(nft.lottie ? { lottie: nft.lottie } : {}),
         };
       });
 

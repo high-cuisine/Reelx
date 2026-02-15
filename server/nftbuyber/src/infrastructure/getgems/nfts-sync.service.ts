@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy, Inject, forwardRef } from '@nestjs/common';
 import { Address } from '@ton/ton';
 import { GetGemsApiClient } from './getgems-api.client';
+import { TonCenterClient } from './toncenter.client';
 import { RedisService } from '../redis/redis.service';
 import { GiftsSyncService } from './gifts-sync.service';
 import { NftOnSaleData, NftOnSale, GetGemsNftListing } from './interfaces/getgems-response.interface';
@@ -18,6 +19,7 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly getGemsClient: GetGemsApiClient,
+    private readonly tonCenterClient: TonCenterClient,
     private readonly redisService: RedisService,
     private readonly giftsSyncService: GiftsSyncService,
     private readonly tonApiClient: TonApiClient,
@@ -112,6 +114,13 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
 
       const nfts = response.response.items;
       
+      const canCheckContractType = this.nftPurchaseService.isClientInitialized();
+      if (!canCheckContractType) {
+        this.logger.debug(
+          `TON client not initialized: syncing NFTs without contract type check (collection ${collectionAddress})`,
+        );
+      }
+
       let saved = 0;
       for (const nft of nfts) {
         const saleAddress = nft.sale?.contractAddress;
@@ -119,18 +128,22 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
           this.logger.debug(`Skipping NFT ${nft.address}: no sale contract address`);
           continue;
         }
-        try {
-          const isGetGemsV4 = await this.nftPurchaseService.checkNftContractType(Address.parse(saleAddress));
-          if (!isGetGemsV4) {
-            this.logger.debug(`Skipping NFT ${nft.address}: not nft_sale_getgems_v4 (code hash check)`);
+        if (canCheckContractType) {
+          try {
+            const isGetGemsV4 = await this.nftPurchaseService.checkNftContractType(Address.parse(saleAddress));
+            if (!isGetGemsV4) {
+              this.logger.debug(`Skipping NFT ${nft.address}: not nft_sale_getgems_v4 (code hash check)`);
+              continue;
+            }
+          } catch (e) {
+            this.logger.debug(`Skipping NFT ${nft.address}: checkNftContractType failed`);
             continue;
           }
-        } catch (e) {
-          this.logger.debug(`Skipping NFT ${nft.address}: checkNftContractType failed`);
-          continue;
         }
-        await this.saveNftToRedis(nft, collectionName);
+        const lottie = await this.tonCenterClient.getNftLottie(nft.address);
+        await this.saveNftToRedis(nft, collectionName, lottie);
         saved++;
+        await new Promise((r) => setTimeout(r, 100));
       }
 
       this.logger.debug(`Synced ${saved}/${nfts.length} getgems_v4 NFTs for collection ${collectionAddress}`);
@@ -140,7 +153,7 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async saveNftToRedis(nft: NftOnSale, collectionName: string): Promise<void> {
+  private async saveNftToRedis(nft: NftOnSale, collectionName: string, lottie?: string): Promise<void> {
     try {
       const nftAddress = nft.address;
       const fullPriceInNano = nft.sale?.fullPrice || '0';
@@ -159,6 +172,7 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
         fullPrice: fullPriceInNano,
         saleAddress: nft.sale?.contractAddress || undefined,
         lastUpdated: Date.now(),
+        ...(lottie ? { lottie } : {}),
       };
 
       // 1. Добавляем в Z-SET (sorted set) для сортировки по цене
@@ -336,7 +350,7 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private getGemsListingToNftOnSaleData(listing: GetGemsNftListing & { lastUpdated?: string }): NftOnSaleData {
+  private getGemsListingToNftOnSaleData(listing: GetGemsNftListing & { lastUpdated?: string; lottie?: string }): NftOnSaleData {
     const priceAmount = listing.price?.amount ?? '0';
     const priceInTon = Number(priceAmount) / 1_000_000_000;
     return {
@@ -351,6 +365,7 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
       fullPrice: priceAmount,
       saleAddress: listing.saleContractAddress,
       lastUpdated: typeof listing.lastUpdated === 'string' ? new Date(listing.lastUpdated).getTime() : (listing.lastUpdated as Date)?.getTime?.() ?? Date.now(),
+      ...(listing.lottie ? { lottie: listing.lottie } : {}),
     };
   }
 

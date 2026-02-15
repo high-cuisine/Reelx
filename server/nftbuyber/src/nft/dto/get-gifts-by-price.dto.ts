@@ -27,4 +27,6 @@ export interface GiftItem {
   image: string;
   ownerAddress: string;
   actualOwnerAddress: string;
+  /** URL lottie-анимации (из TonCenter metadata) */
+  lottie?: string;
 }

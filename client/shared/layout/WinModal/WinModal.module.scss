@@ -63,6 +63,27 @@
     border-radius: 16px;
 }
 
+.lottieWrap {
+    width: 167px;
+    height: 191px;
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    > div {
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    svg {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover;
+    }
+}
+
 .prizePlaceholder {
     width: 100px;
     height: 100px;

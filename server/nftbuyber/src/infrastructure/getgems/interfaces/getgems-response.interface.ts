@@ -75,6 +75,8 @@ export interface NftOnSaleData {
   fullPrice: string; // в nanoTON
   saleAddress?: string; // contractAddress из sale
   lastUpdated: number;
+  /** URL lottie-анимации из TonCenter metadata (extra.lottie) */
+  lottie?: string;
 }
 
 /** Листинг NFT только с контрактом продажи типа nft_sale_getgems_v4 (TonApi + фильтр) */

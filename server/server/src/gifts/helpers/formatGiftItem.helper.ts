@@ -3,12 +3,15 @@ export interface GiftItemFormatted {
   price: number;
   image: string;
   name: string;
+  /** URL lottie-анимации (из nftbuyber/TonCenter) */
+  lottie?: string;
 }
 
 interface RawGiftItem {
   price?: string | number;
   image?: string;
   name?: string;
+  lottie?: string;
 }
 
 interface MoneyPrice {
@@ -36,6 +39,7 @@ export const formatGiftItem = (
     price: priceNumber,
     image: item?.image ?? '',
     name: item?.name ?? 'Gift',
+    ...(item?.lottie ? { lottie: item.lottie } : {}),
   };
 };
 

@@ -84,6 +84,8 @@ export class TonBlockchainAdapter {
         timeout: 15000,
       });
 
+      console.log(response.data);
+
       if (!response.data || !response.data.nft_items || response.data.nft_items.length === 0) {
         this.logger.warn(`No NFT items found for address ${nftAddress}`);
         return null;

@@ -92,12 +92,14 @@ export const useGameResult = () => {
 
             giftIdRef.current = result.giftId ?? null;
 
-            // Преобразуем результат сервера в GiftItem
+            // Преобразуем результат сервера в GiftItem (lottie берём из элемента колеса)
+            const wheelItem = wheelItems[targetIndex];
             const prize: GiftItem = {
                 type: result.type,
                 name: result.name,
                 price: result.price,
                 image: result.image || '',
+                ...(wheelItem?.lottie ? { lottie: wheelItem.lottie } : {}),
             };
 
             setStartGameState({
@@ -153,6 +155,7 @@ export const useGameResult = () => {
                 name: result.selectedItem.name,
                 price: result.selectedItem.price,
                 image: result.selectedItem.image,
+                lottie: result.selectedItem.lottie,
             },
             rolls: result.rolls,
             totalPrice: result.totalPrice,

@@ -50,6 +50,7 @@ class GiftsService {
             const rawPrice = (raw as any).price;
             const rawName = (raw as any).name;
             const rawImage = (raw as any).image;
+            const rawLottie = (raw as any).lottie;
 
             const priceNumber =
                 typeof rawPrice === 'string'
@@ -75,6 +76,7 @@ class GiftsService {
                     price: priceNumber,
                     image: rawImage || '',
                     name: currencyLabel,
+                    ...(rawLottie ? { lottie: rawLottie } : {}),
                 };
             }
 
@@ -83,6 +85,7 @@ class GiftsService {
                 price: priceNumber,
                 image: rawImage || '',
                 name: rawName || 'Gift',
+                ...(rawLottie ? { lottie: rawLottie } : {}),
             };
         });
     }

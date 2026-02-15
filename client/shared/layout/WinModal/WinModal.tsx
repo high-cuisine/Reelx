@@ -1,17 +1,21 @@
 'use client'
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { eventBus, MODAL_EVENTS } from '@/features/eventBus/eventBus';
 import { nftWithdrawService } from '@/features/nft/nft';
 import { updateUserBalance } from '@/features/user/user';
 import cls from './WinModal.module.scss';
 
+const Lottie = dynamic(() => import('lottie-react').then((m) => m.default), { ssr: false });
+
 interface WinData {
     selectedItem: {
         name: string;
         price?: number;
         image?: string;
+        lottie?: string;
     };
     rolls: number;
     totalPrice: number;
@@ -22,9 +26,31 @@ const WinModal = () => {
     const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
     const [winData, setWinData] = useState<WinData | null>(null);
+    const [lottieData, setLottieData] = useState<object | null>(null);
     const [isSelling, setIsSelling] = useState(false);
     const [sellError, setSellError] = useState<string | null>(null);
     const isProfile = pathname?.includes('/profile') ?? false;
+
+    // Загружаем Lottie JSON по URL при открытии модалки с lottie
+    useEffect(() => {
+        if (!isOpen || !winData?.selectedItem?.lottie) {
+            setLottieData(null);
+            return;
+        }
+        const url = winData.selectedItem.lottie;
+        let cancelled = false;
+        fetch(url)
+            .then((r) => r.json())
+            .then((data) => {
+                if (!cancelled) setLottieData(data);
+            })
+            .catch(() => {
+                if (!cancelled) setLottieData(null);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [isOpen, winData?.selectedItem?.lottie]);
 
     useEffect(() => {
         const handleOpenModal = (data: WinData) => {
@@ -105,7 +131,15 @@ const WinModal = () => {
             <div className={cls.prizeCard}>
                 {!isNoLoot ? (
                     <>
-                        {selectedItem.image ? (
+                        {lottieData ? (
+                            <div className={cls.lottieWrap}>
+                                <Lottie
+                                    animationData={lottieData}
+                                    loop
+                                    style={{ width: 167, height: 191 }}
+                                />
+                            </div>
+                        ) : selectedItem.image ? (
                             <Image 
                                 src={selectedItem.image} 
                                 alt={selectedItem.name}

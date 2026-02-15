@@ -20,10 +20,20 @@ export class NftPurchaseService implements OnModuleInit {
 
   constructor(private readonly configService: ConfigService) {}
 
+  private readonly defaultEndpoint = 'https://toncenter.com/api/v2/jsonRPC';
+
   async onModuleInit() {
     try {
-      // Получаем endpoint через @orbs-network/ton-access
-      const endpoint = await getHttpEndpoint({ network: 'mainnet' });
+      let endpoint: string;
+      try {
+        endpoint = await getHttpEndpoint({ network: 'mainnet' });
+      } catch (accessError: any) {
+        endpoint =
+          this.configService.get<string>('TON_HTTP_ENDPOINT') ?? this.defaultEndpoint;
+        this.logger.warn(
+          `ton-access failed (${accessError?.message ?? 'unknown'}), using endpoint: ${endpoint}`,
+        );
+      }
       this.logger.log(`Using TON endpoint: ${endpoint}`);
 
       const tonApiKey = this.configService.get<string>('TON_API_KEY');
@@ -526,10 +536,23 @@ export class NftPurchaseService implements OnModuleInit {
     }
   }
   
+  /** Для синка: можно ли проверять тип контракта (нужен инициализированный TON client). */
+  isClientInitialized(): boolean {
+    return this.isInitialized && this.client !== null;
+  }
+
   async checkNftContractType(address: Address) {
     try {
-      const contractState = await this.client!.getContractState(address);
-      const codeCell = Cell.fromBoc(Buffer.from(contractState.code!))[0];
+      if (!this.client) {
+        this.logger.warn('checkNftContractType: TON client not initialized');
+        return null;
+      }
+      const contractState = await this.client.getContractState(address);
+      if (!contractState?.code) {
+        this.logger.debug(`checkNftContractType: no code for address ${address.toString()}`);
+        return null;
+      }
+      const codeCell = Cell.fromBoc(Buffer.from(contractState.code))[0];
       const codeHash = codeCell.hash().toString("hex");
 
       const contractType = hexContractType[codeHash.toString()];

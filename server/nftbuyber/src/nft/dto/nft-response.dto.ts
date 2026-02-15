@@ -11,6 +11,8 @@ export interface NftAttributeDto {
 export interface NftMediaDto {
   image: string;
   raw_image: string;
+  /** URL to Lottie animation (from TonCenter metadata) */
+  lottie?: string;
 }
 
 export interface NftMetadataDto {
