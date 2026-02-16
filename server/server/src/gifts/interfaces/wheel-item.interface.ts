@@ -12,6 +12,7 @@ export interface WheelGiftItem {
   image: string;
   ownerAddress: string;
   actualOwnerAddress: string;
+  lottie: string;
 }
 
 export interface WheelMoneyItem {
