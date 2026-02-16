@@ -526,6 +526,17 @@ export class GiftsService {
       } else if (selectedPrize.type === 'gift') {
         const giftPrize = selectedPrize as WheelGiftItem;
 
+        let lottieUrl = giftPrize.lottie;
+        if (!lottieUrl && giftPrize.address) {
+          try {
+            const nftDetailUrl = `${this.nftBuyerUrl}/api/nft/${encodeURIComponent(giftPrize.address)}`;
+            const nftRes = await this.axiosInstance.get(nftDetailUrl);
+            lottieUrl = nftRes.data?.media?.lottie ?? nftRes.data?.metadata?.lottie ?? '';
+          } catch (e) {
+            this.logger.debug(`Could not fetch lottie for gift ${giftPrize.address}: ${(e as Error).message}`);
+          }
+        }
+
         const createdGift = await this.usersService.createUserGift({
           userId,
           giftName: giftPrize.name,
@@ -533,7 +544,7 @@ export class GiftsService {
           collectionAddress: giftPrize.collection.address,
           image: giftPrize.image,
           price: giftPrize.price,
-          lottieUrl: giftPrize.lottie,
+          lottieUrl: lottieUrl || undefined,
         });
 
         this.logger.debug(
@@ -578,6 +589,17 @@ export class GiftsService {
             );
           }
 
+          let secretLottieUrl = secretPrize.lottie;
+          if (!secretLottieUrl && secretPrize.address) {
+            try {
+              const nftDetailUrl = `${this.nftBuyerUrl}/api/nft/${encodeURIComponent(secretPrize.address)}`;
+              const nftRes = await this.axiosInstance.get(nftDetailUrl);
+              secretLottieUrl = nftRes.data?.media?.lottie ?? nftRes.data?.metadata?.lottie ?? '';
+            } catch (e) {
+              this.logger.debug(`Could not fetch lottie for secret gift ${secretPrize.address}: ${(e as Error).message}`);
+            }
+          }
+
           const createdGift = await this.usersService.createUserGift({
             userId,
             giftName: secretPrize.name,
@@ -585,6 +607,7 @@ export class GiftsService {
             collectionAddress: secretPrize.collection?.address,
             image: secretPrize.image,
             price: secretPrize.price,
+            lottieUrl: secretLottieUrl || undefined,
           });
 
           this.logger.debug(

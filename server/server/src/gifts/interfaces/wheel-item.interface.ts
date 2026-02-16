@@ -10,9 +10,9 @@ export interface WheelGiftItem {
   };
   price: number;
   image: string;
+  lottie?: string;
   ownerAddress: string;
   actualOwnerAddress: string;
-  lottie: string;
 }
 
 export interface WheelMoneyItem {
@@ -33,6 +33,7 @@ export interface WheelSecretItem {
   };
   price?: number;
   image?: string;
+  lottie?: string;
   ownerAddress?: string;
   actualOwnerAddress?: string;
   // Если realType === 'money', то поля из WheelMoneyItem
