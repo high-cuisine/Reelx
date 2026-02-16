@@ -57,6 +57,7 @@ export class UserRepository {
         collectionAddress?: string;
         image?: string;
         price?: number;
+        lottieUrl?: string;
     }) {
         return (await this.prisma.userGifts.create({
             data,

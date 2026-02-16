@@ -494,7 +494,6 @@ export class GiftsService {
         type: UserGamesType.solo,
         priceAmount: amount,
         priceType: currencyType === 'stars' ? GameCurrancy.STARS : GameCurrancy.TON,
-        lottieUrl: (selectedPrize as any).lottie || ''
       });
 
       // Если выпал no-loot — это пустой слот: только списание, без выигрыша
@@ -534,6 +533,7 @@ export class GiftsService {
           collectionAddress: giftPrize.collection.address,
           image: giftPrize.image,
           price: giftPrize.price,
+          lottieUrl: giftPrize.lottie,
         });
 
         this.logger.debug(

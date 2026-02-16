@@ -43,6 +43,7 @@ export class UsersService {
         collectionAddress?: string;
         image?: string;
         price?: number;
+        lottieUrl?: string;
     }) {
         return await this.userRepository.createUserGift(data);
     }
