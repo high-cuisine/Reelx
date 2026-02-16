@@ -63,7 +63,7 @@ export const GiftImageOrLottie = ({
         return (
             <div
                 className={`${cls.lottieWrap} ${fillContainer ? cls.fillContainer : ''} ${className ?? ''}`}
-                style={fillContainer ? sizeStyle : sizeStyle}
+                style={sizeStyle}
             >
                 <Lottie
                     animationData={lottieData}
@@ -100,8 +100,16 @@ export const GiftImageOrLottie = ({
     }
 
     if (placeholder) {
-        return <div className={cls.placeholder}>{placeholder}</div>;
+        return (
+            <div className={`${cls.placeholder} ${fillContainer ? cls.fillContainer : ''} ${className ?? ''}`}>
+                {placeholder}
+            </div>
+        );
     }
 
-    return <div className={cls.placeholder}>🎁</div>;
+    return (
+        <div className={`${cls.placeholder} ${fillContainer ? cls.fillContainer : ''} ${className ?? ''}`}>
+            🎁
+        </div>
+    );
 };

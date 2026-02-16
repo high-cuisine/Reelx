@@ -11,6 +11,7 @@ export class GiftsRepository {
     type: UserGamesType;
     priceAmount: number;
     priceType: GameCurrancy;
+    lottieUrl: string;
   }) {
     return this.prisma.userGames.create({
       data,

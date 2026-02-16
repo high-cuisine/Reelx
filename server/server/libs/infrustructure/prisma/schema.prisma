@@ -70,6 +70,7 @@ model UserGifts {
   collectionAddress String?
   image           String?
   price           Float?
+  lottieUrl       String  @default("")
   isOut           Boolean @default(false)
   
   createdAt       DateTime @default(now())
