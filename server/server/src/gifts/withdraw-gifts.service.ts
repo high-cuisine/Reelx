@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { UserRepository } from '../users/repositorys/user.repository';
 import { WithdrawNftResponse } from './dto/withdraw-nft.dto';
+import { TelegramBotService } from '../telegram-bot/services/telegram-bot.service';
 
 @Injectable()
 export class WithdrawGiftsService {
@@ -12,6 +13,7 @@ export class WithdrawGiftsService {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly configService: ConfigService,
+    private readonly telegramBotService: TelegramBotService,
   ) {
     this.nftBuyerUrl = this.configService.get<string>('NFT_BUYER_URL', 'http://localhost:3001');
   }
@@ -78,6 +80,15 @@ export class WithdrawGiftsService {
       await this.userRepository.markUserGiftsAsOut(userId, [giftId]);
 
       this.logger.log(`NFT ${userGift.giftAddress} successfully transferred to ${walletAddress}`);
+
+      // 4. Отправляем уведомление в Telegram
+      const user = await this.userRepository.findUserById(userId);
+      if (user?.telegramId) {
+        await this.telegramBotService.sendMessageToUser(
+          user.telegramId,
+          `🎁 Подарок «${userGift.giftName}» успешно выведен на кошелёк ${walletAddress}`,
+        );
+      }
 
       return {
         success: true,

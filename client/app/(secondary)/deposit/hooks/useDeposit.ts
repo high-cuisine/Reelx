@@ -24,6 +24,8 @@ interface UseDepositReturn {
   handleSubmit: () => Promise<void>;
   walletConnected: boolean;
   handleConnectWallet: () => void;
+  handleDisconnectWallet: () => void;
+  walletDisplayAddress: string | null;
   walletBalance: number | null;
   insufficientBalance: boolean;
 }
@@ -87,6 +89,20 @@ export const useDeposit = (): UseDepositReturn => {
       console.error('Failed to open TonConnect modal', e);
     }
   }, [tonConnectUI]);
+
+  const handleDisconnectWallet = useCallback(() => {
+    if (!tonConnectUI) return;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (tonConnectUI as any).disconnect?.();
+    } catch (e) {
+      console.error('Failed to disconnect wallet', e);
+    }
+  }, [tonConnectUI]);
+
+  const walletDisplayAddress = walletAddress
+    ? `${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`
+    : null;
 
   const handleTonDeposit = useCallback(
     async (amount: number) => {
@@ -157,6 +173,8 @@ export const useDeposit = (): UseDepositReturn => {
     handleSubmit,
     walletConnected,
     handleConnectWallet,
+    handleDisconnectWallet,
+    walletDisplayAddress,
     walletBalance,
     insufficientBalance,
   };

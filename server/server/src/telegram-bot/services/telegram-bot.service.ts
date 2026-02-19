@@ -162,6 +162,14 @@ export class TelegramBotService {
     }
   }
 
+  async sendMessageToUser(telegramId: string, text: string): Promise<void> {
+    try {
+      await this.bot.telegram.sendMessage(telegramId, text);
+    } catch (error) {
+      console.error('Error sending Telegram message:', error);
+    }
+  }
+
   parsePayload(payload: string): { userId: string } | null {
     try {
       // payload формат: payment_${userId}_${timestamp}
