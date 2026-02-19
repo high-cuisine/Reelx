@@ -76,11 +76,7 @@ const DepositPage = () => {
         >
           <Button
             customClass={cls.depositButton}
-            text={
-              isProcessing || tonLoading
-                ? 'Обработка...'
-                : `Пополнить на ${inputValue} ${activeCard.item}`
-            }
+            text={`Пополнить на ${inputValue} ${activeCard.item}`}
           />
         </div>
       )}
