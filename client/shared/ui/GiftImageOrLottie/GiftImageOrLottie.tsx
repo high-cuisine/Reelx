@@ -105,7 +105,9 @@ export const GiftImageOrLottie = ({
 
     const sizeStyle = fillContainer
         ? { width: '100%', height: '100%' as const }
-        : { width, height };
+        : lottieData
+          ? { width: '18vw', height: '18vw' as const }
+          : { width: 56, height: 56 };
 
     if (lottieData) {
         return (
@@ -141,7 +143,9 @@ export const GiftImageOrLottie = ({
             <Image
                 src={image}
                 alt={alt}
-                style={{ width: `${width}vw`, height: `${height}vw` }}
+                width={56}
+                height={56}
+                style={{ width: 56, height: 56 }}
                 className={imageClassName ?? cls.image}
             />
         );
