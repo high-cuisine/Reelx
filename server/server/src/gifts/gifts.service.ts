@@ -238,7 +238,7 @@ export class GiftsService {
     }
 
     // Дефолтный случай — старая логика
-    originalGifts = allRawGifts.slice(0, getCountGifts(amount));
+    originalGifts = allRawGifts.slice(0, Math.min(getCountGifts(amount), 9));
     
     if (onOriginalData) {
       onOriginalData(originalGifts);
