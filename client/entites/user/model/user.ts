@@ -8,6 +8,8 @@ interface UserState {
     authError: string | null;
     setGames: (games: Game[]) => void;
     addGame: (game: Game) => void;
+    /** Добавляет игру в начало списка (после завершения спина) */
+    prependGame: (game: Game) => void;
     setUser: (user: User) => void;
     setAuthError: (error: string | null) => void;
     updateBalance: (amount: number, type: 'stars' | 'ton') => void;
@@ -22,6 +24,9 @@ export const useUserStore = create<UserState>((set) => ({
         if (!state.games) return { games: [game] };
         return { games: [...state.games, game] };
     }),
+    prependGame: (game: Game) => set((state) => ({
+        games: [game, ...(state.games ?? [])],
+    })),
     setUser: (user: User) => set({ user }),
     setAuthError: (error: string | null) => set({ authError: error }),
     updateBalance: (amount: number, type: 'stars' | 'ton') =>

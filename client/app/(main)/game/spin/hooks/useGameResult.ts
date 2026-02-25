@@ -3,6 +3,8 @@ import { eventBus, MODAL_EVENTS } from '@/features/eventBus/eventBus';
 import { giftsService } from '@/entites/gifts/api/api';
 import { GiftItem } from '@/entites/gifts/interfaces/giftItem.interface';
 import { updateUserBalance } from '@/features/user/user';
+import { useUserStore } from '@/entites/user/model/user';
+import type { Game } from '@/entites/user/interface/game.interface';
 
 interface GameResult {
     selectedItem: GiftItem;
@@ -36,19 +38,8 @@ export const useGameResult = () => {
 
         try {
             const result = await giftsService.startGame();
-            
-            // При выигрыше валюты обновляем баланс пользователя в сторе
-            if (result.type === 'money' || (result.type === 'secret' && result.realType === 'money')) {
-                const amount = result.amount ?? result.price ?? 0;
-                const currency =
-                    result.currencyType === 'star'
-                        ? 'stars'
-                        : 'ton';
 
-                if (amount > 0 && currency) {
-                    updateUserBalance(amount, currency);
-                }
-            }
+            // Начисление TON/STARS — только в handleGameComplete, после окончания анимации барабана
 
             // Находим индекс приза в колесе по имени и типу
             const targetIndex = wheelItems.findIndex((item) => {
@@ -133,8 +124,20 @@ export const useGameResult = () => {
         }
     }, []);
 
-    const handleGameComplete = useCallback((result: GameResult) => {
+    const handleGameComplete = useCallback((result: GameResult, playCurrency?: 'ton' | 'stars') => {
         console.log('Игра завершена:', result);
+
+        // Добавляем сыгранную игру в начало списка в сторе
+        if (playCurrency) {
+            const game: Game = {
+                id: `local-${Date.now()}`,
+                type: 'solo',
+                priceAmount: result.totalPrice,
+                priceType: playCurrency === 'ton' ? 'TON' : 'STARS',
+                createdAt: new Date().toISOString(),
+            };
+            useUserStore.getState().prependGame(game);
+        }
 
         const isNoLoot = result.selectedItem.type === 'no-loot' || result.selectedItem.name === 'No loot';
         if (isNoLoot) {
@@ -148,9 +151,14 @@ export const useGameResult = () => {
             return;
         }
 
-        // TON и STARS уже начислены в startGame — модальное окно не показываем
+        // При выигрыше TON/STARS начисляем баланс после остановки барабана, модалку не показываем
         const isMoneyWin = result.selectedItem.name === 'TON' || result.selectedItem.name === 'STARS';
         if (isMoneyWin) {
+            const amount = result.selectedItem.price ?? 0;
+            const currency = result.selectedItem.name === 'TON' ? 'ton' : 'stars';
+            if (amount > 0) {
+                updateUserBalance(amount, currency);
+            }
             giftIdRef.current = null;
             setStartGameState({
                 prize: null,

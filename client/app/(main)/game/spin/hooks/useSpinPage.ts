@@ -34,7 +34,7 @@ export const useSpinPage = () => {
             step,
             giftCount: 1,
         },
-        handleGameComplete
+        (result) => handleGameComplete(result, currency)
     );
 
     const { wheelItems, isLoadingGifts } = useGifts(currency, totalPrice);
