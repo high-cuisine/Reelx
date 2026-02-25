@@ -4,10 +4,12 @@
     justify-content: center;
     overflow: hidden;
     flex-shrink: 0;
+    border-radius: 16px;
 
     > div {
         width: 100% !important;
         height: 100% !important;
+        transform: scale(1.2);
     }
 
     svg {

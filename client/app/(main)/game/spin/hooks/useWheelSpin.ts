@@ -6,8 +6,8 @@ interface UseWheelSpinReturn {
 }
 
 const SPIN_DURATION = 5000; // 5 секунд
-const MIN_ROTATIONS = 3; // Минимум 3 полных оборота
-const MIN_ROTATION_DEGREES = MIN_ROTATIONS * 360; // 1080°
+const MIN_ROTATIONS = 1; // 1 полный оборот
+const MAX_ROTATIONS = 2; // максимум 2 полных оборота
 
 export const useWheelSpin = (
     externalIsSpinning?: boolean,
@@ -31,17 +31,20 @@ export const useWheelSpin = (
             console.log('🎡 useWheelSpin: Начало вращения колеса');
             setIsSpinning(true);
 
+            // 1 или 2 полных оборота до приза
+            const fullRotations = Math.random() < 0.5 ? MIN_ROTATIONS : MAX_ROTATIONS;
+
             let additionalRotation = 0;
 
             if (targetIndex !== null && targetIndex !== undefined && itemsCount && itemsCount > 0) {
                 const segmentAngle = 360 / itemsCount;
                 const targetSegmentCenter = targetIndex * segmentAngle + segmentAngle / 2;
                 const targetRotation = 360 - targetSegmentCenter;
-                additionalRotation = MIN_ROTATION_DEGREES + targetRotation;
-                console.log(`🎯 useWheelSpin: Целевой индекс: ${targetIndex}, дополнительный угол: ${additionalRotation}°`);
+                additionalRotation = fullRotations * 360 + targetRotation;
+                console.log(`🎯 useWheelSpin: Целевой индекс: ${targetIndex}, оборотов: ${fullRotations}, угол: ${additionalRotation}°`);
             } else {
-                additionalRotation = MIN_ROTATION_DEGREES + Math.random() * 360;
-                console.log(`🎯 useWheelSpin: Случайный дополнительный угол: ${additionalRotation}°`);
+                additionalRotation = fullRotations * 360 + Math.random() * 360;
+                console.log(`🎯 useWheelSpin: Случайный спин, оборотов: ${fullRotations}, угол: ${additionalRotation}°`);
             }
 
             const startRotation = rotation;
