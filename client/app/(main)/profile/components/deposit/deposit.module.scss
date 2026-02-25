@@ -30,11 +30,11 @@
 
     & .rightContainer {
         & .depositButton {
-            height: 32px;
-            width: 78px;
-            font-size: 10px;
             background: var(--light-blue);
-            color:var(--white);
+            width: 89px;
+            height: 32px;
+            color: var(--white);
+            font-size: 13px
         }
     }
 

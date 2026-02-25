@@ -96,15 +96,16 @@
 }
 
 .support {
+    background: var(--dark-blue);
+    border-radius: 5px;
+    justify-content: center;
+    align-items: center;
     width: 24px;
     height: 24px;
     display: flex;
-    justify-content: center;
-    align-items: center;
-    border-radius: 5px;
-    background: var(--dark-blue);
     position: absolute;
-    left:20px;
-    top:20px;
+    top: 40px;
+    left: 40px;
+    transform: scale(2);
 }
 
