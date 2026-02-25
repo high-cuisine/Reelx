@@ -40,13 +40,16 @@ export const useSpinPage = () => {
     const { wheelItems, isLoadingGifts } = useGifts(currency, totalPrice);
 
     // Пересчитываем totalPrice в TON, чтобы режимы normal/multy/mystery
-    // зависели от диапазонов 0–20 / 20–50 / 50+ TON.
+    // зависели от диапазонов 0–20 / 20–50 / 50+ TON. От 1600 STARS — режим multy (монеты на колесе).
     const tonEquivalent =
         currency === 'ton'
             ? totalPrice
             : (minStakeStars > 0 ? (totalPrice * minStakeTon) / minStakeStars : 0);
 
-    const mode = getModeByTon(tonEquivalent);
+    const mode =
+        currency === 'stars' && totalPrice >= 1600
+            ? 'multy'
+            : getModeByTon(tonEquivalent);
 
     // Обертка для handlePlay с проверкой баланса, запуском игры и обновлением баланса в сторе
     const handlePlay = () => {
