@@ -8,20 +8,18 @@ async function bootstrap() {
   const adminApp = await NestFactory.create(AdminModule)
   app.setGlobalPrefix('api');
   
-  adminApp.setGlobalPrefix('api/admin-c7ad44cbad762a5da0a4')
+  adminApp.setGlobalPrefix('api/admin-c7ad44cbad762a5da0a4');
+
+  const corsOrigins = process.env.CORS_ORIGIN
+    ? [...process.env.CORS_ORIGIN.split(',').map((s) => s.trim()), 'http://89.124.66.87', 'http://89.124.66.87:5173']
+    : true;
+
   // CORS configuration
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || true, // Разрешить все origins в dev, в prod указать конкретный
-    credentials: true, // Разрешить cookies и credentials
+    origin: corsOrigins,
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-  });
-
-  app.enableCors({
-    origin: process.env.CORS_ORIGIN || true, // Разрешить все origins в dev, в prod указать конкретный
-    credentials: true, // Разрешить cookies и credentials
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],  
   });
   
   // Глобальная валидация DTO
@@ -34,7 +32,7 @@ async function bootstrap() {
   );
 
   adminApp.enableCors({
-    origin: process.env.CORS_ORIGIN || true,
+    origin: corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'x-session-id'],
