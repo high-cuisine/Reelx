@@ -99,17 +99,14 @@ services:
     build:
       context: ./adminClient
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE: ${VITE_API_BASE:-https://reelx.online/api/admin-c7ad44cbad762a5da0a4/admin}
     container_name: gifts-admin-client
     restart: unless-stopped
     ports:
       - '5173:5173'
     networks:
       - gifts-network
-    volumes:
-      - ./adminClient:/app
-      - /app/node_modules
-    environment:
-      VITE_API_BASE: ${VITE_API_BASE:-https://reelx.online/api/admin-c7ad44cbad762a5da0a4/admin}
     depends_on:
       - server
 
