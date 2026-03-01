@@ -541,27 +541,53 @@ export class NftPurchaseService implements OnModuleInit {
     return this.isInitialized && this.client !== null;
   }
 
-  async checkNftContractType(address: Address) {
-    try {
-      if (!this.client) {
-        this.logger.warn('checkNftContractType: TON client not initialized');
-        return null;
-      }
-      const contractState = await this.client.getContractState(address);
-      if (!contractState?.code) {
-        this.logger.debug(`checkNftContractType: no code for address ${address.toString()}`);
-        return null;
-      }
-      const codeCell = Cell.fromBoc(Buffer.from(contractState.code))[0];
-      const codeHash = codeCell.hash().toString("hex");
+  /** Retryable TON API errors (502/503, timeouts, connection resets). */
+  private isRetryableTonError(e: any): boolean {
+    const status = e?.response?.status ?? e?.status;
+    const code = e?.code ?? e?.response?.data?.error;
+    if (status === 502 || status === 503) return true;
+    if (code === 'ECONNRESET' || code === 'ETIMEDOUT' || code === 'ECONNREFUSED') return true;
+    return false;
+  }
 
-      const contractType = hexContractType[codeHash.toString()];
-      
-      return contractType && contractType.toString().includes('nft_sale_getgems');
-    } catch (e) {
-      console.error(e);
+  async checkNftContractType(address: Address) {
+    if (!this.client) {
+      this.logger.warn('checkNftContractType: TON client not initialized');
       return null;
     }
+    let lastError: any;
+    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+      try {
+        const contractState = await this.client.getContractState(address);
+        if (!contractState?.code) {
+          this.logger.debug(`checkNftContractType: no code for address ${address.toString()}`);
+          return null;
+        }
+        const codeCell = Cell.fromBoc(Buffer.from(contractState.code))[0];
+        const codeHash = codeCell.hash().toString("hex");
+        const contractType = hexContractType[codeHash.toString()];
+        return contractType && contractType.toString().includes('nft_sale_getgems');
+      } catch (e) {
+        lastError = e;
+        const status = e?.response?.status ?? e?.status;
+        const msg = e?.message ?? String(e);
+        if (this.isRetryableTonError(e) && attempt < this.maxRetries) {
+          this.logger.warn(
+            `checkNftContractType TON API error (${status ?? msg}), retry ${attempt}/${this.maxRetries} in ${this.retryDelay}ms`,
+          );
+          await new Promise((r) => setTimeout(r, this.retryDelay));
+          continue;
+        }
+        this.logger.warn(
+          `checkNftContractType failed for ${address.toString()}: ${status ? `HTTP ${status}` : msg}`,
+        );
+        return null;
+      }
+    }
+    this.logger.warn(
+      `checkNftContractType failed after ${this.maxRetries} attempts: ${lastError?.message ?? String(lastError)}`,
+    );
+    return null;
   }
 }
 

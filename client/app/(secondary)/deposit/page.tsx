@@ -48,7 +48,7 @@ const DepositPage = () => {
 
       <DepositPresetButtons amounts={presetAmounts} onSelect={setInputValue} />
 
-      {activeCard.type === 'ton' && !walletConnected && (
+      {!walletConnected && (
         <div
           style={{ marginBottom: '10px' }}
           onClick={() => {
@@ -61,8 +61,8 @@ const DepositPage = () => {
         </div>
       )}
 
-      {/* Кнопка пополнения скрыта, если выбран TON и кошелёк не подключен */}
-      {!(activeCard.type === 'ton' && !walletConnected) && (
+      {/* Кнопка пополнения скрыта, пока кошелёк не подключен */}
+      {walletConnected && (
         <div
           onClick={() => {
             if (!isDisabled) {
@@ -81,7 +81,7 @@ const DepositPage = () => {
         </div>
       )}
 
-      {activeCard.type === 'ton' && walletConnected && walletDisplayAddress && (
+      {walletConnected && walletDisplayAddress && (
         <div className={cls.walletCard}>
           <span className={cls.walletCardLabel}>Привязанный кошелек:</span>
           <div className={cls.walletCardRow}>

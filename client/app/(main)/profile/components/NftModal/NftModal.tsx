@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useContext, useState } from 'react';
-import Image from 'next/image';
 import { useTonWallet, TonConnectUIContext } from '@tonconnect/ui-react';
 import { UserGift } from '@/entites/user/api/api';
 import { GiftImageOrLottie } from '@/shared/ui/GiftImageOrLottie/GiftImageOrLottie';
+import { Button } from '@/shared/ui/Button/Button';
 import { nftWithdrawService } from '@/features/nft/nft';
 import { updateUserBalance } from '@/features/user/user';
 import cls from './NftModal.module.scss';
@@ -91,9 +91,21 @@ export const NftModal = ({ isOpen, onClose, nft, onSell, onWithdraw }: NftModalP
         }
     };
 
+    const handleDisconnectWallet = () => {
+        if (!tonConnectUI) return;
+        try {
+            (tonConnectUI as { disconnect?: () => void }).disconnect?.();
+        } catch (e) {
+            console.error('Failed to disconnect wallet', e);
+        }
+    };
+
     if (!nft) return null;
 
     const isWalletConnected = !!wallet;
+    const walletDisplayAddress = wallet?.account?.address
+        ? `${wallet.account.address.slice(0, 4)}...${wallet.account.address.slice(-4)}`
+        : null;
 
     const sellPrice = nft.price ? (nft.price * 0.8).toFixed(2) : '0.00';
 
@@ -125,7 +137,7 @@ export const NftModal = ({ isOpen, onClose, nft, onSell, onWithdraw }: NftModalP
                 </div>
             </div>
 
-            <div className={cls.textBlock}>
+            {/* <div className={cls.textBlock}>
                 <h2 className={cls.title}>Ваш NFT</h2>
                 <p className={cls.subtitle}>
                     {nft.giftName.includes('#') ? (
@@ -137,14 +149,29 @@ export const NftModal = ({ isOpen, onClose, nft, onSell, onWithdraw }: NftModalP
                         <span className={cls.subtitleTitle}>{nft.giftName}</span>
                     )}
                 </p>
-            </div>
+            </div> */}
 
             <div className={cls.actions}>
                 {!isWalletConnected ? (
-                    <button className={cls.connectButton} onClick={handleConnectWallet}>
-                        Подключить кошелек
-                    </button>
+                    <div onClick={handleConnectWallet}>
+                        <Button customClass={cls.walletConnectButton} text="Подключить TON кошелёк" />
+                    </div>
                 ) : (
+                    <div className={cls.walletCard}>
+                        <span className={cls.walletCardLabel}>Привязанный кошелек:</span>
+                        <div className={cls.walletCardRow}>
+                            <span className={cls.walletCardAddress}>{walletDisplayAddress}</span>
+                            <button type="button" className={cls.walletCardDisconnect} onClick={handleDisconnectWallet}>
+                                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M13.5 10H17M17 10L15 8M17 10L15 12" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                    <path d="M13 6V5C13 3.89543 12.1046 3 11 3H5C3.89543 3 3 3.89543 3 5V15C3 16.1046 3.89543 17 5 17H11C12.1046 17 13 16.1046 13 15V14" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" strokeLinecap="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {isWalletConnected && (
                     <>
                         <button
                             className={cls.sellButton}
@@ -178,8 +205,8 @@ export const NftModal = ({ isOpen, onClose, nft, onSell, onWithdraw }: NftModalP
                         )}
                     </>
                 )}
-                
-                <button className={cls.backButton} onClick={onClose}>
+
+                <button type="button" className={cls.backButton} onClick={onClose}>
                     Назад
                 </button>
             </div>
