@@ -4,6 +4,12 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.enableCors({
+    origin: ['http://89.124.66.87', 'http://89.124.66.87:5173'],
+    credentials: true,
+  });
+
   app.setGlobalPrefix('api');
 
   // Глобальная валидация DTO
