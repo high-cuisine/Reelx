@@ -1,4 +1,5 @@
 'use client'
+import { useRef, useEffect } from 'react';
 import Image from 'next/image';
 import cls from './Bets.module.scss';
 import starIcon from '@/assets/star.svg';
@@ -46,6 +47,17 @@ const Bets = ({
     onDecreaseRolls,
     onPlay,
 }: BetsProps) => {
+    const playLockRef = useRef(false);
+
+    useEffect(() => {
+        if (!isSpinning) playLockRef.current = false;
+    }, [isSpinning]);
+
+    const handlePlay = () => {
+        if (isSpinning || !canPlay || playLockRef.current) return;
+        playLockRef.current = true;
+        onPlay();
+    };
 
     const handleGiftClick = () => {
         // Для модалки показываем каждый приз только один раз по имени
@@ -150,8 +162,14 @@ const Bets = ({
                 </button>
             </div>
 
-            <div onClick={onPlay}>
-                <Button text={isSpinning ? 'Крутится...' : 'Играть'} customClass={!canPlay ? cls.disabled : ''}></Button>
+            <div
+                onClick={handlePlay}
+                style={isSpinning ? { pointerEvents: 'none', cursor: 'not-allowed' } : undefined}
+            >
+                <Button
+                    text={isSpinning ? 'Крутится...' : 'Играть'}
+                    customClass={!canPlay || isSpinning ? cls.disabled : ''}
+                />
             </div>
         </div>
     );
