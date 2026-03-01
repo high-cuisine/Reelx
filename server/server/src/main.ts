@@ -11,7 +11,11 @@ async function bootstrap() {
   adminApp.setGlobalPrefix('api/admin-c7ad44cbad762a5da0a4');
 
   const corsOrigins = process.env.CORS_ORIGIN
-    ? [...process.env.CORS_ORIGIN.split(',').map((s) => s.trim()), 'http://89.124.66.87', 'http://89.124.66.87:5173']
+    ? [
+        'http://89.124.66.87',
+        'http://89.124.66.87:5173',
+        ...process.env.CORS_ORIGIN.split(',').map((s) => s.trim()),
+      ]
     : true;
 
   // CORS configuration
