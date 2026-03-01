@@ -10,17 +10,9 @@ async function bootstrap() {
   
   adminApp.setGlobalPrefix('api/admin-c7ad44cbad762a5da0a4');
 
-  const corsOrigins = process.env.CORS_ORIGIN
-    ? [
-        'http://89.124.66.87',
-        'http://89.124.66.87:5173',
-        ...process.env.CORS_ORIGIN.split(',').map((s) => s.trim()),
-      ]
-    : true;
-
-  // CORS configuration
+  // CORS: разрешить все origins
   app.enableCors({
-    origin: corsOrigins,
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
@@ -36,7 +28,7 @@ async function bootstrap() {
   );
 
   adminApp.enableCors({
-    origin: corsOrigins,
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'x-session-id'],
