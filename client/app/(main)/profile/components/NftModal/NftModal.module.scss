@@ -25,7 +25,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-image: linear-gradient(to bottom, #0c1134, #190925, #190418, #12010b, #000000);
+    background: linear-gradient(180deg, rgba(12, 17, 52, 1) 0%, rgba(0, 0, 0, 1) 100%);
     z-index: 1;
 }
 
@@ -173,123 +173,60 @@
     z-index: 2;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 10px;
     width: 100%;
-    max-width: 320px;
+    max-width: 355px;
     margin: auto auto 0;
-    padding: 0 24px 5vh;
+    padding: 0 19px 5vh;
     box-sizing: border-box;
     animation: slideUp 0.6s ease-out 0.4s both;
 }
 
-.walletConnectButton {
-    margin-top: 0;
-    background: #5C46B5;
-    color: #fff;
-}
-
-.walletCard {
-    margin-top: 0;
-    margin-bottom: 0;
-    padding: 14px 16px;
-    background: rgba(255, 255, 255, 0.06);
-    border-radius: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.walletCardLabel {
-    font-size: 12px;
-    font-weight: 400;
-    color: rgba(255, 255, 255, 0.5);
-}
-
-.walletCardRow {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.walletCardAddress {
-    font-family: 'Montserrat', monospace;
-    font-size: 18px;
-    font-weight: 700;
-    color: #fff;
-    letter-spacing: 0.02em;
-}
-
-.walletCardDisconnect {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.08);
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: background 0.2s;
-
-    &:active {
-        background: rgba(255, 255, 255, 0.14);
-    }
-}
-
-.connectButton,
 .sellButton {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
     width: 100%;
-    padding: 14px 16px;
-    background: linear-gradient(90deg, rgba(116, 86, 233, 1) -10%, 10%, rgba(255, 255, 255, 1) 100%);
-    border-radius: 12px;
+    padding: 10px;
+    background: linear-gradient(45deg, rgba(116, 86, 233, 1) 0%, rgba(142, 179, 239, 1) 33%, rgba(230, 221, 247, 0.99) 68%, rgba(207, 174, 254, 1) 100%);
+    border-radius: 10px;
     border: none;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
     font-family: 'Montserrat', sans-serif;
     font-weight: 700;
-    font-size: 14px;
+    font-size: 12px;
     color: #1E1D2B;
     line-height: 1.22;
 
-    &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(116, 86, 233, 0.4);
+    &:active:not(:disabled) {
+        transform: scale(0.98);
     }
 
-    &:active {
-        transform: translateY(0);
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
     }
 }
 
-.withdrawButton,
-.backButton {
+.withdrawButton {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 6px;
     width: 100%;
-    padding: 14px 16px;
+    padding: 10px;
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 12px;
+    border-radius: 10px;
     cursor: pointer;
     transition: all 0.2s;
     font-family: 'Montserrat', sans-serif;
-    font-weight: 700;
-    font-size: 14px;
+    font-weight: 600;
+    font-size: 12px;
     color: rgba(255, 255, 255, 0.32);
     line-height: 1.22;
-
-    &:hover:not(:disabled) {
-        border-color: rgba(255, 255, 255, 0.32);
-        background: rgba(255, 255, 255, 0.05);
-        color: rgba(255, 255, 255, 0.6);
-    }
 
     &:active:not(:disabled) {
         transform: scale(0.98);
@@ -304,18 +241,96 @@
 .priceTag {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
 
     svg, img {
-        width: 14px;
-        height: 14px;
+        width: 13px;
+        height: 13px;
     }
 
     span {
         font-family: 'Montserrat', sans-serif;
         font-weight: 700;
-        font-size: 14px;
+        font-size: 12px;
         line-height: 1.22;
+    }
+}
+
+.withdrawPriceTag {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+
+    svg, img {
+        width: 13px;
+        height: 13px;
+    }
+
+    span {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 600;
+        font-size: 12px;
+        line-height: 1.22;
+        color: rgba(255, 255, 255, 0.32);
+    }
+}
+
+.walletConnectButton {
+    background: #5C46B5;
+    color: #fff;
+}
+
+.walletCard {
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.walletCardLabel {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.32);
+    line-height: 1.22;
+}
+
+.walletCardRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.walletCardAddress {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: #FFFFFF;
+    line-height: 1.22;
+}
+
+.walletCardDisconnect {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    padding: 0 16px;
+    background: rgba(116, 86, 233, 1);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    color: #FFFFFF;
+    line-height: 1.22;
+
+    &:active {
+        background: rgba(116, 86, 233, 0.8);
     }
 }
 
@@ -325,7 +340,7 @@
     font-size: 10px;
     color: #ff4444;
     text-align: center;
-    margin-top: 8px;
+    margin-top: 4px;
     padding: 8px;
     background: rgba(255, 68, 68, 0.1);
     border-radius: 6px;
