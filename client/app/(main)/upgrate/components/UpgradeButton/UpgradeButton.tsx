@@ -20,7 +20,7 @@ export function UpgradeButton({
     const text =
         selectedCount === 0
             ? 'Выберите подарки для апгрейда'
-            : `Выбрано подарков: ${selectedCount}${selectedMultiplier ? `, ставка ${selectedMultiplier}` : ' (ставка x1)'}`;
+            : 'Считаем шанс...';
 
     return (
         <button
@@ -30,11 +30,13 @@ export function UpgradeButton({
             disabled={!isReadyToPlay || isPlaying}
         >
             <span>
-                {isReadyToPlay
-                    ? isPlaying
-                        ? 'Играем...'
-                        : 'Играть'
-                    : text}
+                {selectedCount === 0
+                    ? text
+                    : isReadyToPlay
+                        ? isPlaying
+                            ? 'Играем...'
+                            : 'Играть'
+                        : text}
             </span>
         </button>
     );

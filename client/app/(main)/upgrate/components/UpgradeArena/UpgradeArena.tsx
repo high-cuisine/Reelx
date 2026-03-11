@@ -43,10 +43,12 @@ export function UpgradeArena({
     const resultRef = useRef<'win' | 'lose' | null>(null);
     const onCompleteRef = useRef<((r: 'win' | 'lose') => void) | null>(null);
     const hasCompletedRef = useRef(false);
+    const isReturningRef = useRef(false);
 
     useEffect(() => {
         resultRef.current = result;
         hasCompletedRef.current = false;
+        isReturningRef.current = false;
     }, [result]);
 
     useEffect(() => {
@@ -97,13 +99,34 @@ export function UpgradeArena({
                 setAngle(nextAngle);
 
                 if (progress >= 1) {
-                    // Анимация завершена
+                    const res = resultRef.current;
+
+                    // При проигрыше запускаем вторую фазу — возврат по часовой к старту
+                    if (res === 'lose' && !isReturningRef.current) {
+                        isReturningRef.current = true;
+
+                        const currentAngleNorm =
+                            ((nextAngle % FULL_DEG) + FULL_DEG) % FULL_DEG;
+                        const localCurrent =
+                            ((currentAngleNorm - START_ANGLE + FULL_DEG) % FULL_DEG +
+                                FULL_DEG) %
+                            FULL_DEG;
+                        const deltaLocal = (FULL_DEG - localCurrent) % FULL_DEG;
+                        const targetBackGlobal = nextAngle + deltaLocal;
+
+                        startAngleRef.current = nextAngle;
+                        targetAngleRef.current = targetBackGlobal;
+                        easeStartRef.current = timestamp;
+                        lastTimeRef.current = timestamp;
+                        return;
+                    }
+
+                    // Анимация полностью завершена
                     targetAngleRef.current = null;
                     easeStartRef.current = null;
                     lastTimeRef.current = null;
                     rafRef.current = null;
 
-                    const res = resultRef.current;
                     if (res && !hasCompletedRef.current && onCompleteRef.current) {
                         hasCompletedRef.current = true;
                         onCompleteRef.current(res);
