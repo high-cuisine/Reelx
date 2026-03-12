@@ -59,7 +59,7 @@ export function useUpgratePage() {
             eventBus.emit(MODAL_EVENTS.OPEN_WIN_MODAL, {
                 selectedItem: {
                     name: mainGift.name ?? 'Подарок',
-                    price: undefined,
+                    price: mainGift.price,
                     image: mainGift.image,
                 },
                 rolls: 1,

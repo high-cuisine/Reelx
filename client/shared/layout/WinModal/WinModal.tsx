@@ -147,7 +147,7 @@ const WinModal = () => {
     const { selectedItem } = winData;
     const isNoLoot = selectedItem.name === 'NO LOOT';
 
-    const sellPrice = selectedItem.price ? (selectedItem.price * 0.8).toFixed(2) : '4.15';
+    const sellPrice = selectedItem.price ? (selectedItem.price * 0.8).toFixed(2) : '0.00';
 
     return (
         <div className={`${cls.winModal} ${isOpen ? cls.open : ''}`}>

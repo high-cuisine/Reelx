@@ -119,7 +119,7 @@ export class UpgrateService {
     loseGifts: NftBuyerGift[];
     baseAmount: number;
   }> {
-    let baseAmount = sumPrices * multiplier;
+    let baseAmount = sumPrices;
     let winGifts: NftBuyerGift[] = [];
     let loseGifts: NftBuyerGift[] = [];
 
@@ -273,6 +273,7 @@ export class UpgrateService {
       id: g.id ?? String(idx),
       name: g.name,
       image: g.image,
+      price: priceToTon(g.price),
     }));
 
     if (gifts.length > 0) {
@@ -290,11 +291,11 @@ export class UpgrateService {
         ),
       );
 
-      // Возвращаем фактические id созданных userGifts
-      gifts = created.map((u) => ({
+      gifts = created.map((u, i) => ({
         id: u.id,
         name: u.giftName,
         image: u.image ?? undefined,
+        price: gifts[i]?.price,
       }));
     }
 
