@@ -107,9 +107,6 @@ export class UpgrateService {
       (sum, g) => sum + (g.price ?? 0),
       0,
     ) as number;
-    if (sumPrices <= 0) {
-      throw new BadRequestException('Total gift price must be positive');
-    }
     return { userGifts, sumPrices };
   }
 
