@@ -10,8 +10,9 @@ const CIRCLE_R = 117;
 const STROKE_WIDTH = 6;
 const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_R;
 const FULL_DEG = 360;
-const BASE_SPIN_SPEED = 720; // градусов в секунду
+const BASE_SPIN_SPEED = 360; // градусов в секунду
 const EASE_DURATION = 1200; // мс
+const LOSE_PAUSE = 1000; // мс паузы при проигрыше перед возвратом
 const START_ANGLE = 90; // 6 часов (нижняя точка)
 
 interface UpgradeArenaProps {
@@ -44,11 +45,15 @@ export function UpgradeArena({
     const onCompleteRef = useRef<((r: 'win' | 'lose') => void) | null>(null);
     const hasCompletedRef = useRef(false);
     const isReturningRef = useRef(false);
+    const pauseStartRef = useRef<number | null>(null);
+    const pendingReturnAngleRef = useRef<number | null>(null);
 
     useEffect(() => {
         resultRef.current = result;
         hasCompletedRef.current = false;
         isReturningRef.current = false;
+        pauseStartRef.current = null;
+        pendingReturnAngleRef.current = null;
     }, [result]);
 
     useEffect(() => {
@@ -64,6 +69,8 @@ export function UpgradeArena({
             easeStartRef.current = null;
             lastTimeRef.current = null;
             rafRef.current = null;
+            pauseStartRef.current = null;
+            pendingReturnAngleRef.current = null;
         }
     }, [isPlaying, result]);
 
@@ -75,15 +82,28 @@ export function UpgradeArena({
         }
 
         const step = (timestamp: number) => {
+            // Фаза паузы при проигрыше: шарик стоит на месте
+            if (pauseStartRef.current != null) {
+                if (timestamp - pauseStartRef.current >= LOSE_PAUSE) {
+                    pauseStartRef.current = null;
+                    startAngleRef.current = angleRef.current;
+                    targetAngleRef.current = pendingReturnAngleRef.current!;
+                    easeStartRef.current = timestamp;
+                    lastTimeRef.current = timestamp;
+                    pendingReturnAngleRef.current = null;
+                }
+                rafRef.current = requestAnimationFrame(step);
+                return;
+            }
+
             if (lastTimeRef.current == null) {
                 lastTimeRef.current = timestamp;
             }
-            const dt = (timestamp - lastTimeRef.current) / 1000; // в секундах
+            const dt = (timestamp - lastTimeRef.current) / 1000;
             lastTimeRef.current = timestamp;
 
             let nextAngle = angleRef.current + BASE_SPIN_SPEED * dt;
 
-            // Если есть целевой угол (результат уже известен) — переходим к easing
             if (targetAngleRef.current != null && easeStartRef.current != null) {
                 const progress = Math.min(
                     1,
@@ -91,7 +111,6 @@ export function UpgradeArena({
                 );
                 const start = startAngleRef.current;
                 const end = targetAngleRef.current;
-                // простое easeOutQuad
                 const eased = 1 - (1 - progress) * (1 - progress);
                 nextAngle = start + (end - start) * eased;
 
@@ -101,7 +120,6 @@ export function UpgradeArena({
                 if (progress >= 1) {
                     const res = resultRef.current;
 
-                    // При проигрыше запускаем вторую фазу — возврат по часовой к старту
                     if (res === 'lose' && !isReturningRef.current) {
                         isReturningRef.current = true;
 
@@ -114,10 +132,13 @@ export function UpgradeArena({
                         const deltaLocal = (FULL_DEG - localCurrent) % FULL_DEG;
                         const targetBackGlobal = nextAngle + deltaLocal;
 
-                        startAngleRef.current = nextAngle;
-                        targetAngleRef.current = targetBackGlobal;
-                        easeStartRef.current = timestamp;
-                        lastTimeRef.current = timestamp;
+                        // Встаём на паузу, запоминаем куда возвращаться
+                        pendingReturnAngleRef.current = targetBackGlobal;
+                        pauseStartRef.current = timestamp;
+                        targetAngleRef.current = null;
+                        easeStartRef.current = null;
+
+                        rafRef.current = requestAnimationFrame(step);
                         return;
                     }
 
