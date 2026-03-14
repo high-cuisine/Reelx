@@ -347,6 +347,10 @@ button.giftItem {
     border: none;
     padding: 0;
     font: inherit;
+    color: inherit;
+    background: inherit;
+    text-align: inherit;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .giftItemSelected {

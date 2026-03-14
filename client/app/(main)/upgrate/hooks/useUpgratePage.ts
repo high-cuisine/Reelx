@@ -19,7 +19,6 @@ export function useUpgratePage() {
     const { chance, bet, winning, poolGifts, isLoadingChance } = useChanceData(
         selectedGifts,
         selectedMultiplier,
-        activeTab,
     );
 
     const canSelectWish = bet >= WISH_SELECTION_MIN_BET_TON;
