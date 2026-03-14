@@ -1,6 +1,7 @@
 import type { NftBuyerGift } from './nft-buyer-gift.type';
 
 export type UpgrateState = {
+  toyIds: string[];
   winGifts: NftBuyerGift[];
   chance: number;
   bet: number;

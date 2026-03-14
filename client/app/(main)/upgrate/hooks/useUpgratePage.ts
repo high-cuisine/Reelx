@@ -89,7 +89,12 @@ export function useUpgratePage() {
             });
         }
 
-        // при проигрыше ничего не показываем
+        // Ставка забрана сервером — сбрасываем выбор и обновляем инвентарь
+        setSelectedGifts([]);
+        setSelectedWishName(null);
+        setActiveTab('inventory');
+        loadGifts();
+
         setGameResult(null);
     };
 

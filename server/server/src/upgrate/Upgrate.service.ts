@@ -77,6 +77,7 @@ export class UpgrateService {
     const chance = computeChanceFromMultiplier(multiplier);
     await this.saveUpgrateStateToRedis(
       userId,
+      toyIds,
       winGifts,
       chance,
       baseAmount,
@@ -204,6 +205,7 @@ export class UpgrateService {
 
   private async saveUpgrateStateToRedis(
     userId: string,
+    toyIds: string[],
     winGifts: NftBuyerGift[],
     chance: number,
     bet: number,
@@ -211,14 +213,14 @@ export class UpgrateService {
     wishNft: string | null = null,
   ): Promise<void> {
     const key = `${UPGRATE_STATE_REDIS_KEY_PREFIX}:${userId}`;
-    const state: UpgrateState = { winGifts, chance, bet, loseGifts, wishNft };
+    const state: UpgrateState = { toyIds, winGifts, chance, bet, loseGifts, wishNft };
     await this.redisService.set(
       key,
       JSON.stringify(state),
       UPGRATE_TTL_SECONDS,
     );
     this.logger.debug(
-      `Saved upgrate state for user ${userId}: win=${winGifts.length}, lose=${loseGifts.length}, chance=${chance}, bet=${bet}`,
+      `Saved upgrate state for user ${userId}: toyIds=${toyIds.length}, win=${winGifts.length}, lose=${loseGifts.length}, chance=${chance}, bet=${bet}`,
     );
   }
 
@@ -261,6 +263,9 @@ export class UpgrateService {
       );
     }
 
+    const toyIds = Array.isArray(obj.toyIds)
+      ? (obj.toyIds as unknown[]).filter((v): v is string => typeof v === 'string')
+      : [];
     const chance = typeof obj.chance === 'number' ? obj.chance : 0;
     const bet = typeof obj.bet === 'number' ? obj.bet : 0;
     const loseRaw = obj.loseGifts;
@@ -273,6 +278,7 @@ export class UpgrateService {
       : [];
 
     const state: UpgrateState = {
+      toyIds,
       winGifts,
       chance,
       bet,
@@ -306,6 +312,9 @@ export class UpgrateService {
     }
 
     const obj = parsed as Record<string, unknown>;
+    const toyIds = Array.isArray(obj.toyIds)
+      ? (obj.toyIds as unknown[]).filter((v): v is string => typeof v === 'string')
+      : [];
     const chance = typeof obj.chance === 'number' ? obj.chance : NaN;
     const bet = typeof obj.bet === 'number' ? obj.bet : NaN;
     const winRaw = obj.winGifts;
@@ -332,12 +341,27 @@ export class UpgrateService {
     const wishNft =
       typeof obj.wishNft === 'string' ? obj.wishNft : null;
 
-    const state: UpgrateState = { winGifts, chance, bet, loseGifts, wishNft };
+    const state: UpgrateState = { toyIds, winGifts, chance, bet, loseGifts, wishNft };
 
     const didWin = Math.random() < state.chance;
 
     if (!didWin) {
+      if (state.toyIds.length > 0) {
+        await this.userRepository.markUserGiftsAsOut(userId, state.toyIds);
+        this.logger.debug(
+          `Upgrate LOSE: marked ${state.toyIds.length} gifts as out for user ${userId}`,
+        );
+      }
+      await this.redisService.del(key);
       return { result: 'lose', gifts: [] };
+    }
+
+    // При выигрыше тоже забираем поставленные подарки
+    if (state.toyIds.length > 0) {
+      await this.userRepository.markUserGiftsAsOut(userId, state.toyIds);
+      this.logger.debug(
+        `Upgrate WIN: marked ${state.toyIds.length} bet gifts as out for user ${userId}`,
+      );
     }
 
     let selected: NftBuyerGift[];
@@ -349,6 +373,7 @@ export class UpgrateService {
     }
 
     if (selected.length === 0) {
+      await this.redisService.del(key);
       return { result: 'win', gifts: [] };
     }
 
@@ -363,6 +388,7 @@ export class UpgrateService {
       price: selected[i] ? priceToTon(selected[i].price) : undefined,
     }));
 
+    await this.redisService.del(key);
     return { result: 'win', gifts };
   }
 
