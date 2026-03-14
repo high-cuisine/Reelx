@@ -5,6 +5,7 @@ import { MULTIPLIER_VALUES } from '../helpers/constants';
 export function useChanceData(
     selectedGifts: string[],
     selectedMultiplier: string | null,
+    activeTab?: 'inventory' | 'wishlist',
 ) {
     const [chanceData, setChanceData] = useState<GetChanceResponse | null>(null);
     const [isLoadingChance, setIsLoadingChance] = useState(false);
@@ -40,7 +41,7 @@ export function useChanceData(
         return () => {
             cancelled = true;
         };
-    }, [selectedGifts, selectedMultiplier]);
+    }, [selectedGifts, selectedMultiplier, activeTab]);
 
     const chance = chanceData?.userToys?.[0]?.chance ?? null;
     const bet = chanceData?.userToys?.[0]?.bet ?? 0;
