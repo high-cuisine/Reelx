@@ -4,6 +4,12 @@ export type NftBuyerGift = {
   image?: string;
   /** Может приходить как nanoTON строкой или как number */
   price?: string | number;
+  /** Адрес NFT контракта (для purchase и записи в инвентарь) */
+  address?: string;
+  /** sale_address для API purchase */
+  ownerAddress?: string;
+  collection?: { address?: string; name?: string };
+  lottie?: string;
 };
 
 export function toNftBuyerGift(raw: unknown): NftBuyerGift | null {
@@ -19,9 +25,22 @@ export function toNftBuyerGift(raw: unknown): NftBuyerGift | null {
       ? obj.price
       : undefined;
 
-  // если вообще нет полезных полей — считаем мусором
-  if (id == null && name == null && image == null && price == null) return null;
+  const address = typeof obj.address === 'string' ? obj.address : undefined;
+  const ownerAddress =
+    typeof obj.ownerAddress === 'string' ? obj.ownerAddress : undefined;
+  let collection: NftBuyerGift['collection'];
+  if (obj.collection != null && typeof obj.collection === 'object') {
+    const col = obj.collection as Record<string, unknown>;
+    collection = {
+      address: typeof col.address === 'string' ? col.address : undefined,
+      name: typeof col.name === 'string' ? col.name : undefined,
+    };
+  }
+  const lottie = typeof obj.lottie === 'string' ? obj.lottie : undefined;
 
-  return { id, name, image, price };
+  // если вообще нет полезных полей — считаем мусором
+  if (id == null && name == null && image == null && price == null && address == null && ownerAddress == null) return null;
+
+  return { id, name, image, price, address, ownerAddress, collection, lottie };
 }
 

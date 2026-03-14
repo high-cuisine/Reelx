@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
 import { RedisService } from '../../libs/infrustructure/redis/redis.service';
 import { UserRepository } from '../users/repositorys/user.repository';
+import { UsersService } from '../users/services/users.service';
 import { ToyRto } from './rto/toy.rto';
 import { GetChanceResponseRto } from './rto/get-chance-response.rto';
 import { StartGameResponseRto } from './rto/start-game-response.rto';
@@ -22,6 +23,7 @@ const MIN_PRICE_PROBE_STEP = 0.5;
 const MAX_ITERATIONS = 10;
 const POOL_SIZE = 10;
 const UPGRATE_STATE_REDIS_KEY_PREFIX = 'upgrate:state';
+const NFT_PURCHASE_FEE_NANO = 300_000_000n; // ~0.3 TON
 
 @Injectable()
 export class UpgrateService {
@@ -33,6 +35,7 @@ export class UpgrateService {
     private readonly configService: ConfigService,
     private readonly redisService: RedisService,
     private readonly userRepository: UserRepository,
+    private readonly usersService: UsersService,
   ) {
     this.nftBuyerUrl = this.configService.get<string>(
       'NFT_BUYER_URL',
@@ -78,6 +81,7 @@ export class UpgrateService {
       chance,
       baseAmount,
       loseGifts,
+      null,
     );
 
     const winning = computeAverageWinning(winGifts);
@@ -204,9 +208,10 @@ export class UpgrateService {
     chance: number,
     bet: number,
     loseGifts: NftBuyerGift[],
+    wishNft: string | null = null,
   ): Promise<void> {
     const key = `${UPGRATE_STATE_REDIS_KEY_PREFIX}:${userId}`;
-    const state: UpgrateState = { winGifts, chance, bet, loseGifts };
+    const state: UpgrateState = { winGifts, chance, bet, loseGifts, wishNft };
     await this.redisService.set(
       key,
       JSON.stringify(state),
@@ -215,6 +220,71 @@ export class UpgrateService {
     this.logger.debug(
       `Saved upgrate state for user ${userId}: win=${winGifts.length}, lose=${loseGifts.length}, chance=${chance}, bet=${bet}`,
     );
+  }
+
+  async setWishNft(userId: string, nftId: string): Promise<{ success: true }> {
+    const key = `${UPGRATE_STATE_REDIS_KEY_PREFIX}:${userId}`;
+    const raw = await this.redisService.get(key);
+    if (!raw) {
+      throw new BadRequestException(
+        'Upgrate state not found. Call get-chance first.',
+      );
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      throw new BadRequestException('Upgrate state is corrupted.');
+    }
+
+    if (parsed == null || typeof parsed !== 'object') {
+      throw new BadRequestException('Upgrate state is corrupted.');
+    }
+
+    const obj = parsed as Record<string, unknown>;
+    const winRaw = obj.winGifts;
+    if (!Array.isArray(winRaw)) {
+      throw new BadRequestException('Upgrate state is corrupted.');
+    }
+
+    const winGifts: NftBuyerGift[] = [];
+    for (const item of winRaw) {
+      const g = toNftBuyerGift(item);
+      if (g) winGifts.push(g);
+    }
+
+    const found = winGifts.some((g) => g.id === nftId);
+    if (!found) {
+      throw new BadRequestException(
+        'NFT not found in current win pool',
+      );
+    }
+
+    const chance = typeof obj.chance === 'number' ? obj.chance : 0;
+    const bet = typeof obj.bet === 'number' ? obj.bet : 0;
+    const loseRaw = obj.loseGifts;
+    const loseGifts: NftBuyerGift[] = Array.isArray(loseRaw)
+      ? (loseRaw as unknown[]).reduce<NftBuyerGift[]>((acc, item) => {
+          const g = toNftBuyerGift(item);
+          if (g) acc.push(g);
+          return acc;
+        }, [])
+      : [];
+
+    const state: UpgrateState = {
+      winGifts,
+      chance,
+      bet,
+      loseGifts,
+      wishNft: nftId,
+    };
+    await this.redisService.set(
+      key,
+      JSON.stringify(state),
+      UPGRATE_TTL_SECONDS,
+    );
+    return { success: true };
   }
 
   async startGame(userId: string): Promise<StartGameResponseRto> {
@@ -259,7 +329,10 @@ export class UpgrateService {
       if (g) loseGifts.push(g);
     }
 
-    const state: UpgrateState = { winGifts, chance, bet, loseGifts };
+    const wishNft =
+      typeof obj.wishNft === 'string' ? obj.wishNft : null;
+
+    const state: UpgrateState = { winGifts, chance, bet, loseGifts, wishNft };
 
     const didWin = Math.random() < state.chance;
 
@@ -267,39 +340,89 @@ export class UpgrateService {
       return { result: 'lose', gifts: [] };
     }
 
-    const selected = this.selectWinningGifts(state);
-
-    let gifts: ToyRto[] = selected.map((g, idx) => ({
-      id: g.id ?? String(idx),
-      name: g.name,
-      image: g.image,
-      price: priceToTon(g.price),
-    }));
-
-    if (gifts.length > 0) {
-      // Создаём подарки в инвентаре пользователя
-      const created = await Promise.all(
-        gifts.map((g) =>
-          this.userRepository.createUserGift({
-            userId,
-            giftName: g.name ?? 'Gift',
-            giftAddress: '', // нет адреса из NFT-buyer, оставляем пустым
-            image: g.image,
-            price: undefined,
-            lottieUrl: undefined,
-          }),
-        ),
-      );
-
-      gifts = created.map((u, i) => ({
-        id: u.id,
-        name: u.giftName,
-        image: u.image ?? undefined,
-        price: gifts[i]?.price,
-      }));
+    let selected: NftBuyerGift[];
+    if (state.wishNft) {
+      const wished = state.winGifts.find((g) => g.id === state.wishNft);
+      selected = wished ? [wished] : this.selectWinningGifts(state);
+    } else {
+      selected = this.selectWinningGifts(state);
     }
 
+    if (selected.length === 0) {
+      return { result: 'win', gifts: [] };
+    }
+
+    const created = await Promise.all(
+      selected.map((g) => this.createUserGiftFromWin(userId, g)),
+    );
+
+    const gifts: ToyRto[] = created.map((u, i) => ({
+      id: u.id,
+      name: u.giftName,
+      image: u.image ?? undefined,
+      price: selected[i] ? priceToTon(selected[i].price) : undefined,
+    }));
+
     return { result: 'win', gifts };
+  }
+
+  /**
+   * Как в gifts: purchase через NFT buyer (если есть address), запрос lottie, создание записи через UsersService.
+   */
+  private async createUserGiftFromWin(
+    userId: string,
+    g: NftBuyerGift,
+  ): Promise<{ id: string; giftName: string; image: string | null }> {
+    const saleAddress = g.ownerAddress ?? g.address;
+    const priceTon = priceToTon(g.price);
+
+    if (saleAddress && typeof priceTon === 'number' && priceTon > 0) {
+      try {
+        const priceNano = BigInt(Math.round(priceTon * 1_000_000_000));
+        const totalNano = (priceNano + NFT_PURCHASE_FEE_NANO).toString();
+        await this.axiosInstance.post(
+          `${this.nftBuyerUrl}/api/nft/purchase`,
+          { sale_address: saleAddress, price: totalNano },
+        );
+        this.logger.debug(
+          `Upgrate: NFT purchase requested for user ${userId}, sale_address=${saleAddress}`,
+        );
+      } catch (err) {
+        this.logger.warn(
+          `Upgrate: NFT purchase failed for user ${userId}: ${(err as Error).message}`,
+        );
+      }
+    }
+
+    let lottieUrl: string | undefined = g.lottie;
+    if (!lottieUrl && g.address) {
+      try {
+        const nftDetailUrl = `${this.nftBuyerUrl}/api/nft/${encodeURIComponent(g.address)}`;
+        const nftRes = await this.axiosInstance.get(nftDetailUrl);
+        lottieUrl =
+          nftRes.data?.media?.lottie ?? nftRes.data?.metadata?.lottie ?? '';
+      } catch (e) {
+        this.logger.debug(
+          `Upgrate: could not fetch lottie for ${g.address}: ${(e as Error).message}`,
+        );
+      }
+    }
+
+    const createdGift = await this.usersService.createUserGift({
+      userId,
+      giftName: g.name ?? 'Gift',
+      giftAddress: g.address ?? '',
+      collectionAddress: g.collection?.address,
+      image: g.image,
+      price: priceTon,
+      lottieUrl: lottieUrl || undefined,
+    });
+
+    return {
+      id: createdGift.id,
+      giftName: createdGift.giftName,
+      image: createdGift.image,
+    };
   }
 
   private selectWinningGifts(state: UpgrateState): NftBuyerGift[] {

@@ -343,6 +343,12 @@
     }
 }
 
+button.giftItem {
+    border: none;
+    padding: 0;
+    font: inherit;
+}
+
 .giftItemSelected {
     outline-color: #7456e9;
 }
@@ -385,6 +391,14 @@
     color: rgba(255, 255, 255, 0.6);
     font-size: 14px;
     padding: 24px;
+}
+
+.wishHint {
+    grid-column: 1 / -1;
+    margin: 0 0 8px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
 }
 
 .giftName {

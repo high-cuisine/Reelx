@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { eventBus, MODAL_EVENTS } from '@/features/eventBus/eventBus';
 import { useInventoryGifts } from './useInventoryGifts';
 import { useChanceData } from './useChanceData';
 import { upgrateService, type StartGameResponse } from '@/entites/upgrate/api/api';
+import { WISH_SELECTION_MIN_BET_TON } from '../helpers/constants';
 
 export type UpgrateTab = 'inventory' | 'wishlist';
 
@@ -12,12 +13,32 @@ export function useUpgratePage() {
     const [selectedGifts, setSelectedGifts] = useState<string[]>([]);
     const [gameResult, setGameResult] = useState<StartGameResponse | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [selectedWishId, setSelectedWishId] = useState<string | null>(null);
 
     const { inventoryGifts, isLoadingGifts, loadGifts } = useInventoryGifts();
     const { chance, bet, winning, poolGifts, isLoadingChance } = useChanceData(
         selectedGifts,
         selectedMultiplier,
     );
+
+    const canSelectWish = bet >= WISH_SELECTION_MIN_BET_TON;
+
+    useEffect(() => {
+        setSelectedWishId(null);
+    }, [selectedGifts, selectedMultiplier]);
+
+    const onSelectWish = async (giftId: string) => {
+        if (selectedWishId === giftId) {
+            setSelectedWishId(null);
+            return;
+        }
+        try {
+            await upgrateService.setWishNft(giftId);
+            setSelectedWishId(giftId);
+        } catch (e) {
+            console.error('Ошибка set-wish-nft:', e);
+        }
+    };
 
     const toggleGiftSelection = (giftId: string) => {
         setSelectedGifts((prev) =>
@@ -87,6 +108,9 @@ export function useUpgratePage() {
         winning,
         poolGifts,
         isLoadingChance,
+        canSelectWish,
+        selectedWishId,
+        onSelectWish,
         startGame,
         gameResult,
         isPlaying,

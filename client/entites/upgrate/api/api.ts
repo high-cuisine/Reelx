@@ -8,6 +8,7 @@ export interface ToyChance {
 }
 
 export interface PoolGift {
+    id?: string;
     name?: string;
     image?: string;
     price?: number;
@@ -23,6 +24,8 @@ export interface GetChanceResponse {
 const GET_CHANCE_URL = '/upgrate/get-chance';
 /** Эндпоинт: UpgrateController GET start-game */
 const START_GAME_URL = '/upgrate/start-game';
+/** Эндпоинт: UpgrateController POST set-wish-nft */
+const SET_WISH_NFT_URL = '/upgrate/set-wish-nft';
 
 export interface StartGameGift {
     id: string;
@@ -47,6 +50,13 @@ class UpgrateService {
 
     async startGame(): Promise<StartGameResponse> {
         const response = await api.$authHost.get<StartGameResponse>(START_GAME_URL);
+        return response.data;
+    }
+
+    async setWishNft(id: string): Promise<{ success: true }> {
+        const response = await api.$authHost.post<{ success: true }>(SET_WISH_NFT_URL, {
+            id,
+        });
         return response.data;
     }
 }

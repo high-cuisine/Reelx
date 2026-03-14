@@ -15,6 +15,9 @@ interface GiftGridProps {
     onToggleGift: (giftId: string) => void;
     poolGifts: PoolGift[];
     isLoadingChance: boolean;
+    canSelectWish?: boolean;
+    selectedWishId?: string | null;
+    onSelectWish?: (giftId: string) => void;
 }
 
 const winPoolGifts = (gifts: PoolGift[]) => gifts.filter((g) => g.pool === 'win');
@@ -27,6 +30,9 @@ export function GiftGrid({
     onToggleGift,
     poolGifts,
     isLoadingChance,
+    canSelectWish = false,
+    selectedWishId = null,
+    onSelectWish,
 }: GiftGridProps) {
     if (activeTab === 'inventory') {
         if (isLoadingGifts) {
@@ -63,8 +69,20 @@ export function GiftGrid({
 
     return (
         <>
+            {canSelectWish && (
+                <p className={cls.wishHint}>
+                    При ставке от 50 TON вы можете выбрать желаемый приз. Выберите один подарок из списка ниже.
+                </p>
+            )}
             {winGifts.map((g, i) => (
-                <WishlistGiftCard key={`win-${i}`} gift={g} index={i} />
+                <WishlistGiftCard
+                    key={g.id ?? `win-${i}`}
+                    gift={g}
+                    index={i}
+                    isSelectable={canSelectWish && !!g.id}
+                    isSelected={!!g.id && g.id === selectedWishId}
+                    onSelect={g.id ? () => onSelectWish?.(g.id!) : undefined}
+                />
             ))}
         </>
     );

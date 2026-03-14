@@ -28,6 +28,9 @@ export default function UpgratePage() {
         winning,
         poolGifts,
         isLoadingChance,
+        canSelectWish,
+        selectedWishId,
+        onSelectWish,
         startGame,
         gameResult,
         isPlaying,
@@ -78,6 +81,9 @@ export default function UpgratePage() {
                         onToggleGift={toggleGiftSelection}
                         poolGifts={poolGifts}
                         isLoadingChance={isLoadingChance}
+                        canSelectWish={canSelectWish}
+                        selectedWishId={selectedWishId}
+                        onSelectWish={onSelectWish}
                     />
                 </div>
             </div>

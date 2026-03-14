@@ -8,6 +8,7 @@ export function buildPoolGiftsRto(
 ): PoolGiftRto[] {
   return [
     ...winGifts.map((g) => ({
+      id: g?.id,
       name: g?.name ?? 'Gift',
       image: g?.image,
       price: priceToTon(g?.price),

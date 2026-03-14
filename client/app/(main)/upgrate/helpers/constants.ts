@@ -10,3 +10,6 @@ export const MULTIPLIER_VALUES: Record<string, number> = {
 };
 
 export const FALLBACK_COLORS = ['#005F70', '#927DD5', '#4F7BDA', '#5B4FC6', '#20A275'];
+
+/** Минимальная ставка (TON), при которой доступен выбор желаемого приза */
+export const WISH_SELECTION_MIN_BET_TON = 50;

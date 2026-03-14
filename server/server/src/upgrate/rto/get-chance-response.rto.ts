@@ -2,6 +2,7 @@ import { ToyChanceRto } from './toy-chance.rto';
 
 /** Один подарок из пула win/lose для отображения на клиенте */
 export class PoolGiftRto {
+  id?: string;
   name?: string;
   image?: string;
   price?: number;
