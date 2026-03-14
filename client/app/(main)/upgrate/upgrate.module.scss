@@ -350,7 +350,8 @@ button.giftItem {
 }
 
 .giftItemSelected {
-    outline-color: #7456e9;
+    outline: 2px solid #7456e9;
+    outline-offset: 2px;
 }
 
 .giftImageBox {

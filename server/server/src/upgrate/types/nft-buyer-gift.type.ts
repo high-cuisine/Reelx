@@ -41,6 +41,9 @@ export function toNftBuyerGift(raw: unknown): NftBuyerGift | null {
   // если вообще нет полезных полей — считаем мусором
   if (id == null && name == null && image == null && price == null && address == null && ownerAddress == null) return null;
 
-  return { id, name, image, price, address, ownerAddress, collection, lottie };
+  // для выбора желаемого и set-wish-nft нужен идентификатор: id или address
+  const stableId = id ?? address ?? ownerAddress;
+
+  return { id: stableId, name, image, price, address, ownerAddress, collection, lottie };
 }
 
