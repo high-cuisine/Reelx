@@ -16,8 +16,8 @@ interface GiftGridProps {
     poolGifts: PoolGift[];
     isLoadingChance: boolean;
     canSelectWish?: boolean;
-    selectedWishId?: string | null;
-    onSelectWish?: (giftId: string) => void;
+    selectedWishName?: string | null;
+    onSelectWish?: (name: string) => void;
 }
 
 const winPoolGifts = (gifts: PoolGift[]) => gifts.filter((g) => g.pool === 'win');
@@ -31,7 +31,7 @@ export function GiftGrid({
     poolGifts,
     isLoadingChance,
     canSelectWish = false,
-    selectedWishId = null,
+    selectedWishName = null,
     onSelectWish,
 }: GiftGridProps) {
     if (activeTab === 'inventory') {
@@ -76,12 +76,12 @@ export function GiftGrid({
             )}
             {winGifts.map((g, i) => (
                 <WishlistGiftCard
-                    key={g.id ?? `win-${i}`}
+                    key={g.name ?? `win-${i}`}
                     gift={g}
                     index={i}
-                    isSelectable={canSelectWish && !!g.id}
-                    isSelected={!!g.id && g.id === selectedWishId}
-                    onSelect={g.id ? () => onSelectWish?.(g.id!) : undefined}
+                    isSelectable={canSelectWish}
+                    isSelected={g.name === selectedWishName}
+                    onSelect={() => onSelectWish?.(g.name)}
                 />
             ))}
         </>

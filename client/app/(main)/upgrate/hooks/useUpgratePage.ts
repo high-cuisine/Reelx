@@ -13,7 +13,7 @@ export function useUpgratePage() {
     const [selectedGifts, setSelectedGifts] = useState<string[]>([]);
     const [gameResult, setGameResult] = useState<StartGameResponse | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
-    const [selectedWishId, setSelectedWishId] = useState<string | null>(null);
+    const [selectedWishName, setSelectedWishName] = useState<string | null>(null);
 
     const { inventoryGifts, isLoadingGifts, loadGifts } = useInventoryGifts();
     const { chance, bet, winning, poolGifts, isLoadingChance } = useChanceData(
@@ -24,17 +24,17 @@ export function useUpgratePage() {
     const canSelectWish = bet >= WISH_SELECTION_MIN_BET_TON;
 
     useEffect(() => {
-        setSelectedWishId(null);
+        setSelectedWishName(null);
     }, [selectedGifts, selectedMultiplier]);
 
-    const onSelectWish = async (giftId: string) => {
-        if (selectedWishId === giftId) {
-            setSelectedWishId(null);
+    const onSelectWish = async (name: string) => {
+        if (selectedWishName === name) {
+            setSelectedWishName(null);
             return;
         }
         try {
-            await upgrateService.setWishNft(giftId);
-            setSelectedWishId(giftId);
+            await upgrateService.setWishNft(name);
+            setSelectedWishName(name);
         } catch (e) {
             console.error('Ошибка set-wish-nft:', e);
         }
@@ -109,7 +109,7 @@ export function useUpgratePage() {
         poolGifts,
         isLoadingChance,
         canSelectWish,
-        selectedWishId,
+        selectedWishName,
         onSelectWish,
         startGame,
         gameResult,

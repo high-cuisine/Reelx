@@ -28,7 +28,7 @@ export class UpgrateController {
     @CurrentUser() userId: string,
     @Body() body: SetWishNftDto,
   ) {
-    return this.upgrateService.setWishNft(userId, body.id);
+    return this.upgrateService.setWishNft(userId, body.name);
   }
 
   @Get('start-game')

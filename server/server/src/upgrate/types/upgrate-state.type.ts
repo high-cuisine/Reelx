@@ -5,7 +5,7 @@ export type UpgrateState = {
   chance: number;
   bet: number;
   loseGifts: NftBuyerGift[];
-  /** id выбранного NFT из win-пула */
+  /** name выбранного NFT из win-пула */
   wishNft: string | null;
 };
 

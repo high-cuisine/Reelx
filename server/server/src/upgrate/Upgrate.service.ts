@@ -222,7 +222,7 @@ export class UpgrateService {
     );
   }
 
-  async setWishNft(userId: string, nftId: string): Promise<{ success: true }> {
+  async setWishNft(userId: string, nftName: string): Promise<{ success: true }> {
     const key = `${UPGRATE_STATE_REDIS_KEY_PREFIX}:${userId}`;
     const raw = await this.redisService.get(key);
     if (!raw) {
@@ -254,7 +254,7 @@ export class UpgrateService {
       if (g) winGifts.push(g);
     }
 
-    const found = winGifts.some((g) => g.id === nftId);
+    const found = winGifts.some((g) => g.name === nftName);
     if (!found) {
       throw new BadRequestException(
         'NFT not found in current win pool',
@@ -277,7 +277,7 @@ export class UpgrateService {
       chance,
       bet,
       loseGifts,
-      wishNft: nftId,
+      wishNft: nftName,
     };
     await this.redisService.set(
       key,
@@ -342,7 +342,7 @@ export class UpgrateService {
 
     let selected: NftBuyerGift[];
     if (state.wishNft) {
-      const wished = state.winGifts.find((g) => g.id === state.wishNft);
+      const wished = state.winGifts.find((g) => g.name === state.wishNft);
       selected = wished ? [wished] : this.selectWinningGifts(state);
     } else {
       selected = this.selectWinningGifts(state);

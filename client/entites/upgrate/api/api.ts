@@ -8,8 +8,7 @@ export interface ToyChance {
 }
 
 export interface PoolGift {
-    id?: string;
-    name?: string;
+    name: string;
     image?: string;
     price?: number;
     pool: 'win' | 'lose';
@@ -53,9 +52,9 @@ class UpgrateService {
         return response.data;
     }
 
-    async setWishNft(id: string): Promise<{ success: true }> {
+    async setWishNft(name: string): Promise<{ success: true }> {
         const response = await api.$authHost.post<{ success: true }>(SET_WISH_NFT_URL, {
-            id,
+            name,
         });
         return response.data;
     }
