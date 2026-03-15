@@ -134,10 +134,6 @@
     pointer-events: none;
 }
 
-/* Во время анимации ослабляем blur (70px и 20px дороги на мобильных) */
-.arenaPlaying .glow {
-    filter: blur(15px);
-}
 
 .percentageBlock {
     position: absolute;
