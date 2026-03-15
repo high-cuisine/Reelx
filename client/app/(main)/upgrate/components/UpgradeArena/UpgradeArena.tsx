@@ -10,8 +10,8 @@ const CIRCLE_R = 117;
 const STROKE_WIDTH = 6;
 const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_R;
 const FULL_DEG = 360;
-const BASE_SPIN_SPEED = 360; // градусов в секунду
-const EASE_DURATION = 1200; // мс
+const BASE_SPIN_SPEED = 180; // градусов в секунду (в 2 раза медленнее)
+const EASE_DURATION = 2400; // мс (в 2 раза дольше замедление)
 const LOSE_PAUSE = 1000; // мс паузы при проигрыше перед возвратом
 const START_ANGLE = 90; // 6 часов (нижняя точка)
 
