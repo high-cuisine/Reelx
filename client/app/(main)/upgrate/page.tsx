@@ -66,7 +66,12 @@ export default function UpgratePage() {
                 <UpgradeButton
                     selectedCount={selectedGifts.length}
                     selectedMultiplier={selectedMultiplier}
-                    isReadyToPlay={selectedGifts.length > 0 && !isLoadingChance && chance != null}
+                    isReadyToPlay={
+                        selectedGifts.length > 0 &&
+                        !isLoadingChance &&
+                        chance != null &&
+                        selectedWishName != null
+                    }
                     isPlaying={isPlaying}
                     onPlay={startGame}
                 />
