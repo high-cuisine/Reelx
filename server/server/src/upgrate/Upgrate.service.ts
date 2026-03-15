@@ -76,13 +76,13 @@ export class UpgrateService {
       minPriceTon,
     );
 
-    const chance = Number((baseAmount / sumPrices).toFixed(2));
+    const chance = Number((baseAmount / sumPrices / 100).toFixed(2));
     await this.saveUpgrateStateToRedis(
       userId,
       toyIds,
       winGifts,
       chance,
-      baseAmount,
+      baseAmount / multiplier,
       loseGifts,
       null,
     );
