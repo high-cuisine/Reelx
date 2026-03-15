@@ -14,6 +14,17 @@ const BASE_SPIN_SPEED = 180; // градусов в секунду (в 2 раз�
 const EASE_DURATION = 2400; // мс (в 2 раза дольше замедление)
 const LOSE_PAUSE = 1000; // мс паузы при проигрыше перед возвратом
 const START_ANGLE = 90; // 6 часов (нижняя точка)
+const CENTER = 120;
+const ORBIT_R = CIRCLE_R - 10;
+const ICON_HALF = 22;
+
+/** Считает left, top иконки по углу (градусы) в пикселях арены 240x240 */
+function angleToPosition(angleDeg: number) {
+    const rad = (angleDeg * Math.PI) / 180;
+    const x = CENTER + ORBIT_R * Math.cos(rad);
+    const y = CENTER + ORBIT_R * Math.sin(rad);
+    return { left: x - ICON_HALF, top: y - ICON_HALF };
+}
 
 interface UpgradeArenaProps {
     chance: number | null;
@@ -35,6 +46,7 @@ export function UpgradeArena({
     const strokeDashoffset = CIRCUMFERENCE * (1 - percent / 100);
 
     const [angle, setAngle] = useState(START_ANGLE);
+    const iconWrapRef = useRef<HTMLDivElement | null>(null);
     const rafRef = useRef<number | null>(null);
     const lastTimeRef = useRef<number | null>(null);
     const angleRef = useRef<number>(START_ANGLE);
@@ -47,6 +59,14 @@ export function UpgradeArena({
     const isReturningRef = useRef(false);
     const pauseStartRef = useRef<number | null>(null);
     const pendingReturnAngleRef = useRef<number | null>(null);
+
+    /** Обновляет позицию иконки по DOM (без setState) — для плавности на мобильных */
+    const applyIconPosition = (angleDeg: number) => {
+        const el = iconWrapRef.current;
+        if (!el) return;
+        const { left, top } = angleToPosition(angleDeg);
+        el.style.transform = `translate(${left}px, ${top}px)`;
+    };
 
     useEffect(() => {
         resultRef.current = result;
@@ -115,9 +135,10 @@ export function UpgradeArena({
                 nextAngle = start + (end - start) * eased;
 
                 angleRef.current = nextAngle;
-                setAngle(nextAngle);
+                applyIconPosition(nextAngle);
 
                 if (progress >= 1) {
+                    setAngle(nextAngle);
                     const res = resultRef.current;
 
                     if (res === 'lose' && !isReturningRef.current) {
@@ -156,7 +177,7 @@ export function UpgradeArena({
                 }
             } else {
                 angleRef.current = nextAngle;
-                setAngle(nextAngle);
+                applyIconPosition(nextAngle);
             }
 
             rafRef.current = requestAnimationFrame(step);
@@ -282,25 +303,25 @@ export function UpgradeArena({
                 <span className={cls.percentage}>{percentage}%</span>
                 <span className={cls.chanceLabel}>Шанс на улучшение</span>
             </div>
-            {/** Двигаем центральную иконку по большому кругу */}
+            {/** Двигаем центральную иконку по большому кругу (transform + ref, без setState каждый кадр — плавно на мобильных) */}
             {(() => {
-                const center = 120;
-                const orbitRadius = CIRCLE_R - 10; // чуть внутри прогресса
-                const rad = (arrowsRotation * Math.PI) / 180;
-                const x = center + orbitRadius * Math.cos(rad);
-                const y = center + orbitRadius * Math.sin(rad);
-                // Сдвигаем к левому/верхнему краю иконки (44x44)
-                const left = x - 22;
-                const top = y - 22;
+                const { left, top } = angleToPosition(arrowsRotation);
                 return (
-                    <Image
-                        src={upgradeIcon}
-                        alt="Upgrade"
-                        width={44}
-                        height={44}
+                    <div
+                        ref={iconWrapRef}
                         className={cls.upgradeIconCenter}
-                        style={{ left, top }}
-                    />
+                        style={{
+                            transform: `translate(${left}px, ${top}px)`,
+                            willChange: isPlaying ? 'transform' : 'auto',
+                        }}
+                    >
+                        <Image
+                            src={upgradeIcon}
+                            alt="Upgrade"
+                            width={44}
+                            height={44}
+                        />
+                    </div>
                 );
             })()}
         </div>
