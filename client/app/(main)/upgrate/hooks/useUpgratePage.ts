@@ -23,6 +23,13 @@ export function useUpgratePage() {
 
     const canSelectWish = bet >= WISH_SELECTION_MIN_BET_TON;
 
+    const selectedWishPrice =
+        selectedWishName && poolGifts.length > 0
+            ? poolGifts.find(
+                  (g) => g.pool === 'win' && g.name === selectedWishName,
+              )?.price ?? null
+            : null;
+
     useEffect(() => {
         setSelectedWishName(null);
     }, [selectedGifts, selectedMultiplier]);
@@ -111,6 +118,7 @@ export function useUpgratePage() {
         chance,
         bet,
         winning,
+        selectedWishPrice,
         poolGifts,
         isLoadingChance,
         canSelectWish,

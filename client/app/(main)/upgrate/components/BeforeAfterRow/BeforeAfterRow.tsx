@@ -6,13 +6,23 @@ import tonIcon from '@/assets/ton.svg';
 
 interface BeforeAfterRowProps {
     bet: number;
-    winning: number;
+    /** Цена выбранного желаемого приза или null — показываем "—" */
+    selectedWishPrice: number | null;
     isLoadingChance: boolean;
 }
 
-export function BeforeAfterRow({ bet, winning, isLoadingChance }: BeforeAfterRowProps) {
+export function BeforeAfterRow({
+    bet,
+    selectedWishPrice,
+    isLoadingChance,
+}: BeforeAfterRowProps) {
     const betStr = isLoadingChance ? '…' : bet.toFixed(2);
-    const winningStr = isLoadingChance ? '…' : winning.toFixed(2);
+    const afterStr =
+        isLoadingChance
+            ? '…'
+            : selectedWishPrice != null
+              ? selectedWishPrice.toFixed(2)
+              : '—';
 
     return (
         <div className={cls.beforeAfterRow}>
@@ -27,7 +37,7 @@ export function BeforeAfterRow({ bet, winning, isLoadingChance }: BeforeAfterRow
                 <span className={cls.baLabel}>После</span>
                 <div className={cls.valueDisplay}>
                     <Image src={tonIcon} alt="TON" width={8} height={8} />
-                    <span>{winningStr}</span>
+                    <span>{afterStr}</span>
                 </div>
             </div>
         </div>

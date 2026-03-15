@@ -26,6 +26,7 @@ export default function UpgratePage() {
         chance,
         bet,
         winning,
+        selectedWishPrice,
         poolGifts,
         isLoadingChance,
         canSelectWish,
@@ -52,7 +53,7 @@ export default function UpgratePage() {
 
             <BeforeAfterRow
                 bet={bet}
-                winning={winning}
+                selectedWishPrice={selectedWishPrice}
                 isLoadingChance={isLoadingChance}
             />
 
