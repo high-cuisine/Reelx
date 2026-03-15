@@ -4,7 +4,6 @@
     background: linear-gradient(180deg, rgba(4, 22, 42, 1) 0%, rgba(0, 2, 2, 1) 100%);
     display: flex;
     flex-direction: column;
-    overflow-x: hidden;
     padding-bottom: 90px;
 }
 
@@ -138,9 +137,6 @@
 /* Во время анимации ослабляем blur (70px и 20px дороги на мобильных) */
 .arenaPlaying .glow {
     filter: blur(15px);
-}
-.arenaPlaying .arenaArrows {
-    filter: blur(4px);
 }
 
 .percentageBlock {
