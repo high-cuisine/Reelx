@@ -10,8 +10,10 @@ const CIRCLE_R = 117;
 const STROKE_WIDTH = 6;
 const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_R;
 const FULL_DEG = 360;
-const BASE_SPIN_SPEED = 180; // градусов в секунду (в 2 раза медленнее)
-const EASE_DURATION = 2400; // мс (в 2 раза дольше замедление)
+/** Старт с макс. скорости, затем плавное замедление по экспоненте */
+const MAX_SPIN_SPEED = 320; // град/с в начале
+const DECAY_TAU_SEC = 2.4; // за 2.4 с скорость падает в ~e раз (плавное замедление)
+const EASE_DURATION = 2400; // мс финального подхода к цели
 const LOSE_PAUSE = 1000; // мс паузы при проигрыше перед возвратом
 const START_ANGLE = 90; // 6 часов (нижняя точка)
 const CENTER = 120;
@@ -68,6 +70,7 @@ export function UpgradeArena({
     const isReturningRef = useRef(false);
     const pauseStartRef = useRef<number | null>(null);
     const pendingReturnAngleRef = useRef<number | null>(null);
+    const spinStartTimeRef = useRef<number | null>(null);
 
 
     useEffect(() => {
@@ -93,6 +96,7 @@ export function UpgradeArena({
             rafRef.current = null;
             pauseStartRef.current = null;
             pendingReturnAngleRef.current = null;
+            spinStartTimeRef.current = null;
         }
     }, [isPlaying, result]);
 
@@ -120,11 +124,12 @@ export function UpgradeArena({
 
             if (lastTimeRef.current == null) {
                 lastTimeRef.current = timestamp;
+                spinStartTimeRef.current = timestamp;
             }
             const dt = (timestamp - lastTimeRef.current) / 1000;
             lastTimeRef.current = timestamp;
 
-            let nextAngle = angleRef.current + BASE_SPIN_SPEED * dt;
+            let nextAngle: number;
 
             if (targetAngleRef.current != null && easeStartRef.current != null) {
                 const progress = Math.min(
@@ -178,6 +183,9 @@ export function UpgradeArena({
                     return;
                 }
             } else {
+                const elapsedSec = (timestamp - (spinStartTimeRef.current ?? timestamp)) / 1000;
+                const speed = MAX_SPIN_SPEED * Math.exp(-elapsedSec / DECAY_TAU_SEC);
+                nextAngle = angleRef.current + speed * dt;
                 angleRef.current = nextAngle;
                 applyIconPositionToEl(iconWrapRef.current, nextAngle);
             }

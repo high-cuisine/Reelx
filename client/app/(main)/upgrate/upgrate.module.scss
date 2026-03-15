@@ -4,7 +4,7 @@
     background: linear-gradient(180deg, rgba(4, 22, 42, 1) 0%, rgba(0, 2, 2, 1) 100%);
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-x: hidden;
     padding-bottom: 90px;
 }
 
@@ -87,8 +87,8 @@
     height: 259px;
     margin: 0 auto;
     flex-shrink: 0;
-    /* Изоляция перерисовки и слой для GPU — меньше лагов на мобильных */
-    contain: layout paint;
+    /* layout + слой GPU без обрезки круга (без contain: paint) */
+    contain: layout;
     transform: translateZ(0);
 }
 
