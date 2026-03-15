@@ -26,6 +26,15 @@ function angleToPosition(angleDeg: number) {
     return { left: x - ICON_HALF, top: y - ICON_HALF };
 }
 
+/** Обновляет transform иконки по углу без аллокаций (для RAF) */
+function applyIconPositionToEl(el: HTMLElement | null, angleDeg: number) {
+    if (!el) return;
+    const rad = (angleDeg * Math.PI) / 180;
+    const left = CENTER + ORBIT_R * Math.cos(rad) - ICON_HALF;
+    const top = CENTER + ORBIT_R * Math.sin(rad) - ICON_HALF;
+    el.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+}
+
 interface UpgradeArenaProps {
     chance: number | null;
     isLoadingChance: boolean;
@@ -60,13 +69,6 @@ export function UpgradeArena({
     const pauseStartRef = useRef<number | null>(null);
     const pendingReturnAngleRef = useRef<number | null>(null);
 
-    /** Обновляет позицию иконки по DOM (без setState) — для плавности на мобильных */
-    const applyIconPosition = (angleDeg: number) => {
-        const el = iconWrapRef.current;
-        if (!el) return;
-        const { left, top } = angleToPosition(angleDeg);
-        el.style.transform = `translate(${left}px, ${top}px)`;
-    };
 
     useEffect(() => {
         resultRef.current = result;
@@ -135,7 +137,7 @@ export function UpgradeArena({
                 nextAngle = start + (end - start) * eased;
 
                 angleRef.current = nextAngle;
-                applyIconPosition(nextAngle);
+                applyIconPositionToEl(iconWrapRef.current, nextAngle);
 
                 if (progress >= 1) {
                     setAngle(nextAngle);
@@ -177,7 +179,7 @@ export function UpgradeArena({
                 }
             } else {
                 angleRef.current = nextAngle;
-                applyIconPosition(nextAngle);
+                applyIconPositionToEl(iconWrapRef.current, nextAngle);
             }
 
             rafRef.current = requestAnimationFrame(step);
@@ -263,7 +265,7 @@ export function UpgradeArena({
     const arrowsRotation = ((angle % FULL_DEG) + FULL_DEG) % FULL_DEG;
 
     return (
-        <div className={cls.arenaWrapper}>
+        <div className={`${cls.arenaWrapper} ${isPlaying ? cls.arenaPlaying : ''}`.trim()}>
             <div className={cls.glow} />
             <svg
                 className={cls.circleProgress}
@@ -303,23 +305,27 @@ export function UpgradeArena({
                 <span className={cls.percentage}>{percentage}%</span>
                 <span className={cls.chanceLabel}>Шанс на улучшение</span>
             </div>
-            {/** Двигаем центральную иконку по большому кругу (transform + ref, без setState каждый кадр — плавно на мобильных) */}
+            {/** Иконка: обёртка с translate3d (GPU), внутри обычный img без Next/Image для меньшей нагрузки */}
             {(() => {
                 const { left, top } = angleToPosition(arrowsRotation);
+                const iconSrc = typeof upgradeIcon === 'string' ? upgradeIcon : (upgradeIcon as { src: string }).src;
                 return (
                     <div
                         ref={iconWrapRef}
                         className={cls.upgradeIconCenter}
                         style={{
-                            transform: `translate(${left}px, ${top}px)`,
+                            transform: `translate3d(${left}px, ${top}px, 0)`,
                             willChange: isPlaying ? 'transform' : 'auto',
                         }}
                     >
-                        <Image
-                            src={upgradeIcon}
-                            alt="Upgrade"
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            src={iconSrc}
+                            alt=""
                             width={44}
                             height={44}
+                            decoding="async"
+                            style={{ display: 'block', width: 44, height: 44 }}
                         />
                     </div>
                 );

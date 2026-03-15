@@ -87,6 +87,9 @@
     height: 259px;
     margin: 0 auto;
     flex-shrink: 0;
+    /* Изоляция перерисовки и слой для GPU — меньше лагов на мобильных */
+    contain: layout paint;
+    transform: translateZ(0);
 }
 
 .glow {
@@ -128,8 +131,16 @@
     left: 0;
     width: 240px;
     height: 240px;
-    filter:blur(20px);
+    filter: blur(20px);
     pointer-events: none;
+}
+
+/* Во время анимации ослабляем blur (70px и 20px дороги на мобильных) */
+.arenaPlaying .glow {
+    filter: blur(15px);
+}
+.arenaPlaying .arenaArrows {
+    filter: blur(4px);
 }
 
 .percentageBlock {
@@ -169,6 +180,9 @@
     width: 44px;
     height: 44px;
     z-index: 2;
+    left: 0;
+    top: 0;
+    backface-visibility: hidden;
 }
 
 /* ── Before / After ── */
