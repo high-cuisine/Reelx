@@ -6,6 +6,7 @@ interface UpgradeButtonProps {
     selectedCount: number;
     selectedMultiplier: string | null;
     isReadyToPlay: boolean;
+    hasWishSelected: boolean;
     isPlaying: boolean;
     onPlay: () => void;
 }
@@ -14,13 +15,19 @@ export function UpgradeButton({
     selectedCount,
     selectedMultiplier,
     isReadyToPlay,
+    hasWishSelected,
     isPlaying,
     onPlay,
 }: UpgradeButtonProps) {
-    const text =
-        selectedCount === 0
-            ? 'Выберите подарки для апгрейда'
-            : 'Считаем шанс...';
+    const text = (() => {
+        if (selectedCount === 0) {
+            return 'Выберите подарки для апгрейда';
+        }
+        if (!hasWishSelected) {
+            return 'Выберите желаемый приз';
+        }
+        return 'Считаем шанс...';
+    })();
 
     return (
         <button
@@ -32,11 +39,13 @@ export function UpgradeButton({
             <span>
                 {selectedCount === 0
                     ? text
-                    : isReadyToPlay
-                        ? isPlaying
-                            ? 'Играем...'
-                            : 'Играть'
-                        : text}
+                    : !hasWishSelected
+                        ? text
+                        : isReadyToPlay
+                            ? isPlaying
+                                ? 'Играем...'
+                                : 'Играть'
+                            : text}
             </span>
         </button>
     );

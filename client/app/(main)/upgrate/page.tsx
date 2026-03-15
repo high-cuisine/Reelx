@@ -72,6 +72,7 @@ export default function UpgratePage() {
                         chance != null &&
                         selectedWishName != null
                     }
+                    hasWishSelected={selectedWishName != null}
                     isPlaying={isPlaying}
                     onPlay={startGame}
                 />

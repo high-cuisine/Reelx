@@ -126,7 +126,8 @@ export class UpgrateService {
     loseGifts: NftBuyerGift[];
     baseAmount: number;
   }> {
-    let baseAmount = sumPrices;
+    // Целевая цена выигрыша ≈ ставка * мультипликатор
+    let baseAmount = sumPrices * multiplier;
     let winGifts: NftBuyerGift[] = [];
     let loseGifts: NftBuyerGift[] = [];
 
