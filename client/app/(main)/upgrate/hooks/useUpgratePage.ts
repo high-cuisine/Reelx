@@ -14,13 +14,15 @@ export function useUpgratePage() {
     const [gameResult, setGameResult] = useState<StartGameResponse | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [selectedWishName, setSelectedWishName] = useState<string | null>(null);
+    const [chanceFromSetWish, setChanceFromSetWish] = useState<number | null>(null);
 
     const { inventoryGifts, isLoadingGifts, loadGifts } = useInventoryGifts();
-    const { chance, bet, winning, poolGifts, isLoadingChance } = useChanceData(
+    const { chance: chanceFromApi, bet, winning, poolGifts, isLoadingChance } = useChanceData(
         selectedGifts,
         selectedMultiplier,
     );
 
+    const chance = chanceFromSetWish ?? chanceFromApi;
     const canSelectWish = bet >= WISH_SELECTION_MIN_BET_TON;
 
     const selectedWishPrice =
@@ -32,16 +34,19 @@ export function useUpgratePage() {
 
     useEffect(() => {
         setSelectedWishName(null);
+        setChanceFromSetWish(null);
     }, [selectedGifts, selectedMultiplier]);
 
     const onSelectWish = async (name: string) => {
         if (selectedWishName === name) {
             setSelectedWishName(null);
+            setChanceFromSetWish(null);
             return;
         }
         try {
-            await upgrateService.setWishNft(name);
+            const res = await upgrateService.setWishNft(name);
             setSelectedWishName(name);
+            setChanceFromSetWish(res.chance);
         } catch (e) {
             console.error('Ошибка set-wish-nft:', e);
         }
@@ -99,6 +104,7 @@ export function useUpgratePage() {
         // Ставка забрана сервером — сбрасываем выбор и обновляем инвентарь
         setSelectedGifts([]);
         setSelectedWishName(null);
+        setChanceFromSetWish(null);
         setActiveTab('inventory');
         loadGifts();
 

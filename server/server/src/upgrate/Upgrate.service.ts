@@ -15,6 +15,7 @@ import { getMinPriceTon } from './helpers/get-min-price-ton.helper';
 import { priceToTon } from './helpers/price-to-ton.helper';
 import { toNftBuyerGift, type NftBuyerGift } from './types/nft-buyer-gift.type';
 import type { UpgrateState } from './types/upgrate-state.type';
+import { AdminSettingsRepository } from '../admin/repositorys/admin-settings.repository';
 
 const UPGRATE_TTL_SECONDS = 10 * 60; // 10 минут
 const MIN_PRICE_REDIS_KEY = 'gifts:min_price_ton';
@@ -36,6 +37,7 @@ export class UpgrateService {
     private readonly redisService: RedisService,
     private readonly userRepository: UserRepository,
     private readonly usersService: UsersService,
+    private readonly settingsRepository: AdminSettingsRepository,
   ) {
     this.nftBuyerUrl = this.configService.get<string>(
       'NFT_BUYER_URL',
@@ -224,7 +226,7 @@ export class UpgrateService {
     );
   }
 
-  async setWishNft(userId: string, nftName: string): Promise<{ success: true }> {
+  async setWishNft(userId: string, nftName: string): Promise<{ success: true; chance: number }> {
     const key = `${UPGRATE_STATE_REDIS_KEY_PREFIX}:${userId}`;
     const raw = await this.redisService.get(key);
     if (!raw) {
@@ -256,8 +258,8 @@ export class UpgrateService {
       if (g) winGifts.push(g);
     }
 
-    const found = winGifts.some((g) => g.name === nftName);
-    if (!found) {
+    const wishGift = winGifts.find((g) => g.name === nftName);
+    if (!wishGift) {
       throw new BadRequestException(
         'NFT not found in current win pool',
       );
@@ -266,7 +268,6 @@ export class UpgrateService {
     const toyIds = Array.isArray(obj.toyIds)
       ? (obj.toyIds as unknown[]).filter((v): v is string => typeof v === 'string')
       : [];
-    const chance = typeof obj.chance === 'number' ? obj.chance : 0;
     const bet = typeof obj.bet === 'number' ? obj.bet : 0;
     const loseRaw = obj.loseGifts;
     const loseGifts: NftBuyerGift[] = Array.isArray(loseRaw)
@@ -276,6 +277,12 @@ export class UpgrateService {
           return acc;
         }, [])
       : [];
+
+    const wishPriceTon = priceToTon(wishGift.price);
+    const { upgradeRTP } = await this.settingsRepository.getSettings();
+    const rtpFactor = Number(upgradeRTP) / 100;
+    const chanceRaw = wishPriceTon > 0 ? (bet / wishPriceTon) * rtpFactor : 0;
+    const chance = Math.min(0.99, Math.max(0.01, chanceRaw));
 
     const state: UpgrateState = {
       toyIds,
@@ -290,7 +297,7 @@ export class UpgrateService {
       JSON.stringify(state),
       UPGRATE_TTL_SECONDS,
     );
-    return { success: true };
+    return { success: true, chance };
   }
 
   async startGame(userId: string): Promise<StartGameResponseRto> {
