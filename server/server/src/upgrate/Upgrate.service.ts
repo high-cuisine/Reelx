@@ -88,7 +88,7 @@ export class UpgrateService {
     );
 
     const winning = computeAverageWinning(winGifts);
-    const userToys = buildUserToysRto(userGifts, chance, baseAmount, winning);
+    const userToys = buildUserToysRto(userGifts, chance, baseAmount / multiplier, winning);
     const poolGifts = buildPoolGiftsRto(winGifts, loseGifts);
 
     return { userToys, poolGifts };
