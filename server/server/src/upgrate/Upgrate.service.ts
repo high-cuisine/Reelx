@@ -122,6 +122,32 @@ export class UpgrateService {
     return { userGifts, sumPrices };
   }
 
+  private nftGiftDedupeKey(g: NftBuyerGift): string {
+    return String(
+      g?.id ?? `${g?.name ?? ''}|${g?.image ?? ''}|${g?.price ?? ''}`,
+    );
+  }
+
+  /** Добавляет в пул новые подарки без дублей, не затирая уже собранные (важно для x20 и т.п.). */
+  private mergePoolUnique(
+    existing: NftBuyerGift[],
+    incoming: NftBuyerGift[] | undefined,
+    maxSize: number,
+  ): NftBuyerGift[] {
+    const seen = new Set<string>();
+    const result: NftBuyerGift[] = [];
+    const push = (g: NftBuyerGift) => {
+      if (result.length >= maxSize) return;
+      const key = this.nftGiftDedupeKey(g);
+      if (seen.has(key)) return;
+      seen.add(key);
+      result.push(g);
+    };
+    for (const g of existing) push(g);
+    for (const g of incoming ?? []) push(g);
+    return result;
+  }
+
   private async fetchWinLosePools(
     sumPrices: number,
     multiplier: number,
@@ -131,7 +157,7 @@ export class UpgrateService {
     loseGifts: NftBuyerGift[];
   }> {
     // Целевая цена выигрыша ≈ ставка * мультипликатор
-    let baseAmount = sumPrices * multiplier;
+    const targetTon = sumPrices * multiplier;
     let winGifts: NftBuyerGift[] = [];
     let loseGifts: NftBuyerGift[] = [];
 
@@ -139,56 +165,43 @@ export class UpgrateService {
       pool: NftBuyerGift[],
       fallback: NftBuyerGift[],
     ): NftBuyerGift[] => {
-      if (pool.length >= POOL_SIZE) return pool.slice(0, POOL_SIZE);
-      const result = [...pool];
-
-      const seen = new Set<string>();
-      for (const g of result) {
-        const key = String(
-          g?.id ?? `${g?.name ?? ''}|${g?.image ?? ''}|${g?.price ?? ''}`,
-        );
-        seen.add(key);
-      }
-
-      for (const g of fallback) {
-        if (result.length >= POOL_SIZE) break;
-        const key = String(
-          g?.id ?? `${g?.name ?? ''}|${g?.image ?? ''}|${g?.price ?? ''}`,
-        );
-        if (seen.has(key)) continue;
-        seen.add(key);
-        result.push(g);
-      }
-      return result.slice(0, POOL_SIZE);
+      return this.mergePoolUnique(pool, fallback, POOL_SIZE);
     };
 
-    for (let i = 0; i < MAX_ITERATIONS; i++) {
-      if (baseAmount < minPriceTon) {
-        baseAmount = minPriceTon;
-      }
-      const amountHigh = Math.max(minPriceTon, baseAmount * 1.3);
-      const amountLow = Math.max(minPriceTon, baseAmount * 0.7);
-
+    const mergeFromTier = async (baseAmount: number): Promise<void> => {
+      const b = Math.max(minPriceTon, baseAmount);
+      const amountHigh = Math.max(minPriceTon, b * 1.3);
+      const amountLow = Math.max(minPriceTon, b * 0.7);
+      const amountMid = b;
       try {
-        const [giftsHigh, giftsLow] = await Promise.all([
+        const [giftsHigh, giftsLow, giftsMid] = await Promise.all([
           this.fetchGiftsByPrice(amountHigh),
           this.fetchGiftsByPrice(amountLow),
+          this.fetchGiftsByPrice(amountMid),
         ]);
-        winGifts = (giftsHigh ?? []).slice(0, POOL_SIZE);
-        loseGifts = (giftsLow ?? []).slice(0, POOL_SIZE);
-
-        if (winGifts.length >= POOL_SIZE && loseGifts.length >= POOL_SIZE) {
-          break;
-        }
+        winGifts = this.mergePoolUnique(winGifts, giftsHigh ?? [], POOL_SIZE);
+        winGifts = this.mergePoolUnique(winGifts, giftsMid ?? [], POOL_SIZE);
+        loseGifts = this.mergePoolUnique(loseGifts, giftsLow ?? [], POOL_SIZE);
       } catch (err) {
         this.logger.warn(
-          `getChance by-price failed at baseAmount=${baseAmount}: ${(err as Error).message}`,
+          `getChance by-price failed at baseAmount=${b}: ${(err as Error).message}`,
         );
       }
-      baseAmount = baseAmount / 2;
+    };
+
+    // Сначала полный таргет (35 * 20 = 700 и т.д.) — не теряем дорогие слоты при доборе
+    await mergeFromTier(targetTon);
+
+    let fillBase = targetTon;
+    for (let i = 0; i < MAX_ITERATIONS; i++) {
+      if (winGifts.length >= POOL_SIZE && loseGifts.length >= POOL_SIZE) {
+        break;
+      }
+      fillBase = Math.max(minPriceTon, fillBase / 2);
+      await mergeFromTier(fillBase);
     }
 
-    // Финальный фолбек: пробуем добить пулы самым "широким" запросом (minPriceTon)
+    // Финальный фолбек: добить пулы с пола цен, не удаляя уже найденные
     if (winGifts.length < POOL_SIZE || loseGifts.length < POOL_SIZE) {
       try {
         const fallback = await this.fetchGiftsByPrice(minPriceTon);
@@ -206,6 +219,13 @@ export class UpgrateService {
         `Upgrate pools incomplete after fallback: win=${winGifts.length}, lose=${loseGifts.length}`,
       );
     }
+
+    const byPriceDesc = (a: NftBuyerGift, b: NftBuyerGift) =>
+      priceToTon(b.price) - priceToTon(a.price);
+    const byPriceAsc = (a: NftBuyerGift, b: NftBuyerGift) =>
+      priceToTon(a.price) - priceToTon(b.price);
+    winGifts.sort(byPriceDesc);
+    loseGifts.sort(byPriceAsc);
 
     return { winGifts, loseGifts };
   }
