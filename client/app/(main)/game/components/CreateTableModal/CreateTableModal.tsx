@@ -18,10 +18,11 @@ const PLAYERS = [2, 3, 4, 5, 6] as const;
 interface CreateTableModalProps {
     isOpen: boolean;
     onClose: () => void;
+    /** Вызывается по нажатию «Создать стол» внизу модалки */
+    onCreateTable?: () => void;
 }
 
-
-const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
+const CreateTableModal = ({ isOpen, onClose, onCreateTable }: CreateTableModalProps) => {
     const [mounted, setMounted] = useState(false);
     const [isShown, setIsShown] = useState(false);
     const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -191,7 +192,14 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
                 </div>
 
                 <div className={cls.footer}>
-                    <button type="button" className={cls.submit}>
+                    <button
+                        type="button"
+                        className={cls.submit}
+                        onClick={() => {
+                            onCreateTable?.();
+                            onClose();
+                        }}
+                    >
                         Создать стол
                     </button>
                 </div>

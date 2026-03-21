@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { TablesList } from './components/TablesList/TablesList';
 import { TableButton } from './components/TableButton/TableButton';
 import { CreateTableModal } from './components/CreateTableModal/CreateTableModal';
@@ -9,6 +10,7 @@ import cls from './game.module.scss';
 import starIcon from '@/assets/icons/grey-star.svg';
 
 export default function GamePage() {
+    const router = useRouter();
     const [createTableOpen, setCreateTableOpen] = useState(false);
 
     return (
@@ -26,7 +28,11 @@ export default function GamePage() {
                 <TableButton onClick={() => setCreateTableOpen(true)} />
             </div>
 
-            <CreateTableModal isOpen={createTableOpen} onClose={() => setCreateTableOpen(false)} />
+            <CreateTableModal
+                isOpen={createTableOpen}
+                onClose={() => setCreateTableOpen(false)}
+                onCreateTable={() => router.push('/game/table')}
+            />
         </div>
     );
 }
