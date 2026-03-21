@@ -1,16 +1,18 @@
-'use client'
+'use client';
+
+import { useState } from 'react';
+import Image from 'next/image';
 import { TablesList } from './components/TablesList/TablesList';
 import { TableButton } from './components/TableButton/TableButton';
+import { CreateTableModal } from './components/CreateTableModal/CreateTableModal';
 import cls from './game.module.scss';
 import starIcon from '@/assets/icons/grey-star.svg';
-import Image from 'next/image';
 
 export default function GamePage() {
+    const [createTableOpen, setCreateTableOpen] = useState(false);
+
     return (
         <div className={cls.gamePage}>
-            <div className={cls.commingSoon}>
-                <span>Coming Soon</span>
-            </div>
             <div className={cls.downContainer}>
                 <div className={cls.pageHeader}>
                     <div className={cls.titleContainer}>
@@ -20,9 +22,11 @@ export default function GamePage() {
                 </div>
 
                 <TablesList />
-                
-                <TableButton />
+
+                <TableButton onClick={() => setCreateTableOpen(true)} />
             </div>
+
+            <CreateTableModal isOpen={createTableOpen} onClose={() => setCreateTableOpen(false)} />
         </div>
-    )
+    );
 }
