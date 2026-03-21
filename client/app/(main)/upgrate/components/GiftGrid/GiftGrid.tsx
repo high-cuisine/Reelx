@@ -63,17 +63,13 @@ export function GiftGrid({
                 ? 'Выберите подарки в инвентаре — здесь появятся желаемые'
                 : isLoadingChance
                   ? 'Загрузка...'
-                  : 'Нет данных о желаемых подарках';
+                  : 'Не удалось подобрать призы под эту комбинацию. Попробуйте другой множитель или состав ставки. Несколько подарков для ставки выбираются во вкладке «Инвентарь».';
         return <div className={cls.emptyState}>{emptyMessage}</div>;
     }
 
     return (
         <>
-            {canSelectWish && (
-                <p className={cls.wishHint}>
-                    Вы можете выбрать желаемый приз. Выберите один подарок из списка ниже.
-                </p>
-            )}
+       
             {winGifts.map((g, i) => (
                 <WishlistGiftCard
                     key={g.name ?? `win-${i}`}

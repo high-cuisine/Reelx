@@ -5,6 +5,7 @@ import cls from '../../upgrate.module.scss';
 import tonIcon from '@/assets/ton.svg';
 
 interface BeforeAfterRowProps {
+    /** Сумма выбранных подарков (ставка), только от инвентаря — не от API / мультипликатора */
     bet: number;
     /** Цена выбранного желаемого приза или null — показываем "—" */
     selectedWishPrice: number | null;
@@ -16,7 +17,7 @@ export function BeforeAfterRow({
     selectedWishPrice,
     isLoadingChance,
 }: BeforeAfterRowProps) {
-    const betStr = isLoadingChance ? '…' : bet.toFixed(2);
+    const betStr = bet.toFixed(2);
     const afterStr =
         isLoadingChance
             ? '…'

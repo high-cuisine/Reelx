@@ -10,7 +10,6 @@ import { StartGameResponseRto } from './rto/start-game-response.rto';
 import { buildUserToysRto } from './helpers/build-user-toys-rto.helper';
 import { buildPoolGiftsRto } from './helpers/build-pool-gifts-rto.helper';
 import { computeAverageWinning } from './helpers/compute-average-winning.helper';
-import { computeChanceFromMultiplier } from './helpers/compute-chance-from-multiplier.helper';
 import { getMinPriceTon } from './helpers/get-min-price-ton.helper';
 import { priceToTon } from './helpers/price-to-ton.helper';
 import { toNftBuyerGift, type NftBuyerGift } from './types/nft-buyer-gift.type';
@@ -70,25 +69,31 @@ export class UpgrateService {
       maxAmountTon: 100,
       fallbackTon: 1,
     });
-    const { winGifts, loseGifts, baseAmount } = await this.fetchWinLosePools(
+    const { winGifts, loseGifts } = await this.fetchWinLosePools(
       sumPrices,
       multiplier,
       minPriceTon,
     );
 
-    const chance = Number((baseAmount / sumPrices / 100).toFixed(2));
+    /** Шанс зависит только от мультипликатора (не от уменьшенного baseAmount при подборе пула). */
+    const chance = Math.min(
+      0.99,
+      Math.max(0.01, Number((multiplier / 100).toFixed(4))),
+    );
+    /** Реальная ставка — сумма выбранных подарков; не меняется при смене множителя и откате цены пула. */
+    const betTon = sumPrices;
     await this.saveUpgrateStateToRedis(
       userId,
       toyIds,
       winGifts,
       chance,
-      baseAmount / multiplier,
+      betTon,
       loseGifts,
       null,
     );
 
     const winning = computeAverageWinning(winGifts);
-    const userToys = buildUserToysRto(userGifts, chance, baseAmount / multiplier, winning);
+    const userToys = buildUserToysRto(userGifts, chance, betTon, winning);
     const poolGifts = buildPoolGiftsRto(winGifts, loseGifts);
 
     return { userToys, poolGifts };
@@ -124,7 +129,6 @@ export class UpgrateService {
   ): Promise<{
     winGifts: NftBuyerGift[];
     loseGifts: NftBuyerGift[];
-    baseAmount: number;
   }> {
     // Целевая цена выигрыша ≈ ставка * мультипликатор
     let baseAmount = sumPrices * multiplier;
@@ -203,7 +207,7 @@ export class UpgrateService {
       );
     }
 
-    return { winGifts, loseGifts, baseAmount };
+    return { winGifts, loseGifts };
   }
 
   private async saveUpgrateStateToRedis(

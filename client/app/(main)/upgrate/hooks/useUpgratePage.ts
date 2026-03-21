@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { eventBus, MODAL_EVENTS } from '@/features/eventBus/eventBus';
 import { useInventoryGifts } from './useInventoryGifts';
 import { useChanceData } from './useChanceData';
@@ -17,13 +17,23 @@ export function useUpgratePage() {
     const [chanceFromSetWish, setChanceFromSetWish] = useState<number | null>(null);
 
     const { inventoryGifts, isLoadingGifts, loadGifts } = useInventoryGifts();
-    const { chance: chanceFromApi, bet, winning, poolGifts, isLoadingChance } = useChanceData(
+    const { chance: chanceFromApi, winning, poolGifts, isLoadingChance } = useChanceData(
         selectedGifts,
         selectedMultiplier,
     );
 
+    /** Ставка в TON = сумма цен выбранных подарков из инвентаря (не зависит от мультипликатора и отката пула на бэкенде). */
+    const selectedStakeTon = useMemo(() => {
+        if (selectedGifts.length === 0) return 0;
+        const idSet = new Set(selectedGifts);
+        return inventoryGifts.reduce((sum, g) => {
+            if (!idSet.has(g.id)) return sum;
+            return sum + (g.price ?? 0);
+        }, 0);
+    }, [inventoryGifts, selectedGifts]);
+
     const chance = chanceFromSetWish ?? chanceFromApi;
-    const canSelectWish = bet >= WISH_SELECTION_MIN_BET_TON;
+    const canSelectWish = selectedStakeTon >= WISH_SELECTION_MIN_BET_TON;
 
     const selectedWishPrice =
         selectedWishName && poolGifts.length > 0
@@ -96,7 +106,7 @@ export function useUpgratePage() {
                     image: mainGift.image,
                 },
                 rolls: 1,
-                totalPrice: bet,
+                totalPrice: selectedStakeTon,
                 giftId: mainGift.id,
             });
         }
@@ -122,7 +132,7 @@ export function useUpgratePage() {
         isLoadingGifts,
         loadGifts,
         chance,
-        bet,
+        bet: selectedStakeTon,
         winning,
         selectedWishPrice,
         poolGifts,
