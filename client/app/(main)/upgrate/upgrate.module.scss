@@ -371,6 +371,12 @@ button.giftItem {
     flex-shrink: 0;
     position: relative;
     overflow: hidden;
+    /* Lottie/Next Image перехватывают клики — иначе «второй» подарок не добавляется в ставку */
+    pointer-events: none;
+
+    * {
+        pointer-events: none;
+    }
 }
 
 .giftImageMedia {

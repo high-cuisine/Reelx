@@ -1,6 +1,8 @@
-import { IsString } from 'class-validator';
+import { IsArray, ArrayMinSize, IsString } from 'class-validator';
 
 export class SetWishNftDto {
-  @IsString()
-  name: string;
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsString({ each: true })
+  names: string[];
 }

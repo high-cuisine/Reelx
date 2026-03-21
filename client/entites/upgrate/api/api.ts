@@ -52,9 +52,9 @@ class UpgrateService {
         return response.data;
     }
 
-    async setWishNft(name: string): Promise<{ success: true; chance: number }> {
+    async setWishNfts(names: string[]): Promise<{ success: true; chance: number }> {
         const response = await api.$authHost.post<{ success: true; chance: number }>(SET_WISH_NFT_URL, {
-            name,
+            names,
         });
         return response.data;
     }

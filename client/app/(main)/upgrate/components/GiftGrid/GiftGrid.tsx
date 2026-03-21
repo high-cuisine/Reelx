@@ -16,7 +16,7 @@ interface GiftGridProps {
     poolGifts: PoolGift[];
     isLoadingChance: boolean;
     canSelectWish?: boolean;
-    selectedWishName?: string | null;
+    selectedWishNames?: string[];
     onSelectWish?: (name: string) => void;
 }
 
@@ -31,7 +31,7 @@ export function GiftGrid({
     poolGifts,
     isLoadingChance,
     canSelectWish = false,
-    selectedWishName = null,
+    selectedWishNames = [],
     onSelectWish,
 }: GiftGridProps) {
     if (activeTab === 'inventory') {
@@ -72,14 +72,17 @@ export function GiftGrid({
 
     return (
         <>
-       
+            <p className={cls.wishHint}>
+                Можно выбрать несколько желаемых призов — при выигрыше вы получите все выбранные. Состав
+                ставки из инвентаря — вкладка «Инвентарь».
+            </p>
             {winGifts.map((g, i) => (
                 <WishlistGiftCard
                     key={`win-${i}-${g.name ?? ''}-${g.price ?? 0}`}
                     gift={g}
                     index={i}
                     isSelectable={canSelectWish}
-                    isSelected={g.name === selectedWishName}
+                    isSelected={g.name != null && selectedWishNames.includes(g.name)}
                     onSelect={() => onSelectWish?.(g.name)}
                 />
             ))}

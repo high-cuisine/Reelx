@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { upgrateService, GetChanceResponse } from '@/entites/upgrate/api/api';
 import { MULTIPLIER_VALUES } from '../helpers/constants';
 
@@ -52,10 +52,28 @@ export function useChanceData(
         };
     }, [selectionKey, multiplierKey]);
 
+    /** Сброс желаемых призов на сервере: снова get-chance с тем же составом ставки */
+    const refetchChance = useCallback(async () => {
+        if (selectedGifts.length === 0) return;
+        const multiplierNum = selectedMultiplier
+            ? MULTIPLIER_VALUES[selectedMultiplier]
+            : 1;
+        setIsLoadingChance(true);
+        try {
+            const data = await upgrateService.getChance(selectedGifts, multiplierNum);
+            setChanceData(data);
+        } catch (e) {
+            console.error('Ошибка get-chance (refetch):', e);
+            setChanceData(null);
+        } finally {
+            setIsLoadingChance(false);
+        }
+    }, [selectedGifts, selectedMultiplier]);
+
     const chance = chanceData?.userToys?.[0]?.chance ?? null;
     const bet = chanceData?.userToys?.[0]?.bet ?? 0;
     const winning = chanceData?.userToys?.[0]?.winning ?? 0;
     const poolGifts = chanceData?.poolGifts ?? [];
 
-    return { chanceData, chance, bet, winning, poolGifts, isLoadingChance };
+    return { chanceData, chance, bet, winning, poolGifts, isLoadingChance, refetchChance };
 }

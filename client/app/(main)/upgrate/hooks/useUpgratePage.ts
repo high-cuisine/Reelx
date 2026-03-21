@@ -13,14 +13,12 @@ export function useUpgratePage() {
     const [selectedGifts, setSelectedGifts] = useState<string[]>([]);
     const [gameResult, setGameResult] = useState<StartGameResponse | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
-    const [selectedWishName, setSelectedWishName] = useState<string | null>(null);
+    const [selectedWishNames, setSelectedWishNames] = useState<string[]>([]);
     const [chanceFromSetWish, setChanceFromSetWish] = useState<number | null>(null);
 
     const { inventoryGifts, isLoadingGifts, loadGifts } = useInventoryGifts();
-    const { chance: chanceFromApi, winning, poolGifts, isLoadingChance } = useChanceData(
-        selectedGifts,
-        selectedMultiplier,
-    );
+    const { chance: chanceFromApi, winning, poolGifts, isLoadingChance, refetchChance } =
+        useChanceData(selectedGifts, selectedMultiplier);
 
     /** Ставка в TON = сумма цен выбранных подарков из инвентаря (не зависит от мультипликатора и отката пула на бэкенде). */
     const selectedStakeTon = useMemo(() => {
@@ -35,27 +33,40 @@ export function useUpgratePage() {
     const chance = chanceFromSetWish ?? chanceFromApi;
     const canSelectWish = selectedStakeTon >= WISH_SELECTION_MIN_BET_TON;
 
-    const selectedWishPrice =
-        selectedWishName && poolGifts.length > 0
-            ? poolGifts.find(
-                  (g) => g.pool === 'win' && g.name === selectedWishName,
-              )?.price ?? null
-            : null;
+    const selectedWishPrice = useMemo(() => {
+        if (selectedWishNames.length === 0 || poolGifts.length === 0) return null;
+        let sum = 0;
+        let foundAny = false;
+        for (const name of selectedWishNames) {
+            const g = poolGifts.find((p) => p.pool === 'win' && p.name === name);
+            if (g?.price != null) {
+                sum += g.price;
+                foundAny = true;
+            }
+        }
+        return foundAny ? sum : null;
+    }, [poolGifts, selectedWishNames]);
 
     useEffect(() => {
-        setSelectedWishName(null);
+        setSelectedWishNames([]);
         setChanceFromSetWish(null);
     }, [selectedGifts, selectedMultiplier]);
 
     const onSelectWish = async (name: string) => {
-        if (selectedWishName === name) {
-            setSelectedWishName(null);
+        const next = selectedWishNames.includes(name)
+            ? selectedWishNames.filter((n) => n !== name)
+            : [...selectedWishNames, name];
+
+        if (next.length === 0) {
+            setSelectedWishNames([]);
             setChanceFromSetWish(null);
+            await refetchChance();
             return;
         }
+
         try {
-            const res = await upgrateService.setWishNft(name);
-            setSelectedWishName(name);
+            const res = await upgrateService.setWishNfts(next);
+            setSelectedWishNames(next);
             setChanceFromSetWish(res.chance);
         } catch (e) {
             console.error('Ошибка set-wish-nft:', e);
@@ -113,7 +124,7 @@ export function useUpgratePage() {
 
         // Ставка забрана сервером — сбрасываем выбор и обновляем инвентарь
         setSelectedGifts([]);
-        setSelectedWishName(null);
+        setSelectedWishNames([]);
         setChanceFromSetWish(null);
         setActiveTab('inventory');
         loadGifts();
@@ -138,7 +149,7 @@ export function useUpgratePage() {
         poolGifts,
         isLoadingChance,
         canSelectWish,
-        selectedWishName,
+        selectedWishNames,
         onSelectWish,
         startGame,
         gameResult,

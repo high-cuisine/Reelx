@@ -89,7 +89,7 @@ export class UpgrateService {
       chance,
       betTon,
       loseGifts,
-      null,
+      [],
     );
 
     const winning = computeAverageWinning(winGifts);
@@ -230,6 +230,18 @@ export class UpgrateService {
     return { winGifts, loseGifts };
   }
 
+  private parseWishNftsFromState(obj: Record<string, unknown>): string[] {
+    if (Array.isArray(obj.wishNfts)) {
+      return (obj.wishNfts as unknown[]).filter(
+        (v): v is string => typeof v === 'string',
+      );
+    }
+    if (typeof obj.wishNft === 'string' && obj.wishNft.length > 0) {
+      return [obj.wishNft];
+    }
+    return [];
+  }
+
   private async saveUpgrateStateToRedis(
     userId: string,
     toyIds: string[],
@@ -237,10 +249,10 @@ export class UpgrateService {
     chance: number,
     bet: number,
     loseGifts: NftBuyerGift[],
-    wishNft: string | null = null,
+    wishNfts: string[] = [],
   ): Promise<void> {
     const key = `${UPGRATE_STATE_REDIS_KEY_PREFIX}:${userId}`;
-    const state: UpgrateState = { toyIds, winGifts, chance, bet, loseGifts, wishNft };
+    const state: UpgrateState = { toyIds, winGifts, chance, bet, loseGifts, wishNfts };
     await this.redisService.set(
       key,
       JSON.stringify(state),
@@ -251,7 +263,10 @@ export class UpgrateService {
     );
   }
 
-  async setWishNft(userId: string, nftName: string): Promise<{ success: true; chance: number }> {
+  async setWishNfts(
+    userId: string,
+    nftNames: string[],
+  ): Promise<{ success: true; chance: number }> {
     const key = `${UPGRATE_STATE_REDIS_KEY_PREFIX}:${userId}`;
     const raw = await this.redisService.get(key);
     if (!raw) {
@@ -283,11 +298,20 @@ export class UpgrateService {
       if (g) winGifts.push(g);
     }
 
-    const wishGift = winGifts.find((g) => g.name === nftName);
-    if (!wishGift) {
-      throw new BadRequestException(
-        'NFT not found in current win pool',
-      );
+    const uniqueNames = [...new Set(nftNames.map((n) => n.trim()).filter(Boolean))];
+    if (uniqueNames.length === 0) {
+      throw new BadRequestException('At least one wish name is required');
+    }
+
+    const wishGifts: NftBuyerGift[] = [];
+    for (const name of uniqueNames) {
+      const wishGift = winGifts.find((g) => g.name === name);
+      if (!wishGift) {
+        throw new BadRequestException(
+          `NFT not found in current win pool: ${name}`,
+        );
+      }
+      wishGifts.push(wishGift);
     }
 
     const toyIds = Array.isArray(obj.toyIds)
@@ -303,24 +327,24 @@ export class UpgrateService {
         }, [])
       : [];
 
-    const wishPriceTon = priceToTon(wishGift.price);
+    const sumWishPriceTon = wishGifts.reduce(
+      (sum, g) => sum + priceToTon(g.price),
+      0,
+    );
     const { upgradeRTP } = await this.settingsRepository.getSettings();
     const rtpFactor = Number(upgradeRTP) / 100;
-    const chanceRaw = wishPriceTon > 0 ? (bet / wishPriceTon) * rtpFactor : 0;
+    const chanceRaw =
+      sumWishPriceTon > 0 ? (bet / sumWishPriceTon) * rtpFactor : 0;
     const chance = Math.min(0.99, Math.max(0.01, chanceRaw));
 
-    const state: UpgrateState = {
+    await this.saveUpgrateStateToRedis(
+      userId,
       toyIds,
       winGifts,
       chance,
       bet,
       loseGifts,
-      wishNft: nftName,
-    };
-    await this.redisService.set(
-      key,
-      JSON.stringify(state),
-      UPGRATE_TTL_SECONDS,
+      uniqueNames,
     );
     return { success: true, chance };
   }
@@ -370,10 +394,9 @@ export class UpgrateService {
       if (g) loseGifts.push(g);
     }
 
-    const wishNft =
-      typeof obj.wishNft === 'string' ? obj.wishNft : null;
+    const wishNfts = this.parseWishNftsFromState(obj);
 
-    const state: UpgrateState = { toyIds, winGifts, chance, bet, loseGifts, wishNft };
+    const state: UpgrateState = { toyIds, winGifts, chance, bet, loseGifts, wishNfts };
 
     const didWin = Math.random() < state.chance;
 
@@ -397,9 +420,14 @@ export class UpgrateService {
     }
 
     let selected: NftBuyerGift[];
-    if (state.wishNft) {
-      const wished = state.winGifts.find((g) => g.name === state.wishNft);
-      selected = wished ? [wished] : this.selectWinningGifts(state);
+    if (state.wishNfts.length > 0) {
+      const wished: NftBuyerGift[] = [];
+      for (const name of state.wishNfts) {
+        const g = state.winGifts.find((x) => x.name === name);
+        if (g) wished.push(g);
+      }
+      selected =
+        wished.length > 0 ? wished : this.selectWinningGifts(state);
     } else {
       selected = this.selectWinningGifts(state);
     }

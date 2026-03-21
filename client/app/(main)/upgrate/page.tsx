@@ -30,7 +30,7 @@ export default function UpgratePage() {
         poolGifts,
         isLoadingChance,
         canSelectWish,
-        selectedWishName,
+        selectedWishNames,
         onSelectWish,
         startGame,
         gameResult,
@@ -70,9 +70,9 @@ export default function UpgratePage() {
                         selectedGifts.length > 0 &&
                         !isLoadingChance &&
                         chance != null &&
-                        selectedWishName != null
+                        selectedWishNames.length > 0
                     }
-                    hasWishSelected={selectedWishName != null}
+                    hasWishSelected={selectedWishNames.length > 0}
                     isPlaying={isPlaying}
                     onPlay={startGame}
                 />
@@ -89,7 +89,7 @@ export default function UpgratePage() {
                         poolGifts={poolGifts}
                         isLoadingChance={isLoadingChance}
                         canSelectWish={canSelectWish}
-                        selectedWishName={selectedWishName}
+                        selectedWishNames={selectedWishNames}
                         onSelectWish={onSelectWish}
                     />
                 </div>
