@@ -5,6 +5,7 @@ import Image from 'next/image';
 import cls from '../../upgrate.module.scss';
 import upgradeArrows from '@/assets/upgrade-arrows.svg';
 import upgradeIcon from '@/assets/upgrade-icon.svg';
+import { formatChancePercentLabel } from '../../helpers/formatChancePercentLabel';
 
 const CIRCLE_R = 117;
 const STROKE_WIDTH = 6;
@@ -52,7 +53,8 @@ export function UpgradeArena({
     onAnimationComplete,
 }: UpgradeArenaProps & { onAnimationComplete: (result: 'win' | 'lose') => void }) {
     const percent = chance != null ? Math.min(100, Math.max(0, chance * 100)) : 0;
-    const percentage = isLoadingChance ? '…' : chance != null ? Math.round(chance * 100) : 0;
+    const percentageLabel =
+        isLoadingChance ? '…' : chance != null ? formatChancePercentLabel(chance) : '0';
     const strokeDashoffset = CIRCUMFERENCE * (1 - percent / 100);
 
     const [angle, setAngle] = useState(START_ANGLE);
@@ -304,7 +306,7 @@ export function UpgradeArena({
                 priority
             />
             <div className={cls.percentageBlock}>
-                <span className={cls.percentage}>{percentage}%</span>
+                <span className={cls.percentage}>{percentageLabel}%</span>
                 <span className={cls.chanceLabel}>Шанс на улучшение</span>
             </div>
             {/** Иконка: обёртка с translate3d (GPU), внутри обычный img без Next/Image для меньшей нагрузки */}
