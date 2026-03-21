@@ -5,8 +5,9 @@ import Image from 'next/image';
 import cls from './CreateTableModal.module.scss';
 import TonIcon from '@/assets/ton.svg';
 import StarIcon from '@/assets/star.svg';
+import TableTypeIconSvg from './icons/table-type-icon.svg';
+import SettingsIconSvg from './icons/settings-icon.svg';
 
-/** Длительность анимации закрытия панели (см. CreateTableModal.module.scss $sheet-duration) */
 const SHEET_CLOSE_MS = 420;
 
 type Currency = 'ton' | 'stars';
@@ -19,42 +20,6 @@ interface CreateTableModalProps {
     onClose: () => void;
 }
 
-function TableTypeIcon() {
-    return (
-        <svg className={cls.cardHeaderIcon} width={20} height={18} viewBox="0 0 20 18" fill="none" aria-hidden>
-            <path
-                d="M2 6h16v2H2V6zm0 4h6v6H2v-6zm8 0h8v6h-8v-6z"
-                fill="url(#createTableGrad1)"
-            />
-            <defs>
-                <linearGradient id="createTableGrad1" x1="10" y1="0" x2="10" y2="18" gradientUnits="userSpaceOnUse">
-                    <stop stopColor="#9D8AF3" />
-                    <stop offset="1" stopColor="#7351FF" />
-                </linearGradient>
-            </defs>
-        </svg>
-    );
-}
-
-function SettingsIcon() {
-    return (
-        <svg className={cls.cardHeaderIcon} width={17} height={18} viewBox="0 0 17 18" fill="none" aria-hidden>
-            <path
-                d="M2 5.5h13v1.5H2V5.5zm0 4h10v1.5H2V9.5zm0 4h13v1.5H2v-1.5z"
-                fill="url(#createTableGrad2)"
-            />
-            <circle cx="14" cy="6.25" r="1.25" fill="url(#createTableGrad2)" />
-            <circle cx="5" cy="10.25" r="1.25" fill="url(#createTableGrad2)" />
-            <circle cx="12" cy="14.25" r="1.25" fill="url(#createTableGrad2)" />
-            <defs>
-                <linearGradient id="createTableGrad2" x1="8.5" y1="0" x2="8.5" y2="18" gradientUnits="userSpaceOnUse">
-                    <stop stopColor="#9D8AF3" />
-                    <stop offset="1" stopColor="#7351FF" />
-                </linearGradient>
-            </defs>
-        </svg>
-    );
-}
 
 const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
     const [mounted, setMounted] = useState(false);
@@ -125,12 +90,7 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
                     <button type="button" className={cls.closeButton} onClick={onClose} aria-label="Закрыть">
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <circle cx="10" cy="10" r="10" fill="rgba(255, 255, 255, 0.08)" />
-                            <path
-                                d="M6 6L14 14M14 6L6 14"
-                                stroke="white"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                            />
+                            <path d="M6 6L14 14M14 6L6 14" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
                         </svg>
                     </button>
                 </div>
@@ -138,7 +98,7 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
                 <div className={cls.scroll}>
                     <section className={cls.card}>
                         <div className={cls.cardHeader}>
-                            <TableTypeIcon />
+                            <Image src={TableTypeIconSvg} alt="" width={20} height={18} className={cls.cardHeaderIcon} />
                             <h3 className={cls.cardTitle}>Тип стола</h3>
                         </div>
                         <div className={cls.rowPills}>
@@ -159,38 +119,39 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
 
                     <section className={cls.card}>
                         <div className={cls.cardHeader}>
-                            <SettingsIcon />
+                            <Image src={SettingsIconSvg} alt="" width={17} height={18} className={cls.cardHeaderIcon} />
                             <h3 className={cls.cardTitle}>Настройка</h3>
                         </div>
 
                         <div className={cls.sectionStack}>
                             <p className={cls.label}>Валюта</p>
-                            <div className={cls.rowPills}>
-                                <button
-                                    type="button"
-                                    className={`${cls.pill} ${currency === 'ton' ? cls.pillActive : ''}`}
-                                    onClick={() => setCurrency('ton')}
-                                >
-                                    <Image src={TonIcon} alt="" width={13} height={13} className={cls.pillIcon} />
-                                    TON
-                                </button>
-                                <button
-                                    type="button"
-                                    className={`${cls.pill} ${currency === 'stars' ? cls.pillActive : ''}`}
-                                    onClick={() => setCurrency('stars')}
-                                >
-                                    <Image src={StarIcon} alt="" width={14} height={13} className={cls.pillIcon} />
-                                    Звезды
-                                </button>
+                            <div className={cls.chipsRowWrap}>
+                                <div className={cls.chipsRow}>
+                                    <button
+                                        type="button"
+                                        className={`${cls.pill} ${currency === 'ton' ? cls.pillActive : ''}`}
+                                        onClick={() => setCurrency('ton')}
+                                    >
+                                        <Image src={TonIcon} alt="" width={13} height={13} className={cls.pillIcon} />
+                                        TON
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`${cls.pill} ${currency === 'stars' ? cls.pillActive : ''}`}
+                                        onClick={() => setCurrency('stars')}
+                                    >
+                                        <Image src={StarIcon} alt="" width={14} height={13} className={cls.pillIcon} />
+                                        Звезды
+                                    </button>
+                                </div>
+                                <div className={cls.chipsFade} aria-hidden />
                             </div>
                         </div>
-
-                        <div className={cls.divider} />
 
                         <div className={cls.sectionStack}>
                             <p className={cls.label}>Ставка</p>
                             <div className={cls.chipsRowWrap}>
-                                <div className={`${cls.chipsRow} ${cls.chipsRowStakes}`}>
+                                <div className={cls.chipsRow}>
                                     {STAKES.map((v) => (
                                         <button
                                             key={v}
@@ -202,6 +163,7 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
                                         </button>
                                     ))}
                                 </div>
+                                <div className={cls.chipsFade} aria-hidden />
                             </div>
                         </div>
 
@@ -210,7 +172,7 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
                         <div className={cls.sectionStack}>
                             <p className={cls.label}>Игроков</p>
                             <div className={cls.chipsRowWrap}>
-                                <div className={`${cls.chipsRow} ${cls.chipsRowPlayers}`}>
+                                <div className={cls.chipsRow}>
                                     {PLAYERS.map((n) => (
                                         <button
                                             key={n}
@@ -222,6 +184,7 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
                                         </button>
                                     ))}
                                 </div>
+                                <div className={cls.chipsFade} aria-hidden />
                             </div>
                         </div>
                     </section>

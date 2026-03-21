@@ -1,6 +1,7 @@
 $sheet-ease: cubic-bezier(0.32, 0.72, 0, 1);
 $sheet-duration: 0.42s;
 $dimmer-duration: 0.32s;
+$card-bg: #262244;
 
 .bottomSheet {
     position: fixed;
@@ -119,7 +120,9 @@ $dimmer-duration: 0.32s;
 }
 
 .card {
-    background: rgba(255, 255, 255, 0.08);
+    background:
+        linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08)),
+        $card-bg;
     border-radius: 16px;
     padding: 16px;
     display: flex;
@@ -135,9 +138,6 @@ $dimmer-duration: 0.32s;
 
 .cardHeaderIcon {
     flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 .cardTitle {
@@ -150,9 +150,8 @@ $dimmer-duration: 0.32s;
 }
 
 .rowPills {
-    display: grid;
-    width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 4px;
 }
 
@@ -161,9 +160,7 @@ $dimmer-duration: 0.32s;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    width: 100%;
-    min-width: 0;
-    padding: 16px 10px;
+    padding: 16px 15px;
     border: none;
     border-radius: 40px;
     cursor: pointer;
@@ -177,11 +174,9 @@ $dimmer-duration: 0.32s;
 
     &.pillActive {
         color: #ffffff;
-        background: linear-gradient(
-                180deg,
-                rgba(115, 81, 255, 0) 0%,
-                rgba(115, 81, 255, 0.35) 100%
-            ),
+        background:
+            linear-gradient(180deg, rgba(115, 81, 255, 0) 80%, rgba(115, 81, 255, 1) 100%),
+            linear-gradient(180deg, rgba(115, 81, 255, 0) 0%, rgba(115, 81, 255, 1) 100%),
             rgba(255, 255, 255, 0.08);
     }
 
@@ -207,37 +202,50 @@ $dimmer-duration: 0.32s;
 }
 
 .chipsRowWrap {
-    width: 100%;
+    position: relative;
+    width: calc(100% + 16px);
+    height: 47px;
+    overflow: hidden;
 }
 
 .chipsRow {
-    display: grid;
-    width: 100%;
+    display: flex;
+    align-items: center;
     gap: 4px;
-    align-items: stretch;
+    height: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
 }
 
-.chipsRowStakes {
-    grid-template-columns: repeat(9, minmax(0, 1fr));
-}
-
-.chipsRowPlayers {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+.chipsFade {
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 47px;
+    height: 47px;
+    background: linear-gradient(90deg, rgba(38, 34, 68, 0) 0%, rgba(38, 34, 68, 1) 100%);
 }
 
 .chip {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    min-width: 0;
-    padding: 14px 4px;
+    flex: 0 0 54px;
+    width: 54px;
+    height: 100%;
+    padding: 0;
     border: none;
     border-radius: 40px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-family: 'Montserrat', sans-serif;
     font-weight: 600;
-    font-size: clamp(10px, 2.6vw, 12px);
+    font-size: 12px;
     line-height: 1.22;
     color: rgba(255, 255, 255, 0.32);
     background: rgba(255, 255, 255, 0.08);
@@ -245,11 +253,9 @@ $dimmer-duration: 0.32s;
 
     &.chipActive {
         color: #ffffff;
-        background: linear-gradient(
-                180deg,
-                rgba(115, 81, 255, 0) 0%,
-                rgba(115, 81, 255, 0.35) 100%
-            ),
+        background:
+            linear-gradient(180deg, rgba(115, 81, 255, 0) 80%, rgba(115, 81, 255, 1) 100%),
+            linear-gradient(180deg, rgba(115, 81, 255, 0) 0%, rgba(115, 81, 255, 1) 100%),
             rgba(255, 255, 255, 0.08);
     }
 }
@@ -282,13 +288,10 @@ $dimmer-duration: 0.32s;
     font-size: 16px;
     line-height: 1.22;
     color: #1e1d2b;
-    background: linear-gradient(
-        45deg,
-        #7456e9 0%,
-        #8eb3ef 33%,
-        rgba(230, 221, 247, 0.99) 68%,
-        #cfaefe 100%
-    );
+    background:
+        linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.6)),
+        linear-gradient(45deg, #7456e9 0%, #8eb3ef 33%, rgba(230, 221, 247, 0.99) 68%, #cfaefe 100%),
+        #2f3293;
     transition: opacity 0.2s, transform 0.15s;
 
     &:hover {
@@ -303,11 +306,5 @@ $dimmer-duration: 0.32s;
 @media (max-width: 768px) {
     .sheet {
         height: calc(100% - 60px);
-    }
-}
-
-@media (max-width: 400px) {
-    .chipsRowStakes {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
