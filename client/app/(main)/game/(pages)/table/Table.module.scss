@@ -1,0 +1,495 @@
+$purple: #7456e9;
+$felt: #24194d;
+$dark-base: #1b1339;
+
+.page {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding-bottom: 100px;
+    overflow: hidden;
+}
+
+/* ── Bank badge ──────────────────────────────────────── */
+
+.bank {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 12px;
+    border-radius: 8px;
+    background:
+        linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)),
+        linear-gradient(0deg, $purple 0%, #cfaefe 100%),
+        #1f0d63;
+    margin-top: 16px;
+    z-index: 2;
+}
+
+.bankLabel {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 10px;
+    line-height: 1.22;
+    color: #fff;
+}
+
+.bankAmount {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 1.22;
+    color: #fff;
+}
+
+/* ── Table visual ────────────────────────────────────── */
+
+.tableWrap {
+    position: relative;
+    width: 316px;
+    height: 508px;
+    margin-top: -4px;
+    z-index: 1;
+    flex-shrink: 0;
+}
+
+.tableGlow {
+    position: absolute;
+    inset: 0;
+    background: $purple;
+    opacity: 0.48;
+    border-radius: 177px;
+    filter: blur(170px);
+    pointer-events: none;
+}
+
+.tableOuter {
+    position: absolute;
+    inset: 0;
+    border-radius: 182px;
+    background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), $dark-base;
+    box-shadow: 0 16px 32px -8px rgba(12, 12, 13, 0.4);
+    overflow: hidden;
+}
+
+.tableBorder {
+    position: absolute;
+    inset: 0;
+    border-radius: 183px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    box-shadow: inset 0 0 6px 0 rgba(157, 138, 243, 0.6);
+    pointer-events: none;
+}
+
+.tableHighlights {
+    position: absolute;
+    inset: 0;
+    border-radius: 182px;
+    pointer-events: none;
+    z-index: 3;
+
+    img {
+        width: 100%;
+        height: 100%;
+    }
+}
+
+.tableFelt {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    border-radius: 269px;
+    background:
+        linear-gradient(rgba(114, 89, 217, 0.14), rgba(114, 89, 217, 0.14)),
+        $felt;
+    border: 1px solid;
+    border-image-source:
+        linear-gradient(180deg, rgba(157, 138, 243, 0.5) 0%, rgba(157, 138, 243, 0.3) 100%);
+    border-image-slice: 1;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
+}
+
+.tableFeltInner {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    border-radius: 269px;
+    background:
+        linear-gradient(rgba(114, 89, 217, 0.14), rgba(114, 89, 217, 0.14)),
+        $felt;
+    border: 1px solid rgba(157, 138, 243, 0.4);
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.tableCenterGlow {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 100px;
+    height: 100px;
+    transform: translate(-50%, -50%);
+    background: #9d8af3;
+    opacity: 0.3;
+    border-radius: 50%;
+    filter: blur(140px);
+    pointer-events: none;
+}
+
+/* ── Wheel ───────────────────────────────────────────── */
+
+.wheel {
+    position: absolute;
+    left: 50%;
+    top: 146px;
+    width: 216px;
+    height: 216px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    box-shadow:
+        0 4px 4px -4px rgba(12, 12, 13, 0.05),
+        0 16px 32px -4px rgba(12, 12, 13, 0.1);
+    z-index: 2;
+}
+
+.wheelSectors {
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    width: 214px;
+    height: 214px;
+    border-radius: 50%;
+    overflow: hidden;
+
+    img {
+        width: 100%;
+        height: 100%;
+    }
+}
+
+.wheelRim {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+
+    img {
+        width: 100%;
+        height: 100%;
+    }
+}
+
+.wheelStatus {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 88px;
+    height: 88px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+    background:
+        radial-gradient(circle at 50% 50%, rgba(36, 25, 77, 0) 70%, rgba(81, 255, 194, 1) 100%),
+        radial-gradient(circle at 50% 50%, rgba(36, 25, 77, 0) 80%, $purple 100%),
+        $felt;
+    box-shadow:
+        0 4px 4px -4px rgba(12, 12, 13, 0.05),
+        0 16px 32px -4px rgba(12, 12, 13, 0.1);
+}
+
+.wheelStatusText {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 10px;
+    line-height: 1.22;
+    color: #fff;
+}
+
+/* ── Player seats ────────────────────────────────────── */
+
+.seats {
+    position: absolute;
+    top: 44px;
+    left: 32px;
+    width: 252px;
+    height: 420px;
+    z-index: 4;
+}
+
+.seat {
+    position: absolute;
+    width: 48px;
+    height: 48px;
+}
+
+.seatRing {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid rgba(116, 86, 233, 0.2);
+}
+
+.seatInner {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.seatEmpty {
+    background: rgba(116, 86, 233, 0.7);
+}
+
+.seatPlus {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 300;
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.5);
+    line-height: 1;
+}
+
+.seatAvatar {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 1.22;
+    color: #fff;
+}
+
+/* ── Purple decorative glow ──────────────────────────── */
+
+.purpleGlow {
+    position: absolute;
+    left: 8px;
+    top: 551px;
+    width: 393px;
+    height: 376px;
+    background: rgba(116, 86, 233, 0.3);
+    border-radius: 50%;
+    filter: blur(150px);
+    opacity: 0.25;
+    pointer-events: none;
+}
+
+/* ── Play button ─────────────────────────────────────── */
+
+.playButton {
+    width: calc(100% - 40px);
+    max-width: 354px;
+    height: 44px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 1.22;
+    color: #1e1d2b;
+    background:
+        linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.6)),
+        linear-gradient(45deg, #7456e9 0%, #8eb3ef 33%, rgba(230, 221, 247, 0.99) 68%, #cfaefe 100%),
+        #2f3293;
+    margin-top: 20px;
+    z-index: 2;
+    transition: opacity 0.2s, transform 0.15s;
+
+    &:hover {
+        opacity: 0.95;
+    }
+
+    &:active {
+        transform: scale(0.98);
+    }
+}
+
+/* ── Info section ────────────────────────────────────── */
+
+.info {
+    width: calc(100% - 40px);
+    max-width: 353px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+    margin-top: 30px;
+    z-index: 2;
+}
+
+.infoHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.infoPlayers {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 1.22;
+    color: #fff;
+}
+
+.infoGameId {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 500;
+    font-size: 10px;
+    line-height: 1.22;
+    color: rgba(255, 255, 255, 0.32);
+}
+
+/* ── Player rows ─────────────────────────────────────── */
+
+.playersList {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+}
+
+.playerRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.playerLeft {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.playerAvatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 1.22;
+    color: #fff;
+}
+
+.playerInfo {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    height: 30px;
+}
+
+.playerName {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    line-height: 1.22;
+    color: #fff;
+}
+
+.playerRole {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 500;
+    font-size: 10px;
+    line-height: 1.22;
+    color: rgba(255, 255, 255, 0.32);
+}
+
+.playerRight {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.playerBetLabel {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 500;
+    font-size: 10px;
+    line-height: 1.22;
+    color: rgba(255, 255, 255, 0.32);
+}
+
+.playerBetValue {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 3px;
+}
+
+.playerBetAmount {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 1.22;
+    color: #fff;
+}
+
+.playerBetIcon {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* ── Hash row ────────────────────────────────────────── */
+
+.hashRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.hashLabel {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 1.22;
+    color: rgba(255, 255, 255, 0.32);
+}
+
+.hashValue {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 1.22;
+    color: #fff;
+}
+
+.hashCopy {
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+
+    &:hover {
+        opacity: 0.7;
+    }
+
+    &:active {
+        opacity: 0.5;
+    }
+}
