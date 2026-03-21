@@ -17,12 +17,10 @@ interface InventoryGiftCardProps {
 
 export function InventoryGiftCard({ gift, index, isSelected, onToggle }: InventoryGiftCardProps) {
     return (
-        <div
-            role="button"
-            tabIndex={0}
+        <button
+            type="button"
             className={`${cls.giftItem} ${isSelected ? cls.giftItemSelected : ''}`}
             onClick={onToggle}
-            onKeyDown={(e) => e.key === 'Enter' && onToggle()}
         >
             <div
                 className={cls.giftImageBox}
@@ -42,6 +40,6 @@ export function InventoryGiftCard({ gift, index, isSelected, onToggle }: Invento
                 <Image src={tonIcon} alt="TON" width={10} height={10} />
                 <span>{(gift.price ?? 0).toFixed(2)}</span>
             </div>
-        </div>
+        </button>
     );
 }

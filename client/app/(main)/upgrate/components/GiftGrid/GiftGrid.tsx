@@ -43,6 +43,9 @@ export function GiftGrid({
         }
         return (
             <>
+                <p className={cls.wishHint}>
+                    Можно выбрать несколько подарков — их сумма пойдёт в одну ставку.
+                </p>
                 {inventoryGifts.map((gift, index) => (
                     <InventoryGiftCard
                         key={gift.id}
@@ -72,7 +75,7 @@ export function GiftGrid({
        
             {winGifts.map((g, i) => (
                 <WishlistGiftCard
-                    key={g.name ?? `win-${i}`}
+                    key={`win-${i}-${g.name ?? ''}-${g.price ?? 0}`}
                     gift={g}
                     index={i}
                     isSelectable={canSelectWish}
