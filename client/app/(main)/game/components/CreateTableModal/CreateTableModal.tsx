@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import cls from './CreateTableModal.module.scss';
 import TonIcon from '@/assets/ton.svg';
 import StarIcon from '@/assets/star.svg';
 
-type TableVisibility = 'public' | 'private';
+/** Длительность анимации закрытия панели (см. CreateTableModal.module.scss $sheet-duration) */
+const SHEET_CLOSE_MS = 420;
+
 type Currency = 'ton' | 'stars';
 
 const STAKES = [1, 5, 10, 25, 50, 100, 250, 500, 1000] as const;
@@ -55,32 +57,66 @@ function SettingsIcon() {
 }
 
 const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
-    const [visibility, setVisibility] = useState<TableVisibility>('public');
+    const [mounted, setMounted] = useState(false);
+    const [isShown, setIsShown] = useState(false);
+    const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
     const [currency, setCurrency] = useState<Currency>('ton');
     const [stake, setStake] = useState<(typeof STAKES)[number]>(1);
     const [players, setPlayers] = useState<(typeof PLAYERS)[number]>(2);
 
     useEffect(() => {
-        if (!isOpen) return;
-        document.body.style.overflow = 'hidden';
+        if (isOpen) {
+            if (closeTimerRef.current) {
+                clearTimeout(closeTimerRef.current);
+                closeTimerRef.current = null;
+            }
+            setMounted(true);
+            let raf2 = 0;
+            const raf1 = requestAnimationFrame(() => {
+                raf2 = requestAnimationFrame(() => setIsShown(true));
+            });
+            return () => {
+                cancelAnimationFrame(raf1);
+                cancelAnimationFrame(raf2);
+            };
+        }
+
+        setIsShown(false);
+        closeTimerRef.current = setTimeout(() => {
+            setMounted(false);
+            closeTimerRef.current = null;
+        }, SHEET_CLOSE_MS);
+
         return () => {
-            document.body.style.overflow = 'unset';
+            if (closeTimerRef.current) {
+                clearTimeout(closeTimerRef.current);
+                closeTimerRef.current = null;
+            }
         };
     }, [isOpen]);
 
     useEffect(() => {
-        if (!isOpen) return;
+        if (!mounted) return;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [mounted]);
+
+    useEffect(() => {
+        if (!mounted) return;
         const onKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
         };
         document.addEventListener('keydown', onKey);
         return () => document.removeEventListener('keydown', onKey);
-    }, [isOpen, onClose]);
+    }, [mounted, onClose]);
 
-    if (!isOpen) return null;
+    if (!mounted) return null;
 
     return (
-        <div className={`${cls.bottomSheet} ${cls.open}`}>
+        <div className={`${cls.bottomSheet} ${isShown ? cls.open : ''}`}>
             <div className={cls.dimmer} onClick={onClose} role="presentation" />
 
             <div className={cls.sheet}>
@@ -106,17 +142,15 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
                             <h3 className={cls.cardTitle}>Тип стола</h3>
                         </div>
                         <div className={cls.rowPills}>
-                            <button
-                                type="button"
-                                className={`${cls.pill} ${visibility === 'public' ? cls.pillActive : ''}`}
-                                onClick={() => setVisibility('public')}
-                            >
+                            <button type="button" className={`${cls.pill} ${cls.pillActive}`}>
                                 Публичный
                             </button>
                             <button
                                 type="button"
-                                className={`${cls.pill} ${visibility === 'private' ? cls.pillActive : ''}`}
-                                onClick={() => setVisibility('private')}
+                                className={`${cls.pill} ${cls.pillDisabled}`}
+                                disabled
+                                aria-disabled="true"
+                                aria-label="Приватные столы временно недоступны"
                             >
                                 Приватный
                             </button>
@@ -156,7 +190,7 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
                         <div className={cls.sectionStack}>
                             <p className={cls.label}>Ставка</p>
                             <div className={cls.chipsRowWrap}>
-                                <div className={cls.chipsRow}>
+                                <div className={`${cls.chipsRow} ${cls.chipsRowStakes}`}>
                                     {STAKES.map((v) => (
                                         <button
                                             key={v}
@@ -168,7 +202,6 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
                                         </button>
                                     ))}
                                 </div>
-                                <div className={cls.chipsFade} aria-hidden />
                             </div>
                         </div>
 
@@ -177,7 +210,7 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
                         <div className={cls.sectionStack}>
                             <p className={cls.label}>Игроков</p>
                             <div className={cls.chipsRowWrap}>
-                                <div className={cls.chipsRow}>
+                                <div className={`${cls.chipsRow} ${cls.chipsRowPlayers}`}>
                                     {PLAYERS.map((n) => (
                                         <button
                                             key={n}
@@ -189,7 +222,6 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
                                         </button>
                                     ))}
                                 </div>
-                                <div className={cls.chipsFade} aria-hidden />
                             </div>
                         </div>
                     </section>
