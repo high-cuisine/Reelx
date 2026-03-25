@@ -25,13 +25,6 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps) {
             >
                 Желаемые
             </button>
-            <button
-                type="button"
-                className={`${cls.tab} ${activeTab === 'multiplayer' ? cls.tabActive : ''}`}
-                onClick={() => onTabChange('multiplayer')}
-            >
-                Стол
-            </button>
         </div>
     );
 }

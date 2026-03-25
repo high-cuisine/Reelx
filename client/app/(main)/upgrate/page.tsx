@@ -11,7 +11,6 @@ import {
     UpgradeButton,
     TabBar,
     GiftGrid,
-    CreateTablePanel,
 } from './components';
 
 export default function UpgratePage() {
@@ -37,10 +36,7 @@ export default function UpgratePage() {
         gameResult,
         isPlaying,
         handleAnimationComplete,
-        multiplayer,
     } = useUpgratePage();
-
-    const isMultiplayer = activeTab === 'multiplayer';
 
     return (
         <div className={cls.page}>
@@ -62,61 +58,41 @@ export default function UpgratePage() {
             />
 
             <div className={cls.bottomSection}>
-                {!isMultiplayer && (
-                    <>
-                        <MultipliersRow
-                            selectedMultiplier={selectedMultiplier}
-                            onToggle={toggleMultiplier}
-                        />
+                <MultipliersRow
+                    selectedMultiplier={selectedMultiplier}
+                    onToggle={toggleMultiplier}
+                />
 
-                        <UpgradeButton
-                            selectedCount={selectedGifts.length}
-                            selectedMultiplier={selectedMultiplier}
-                            isReadyToPlay={
-                                selectedGifts.length > 0 &&
-                                !isLoadingChance &&
-                                chance != null &&
-                                selectedWishNames.length > 0
-                            }
-                            hasWishSelected={selectedWishNames.length > 0}
-                            isPlaying={isPlaying}
-                            onPlay={startGame}
-                        />
-                    </>
-                )}
+                <UpgradeButton
+                    selectedCount={selectedGifts.length}
+                    selectedMultiplier={selectedMultiplier}
+                    isReadyToPlay={
+                        selectedGifts.length > 0 &&
+                        !isLoadingChance &&
+                        chance != null &&
+                        selectedWishNames.length > 0
+                    }
+                    hasWishSelected={selectedWishNames.length > 0}
+                    isPlaying={isPlaying}
+                    onPlay={startGame}
+                />
 
                 <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
 
-                {isMultiplayer ? (
-                    <CreateTablePanel
-                        currency={multiplayer.currency}
-                        onCurrencyChange={multiplayer.setCurrency}
-                        betAmount={multiplayer.betAmount}
-                        onBetAmountChange={multiplayer.setBetAmount}
-                        maxPlayers={multiplayer.maxPlayers}
-                        onMaxPlayersChange={multiplayer.setMaxPlayers}
-                        table={multiplayer.table}
-                        isLoading={multiplayer.isLoading}
-                        error={multiplayer.error}
-                        onCreateTable={multiplayer.createTable}
-                        onCloseTable={multiplayer.closeTable}
+                <div className={cls.giftGrid}>
+                    <GiftGrid
+                        activeTab={activeTab}
+                        isLoadingGifts={isLoadingGifts}
+                        inventoryGifts={inventoryGifts}
+                        selectedGifts={selectedGifts}
+                        onToggleGift={toggleGiftSelection}
+                        poolGifts={poolGifts}
+                        isLoadingChance={isLoadingChance}
+                        canSelectWish={canSelectWish}
+                        selectedWishNames={selectedWishNames}
+                        onSelectWish={onSelectWish}
                     />
-                ) : (
-                    <div className={cls.giftGrid}>
-                        <GiftGrid
-                            activeTab={activeTab}
-                            isLoadingGifts={isLoadingGifts}
-                            inventoryGifts={inventoryGifts}
-                            selectedGifts={selectedGifts}
-                            onToggleGift={toggleGiftSelection}
-                            poolGifts={poolGifts}
-                            isLoadingChance={isLoadingChance}
-                            canSelectWish={canSelectWish}
-                            selectedWishNames={selectedWishNames}
-                            onSelectWish={onSelectWish}
-                        />
-                    </div>
-                )}
+                </div>
             </div>
             <GiftsModal />
         </div>

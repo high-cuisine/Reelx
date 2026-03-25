@@ -6,4 +6,3 @@ export { TabBar } from './TabBar/TabBar';
 export { GiftGrid } from './GiftGrid/GiftGrid';
 export { InventoryGiftCard } from './InventoryGiftCard/InventoryGiftCard';
 export { WishlistGiftCard } from './WishlistGiftCard/WishlistGiftCard';
-export { CreateTablePanel } from './CreateTablePanel/CreateTablePanel';

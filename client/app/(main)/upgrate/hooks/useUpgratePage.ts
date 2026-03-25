@@ -2,11 +2,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { eventBus, MODAL_EVENTS } from '@/features/eventBus/eventBus';
 import { useInventoryGifts } from './useInventoryGifts';
 import { useChanceData } from './useChanceData';
-import { useMultiplayer } from './useMultiplayer';
 import { upgrateService, type StartGameResponse } from '@/entites/upgrate/api/api';
 import { WISH_SELECTION_MIN_BET_TON } from '../helpers/constants';
 
-export type UpgrateTab = 'inventory' | 'wishlist' | 'multiplayer';
+export type UpgrateTab = 'inventory' | 'wishlist';
 
 export function useUpgratePage() {
     const [activeTab, setActiveTab] = useState<UpgrateTab>('inventory');
@@ -20,7 +19,6 @@ export function useUpgratePage() {
     const { inventoryGifts, isLoadingGifts, loadGifts } = useInventoryGifts();
     const { chance: chanceFromApi, winning, poolGifts, isLoadingChance, refetchChance } =
         useChanceData(selectedGifts, selectedMultiplier);
-    const multiplayer = useMultiplayer();
 
     /** Ставка в TON = сумма цен выбранных подарков из инвентаря (не зависит от мультипликатора и отката пула на бэкенде). */
     const selectedStakeTon = useMemo(() => {
@@ -168,6 +166,5 @@ export function useUpgratePage() {
         gameResult,
         isPlaying,
         handleAnimationComplete,
-        multiplayer,
     };
 }
