@@ -8,6 +8,7 @@ import { RedisModule } from '../libs/infrustructure/redis/redis.module';
 import { TelegramBotModule } from './telegram-bot/telegram-bot.module';
 import { CurrancyModule } from '../libs/common/modules/Currancy/Currancy.module';
 import { UpgrateModule } from './upgrate/Upgrate.module';
+import { MultiplayerModule } from './multiplayer/multiplayer.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { UpgrateModule } from './upgrate/Upgrate.module';
     GiftsModule,
     UpgrateModule,
     PromocodeModule,
+    MultiplayerModule,
     ...(process.env.DISABLE_TELEGRAM_BOT !== 'true' ? [TelegramBotModule] : []),
   ],
   controllers: [],

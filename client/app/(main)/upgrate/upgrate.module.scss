@@ -446,3 +446,196 @@ button.giftItem {
     line-height: 1.219;
     color: #ffffff;
 }
+
+/* ── Create Table Panel ── */
+.tablePanel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 4px 0;
+}
+
+.tablePanelSection {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tablePanelLabel {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 11px;
+    line-height: 1.219;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.currencySelector {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    padding: 3px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+}
+
+.currencyBtn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 5px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 1.219;
+    color: rgba(255, 255, 255, 0.32);
+    transition: all 0.2s ease;
+}
+
+.currencyBtnActive {
+    background: rgba(116, 86, 233, 0.5);
+    color: #ffffff;
+}
+
+.betInput {
+    width: 100%;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: #ffffff;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease;
+
+    &::placeholder {
+        color: rgba(255, 255, 255, 0.24);
+    }
+
+    &:focus {
+        border-color: rgba(116, 86, 233, 0.6);
+    }
+
+    /* hide number arrows */
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+}
+
+.maxPlayersRow {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.maxPlayerBtn {
+    flex: 1;
+    min-width: 36px;
+    padding: 10px 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    border-radius: 6px;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.24);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.maxPlayerBtnActive {
+    background: rgba(116, 86, 233, 0.3);
+    color: #ffffff;
+}
+
+.tableError {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: #ff5c5c;
+    margin: 0;
+    text-align: center;
+}
+
+/* ── Active table info ── */
+.tableSuccess {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+    background: rgba(116, 86, 233, 0.1);
+    border: 1px solid rgba(116, 86, 233, 0.25);
+    border-radius: 12px;
+}
+
+.tableInfoRow {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tableInfoKey {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 500;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.tableInfoVal {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    color: #ffffff;
+}
+
+.tableParticipants {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.tableParticipantRow {
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    align-items: center;
+}
+
+.tableParticipantNum {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.3);
+    width: 14px;
+}
+
+.tableParticipantId {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.7);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 220px;
+}
+
+.tableCloseBtn {
+    background: rgba(255, 80, 80, 0.15);
+    border: 1px solid rgba(255, 80, 80, 0.25);
+
+    &:hover:not(:disabled) {
+        background: rgba(255, 80, 80, 0.25);
+    }
+}
