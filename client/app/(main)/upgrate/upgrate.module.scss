@@ -97,7 +97,6 @@
     left: 0;
     width: 240px;
     height: 240px;
-    background: #7456e9;
     filter: blur(70px);
     border-radius: 177px;
     opacity: 0.2;
@@ -329,6 +328,7 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 8px;
     margin-bottom: 20px;
+    padding: 0 5px 5px;
 }
 
 .giftItem {

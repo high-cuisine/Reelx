@@ -252,12 +252,12 @@ export function UpgradeArena({
         const targetLocalGlobal =
             ((targetLocal + START_ANGLE) % FULL_DEG + FULL_DEG) % FULL_DEG;
 
-        // Хотим сделать ещё пару полных оборотов перед остановкой
+        // Хотим сделать ещё пару полных оборотов перед остановкой.
+        // delta всегда в [0, 360) — чтобы шарик не крутился назад и расстояние было одинаковым.
         const extraTurns = 3;
         const baseAngle = angleRef.current;
-        const targetGlobal =
-            baseAngle +
-            (extraTurns * FULL_DEG + (targetLocalGlobal - currentAngle));
+        const delta = ((targetLocalGlobal - currentAngle) + FULL_DEG) % FULL_DEG;
+        const targetGlobal = baseAngle + extraTurns * FULL_DEG + delta;
 
         startAngleRef.current = baseAngle;
         targetAngleRef.current = targetGlobal;
