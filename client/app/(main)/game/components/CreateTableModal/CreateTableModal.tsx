@@ -7,6 +7,8 @@ import TonIcon from '@/assets/ton.svg';
 import StarIcon from '@/assets/star.svg';
 import TableTypeIconSvg from './icons/table-type-icon.svg';
 import SettingsIconSvg from './icons/settings-icon.svg';
+import { multiplayerService } from '@/entites/multiplayer/api/api';
+import { useUserStore } from '@/entites/user/model/user';
 
 const SHEET_CLOSE_MS = 420;
 
@@ -18,7 +20,7 @@ const PLAYERS = [2, 3, 4, 5, 6] as const;
 interface CreateTableModalProps {
     isOpen: boolean;
     onClose: () => void;
-    /** Вызывается по нажатию «Создать стол» внизу модалки */
+    /** Вызывается после успешного создания стола */
     onCreateTable?: () => void;
 }
 
@@ -30,6 +32,10 @@ const CreateTableModal = ({ isOpen, onClose, onCreateTable }: CreateTableModalPr
     const [currency, setCurrency] = useState<Currency>('ton');
     const [stake, setStake] = useState<(typeof STAKES)[number]>(1);
     const [players, setPlayers] = useState<(typeof PLAYERS)[number]>(2);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const updateBalance = useUserStore((s) => s.updateBalance);
 
     useEffect(() => {
         if (isOpen) {
@@ -192,15 +198,43 @@ const CreateTableModal = ({ isOpen, onClose, onCreateTable }: CreateTableModalPr
                 </div>
 
                 <div className={cls.footer}>
+                    {error && (
+                        <p style={{
+                            margin: '0 0 10px',
+                            fontSize: 12,
+                            fontWeight: 500,
+                            color: '#ff5c5c',
+                            textAlign: 'center',
+                            fontFamily: 'Montserrat, sans-serif',
+                        }}>
+                            {error}
+                        </p>
+                    )}
                     <button
                         type="button"
                         className={cls.submit}
-                        onClick={() => {
-                            onCreateTable?.();
-                            onClose();
+                        disabled={isLoading}
+                        onClick={async () => {
+                            setError(null);
+                            setIsLoading(true);
+                            try {
+                                await multiplayerService.createTable({
+                                    currency: currency === 'ton' ? 'TON' : 'STARS',
+                                    betAmount: stake,
+                                    maxPlayers: players,
+                                });
+                                updateBalance(-stake, currency);
+                                onCreateTable?.();
+                                onClose();
+                            } catch (e: any) {
+                                const raw = e?.response?.data?.message;
+                                setError(Array.isArray(raw) ? raw.join(', ') : raw ?? 'Ошибка при создании стола');
+                            } finally {
+                                setIsLoading(false);
+                            }
                         }}
                     >
-                        Создать стол
+                        {isLoading ? 'Создаём...' : 'Создать стол'}
                     </button>
                 </div>
             </div>
