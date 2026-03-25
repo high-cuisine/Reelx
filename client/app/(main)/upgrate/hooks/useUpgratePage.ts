@@ -109,17 +109,28 @@ export function useUpgratePage() {
         }
 
         if (outcome === 'win' && gameResult.gifts.length > 0) {
-            const mainGift = gameResult.gifts[0];
-            eventBus.emit(MODAL_EVENTS.OPEN_WIN_MODAL, {
-                selectedItem: {
-                    name: mainGift.name ?? 'Подарок',
-                    price: mainGift.price,
-                    image: mainGift.image,
-                },
-                rolls: 1,
-                totalPrice: selectedStakeTon,
-                giftId: mainGift.id,
-            });
+            if (gameResult.gifts.length === 1) {
+                const mainGift = gameResult.gifts[0];
+                eventBus.emit(MODAL_EVENTS.OPEN_WIN_MODAL, {
+                    selectedItem: {
+                        name: mainGift.name ?? 'Подарок',
+                        price: mainGift.price,
+                        image: mainGift.image,
+                    },
+                    rolls: 1,
+                    totalPrice: selectedStakeTon,
+                    giftId: mainGift.id,
+                });
+            } else {
+                eventBus.emit(MODAL_EVENTS.OPEN_GIFTS_MODAL, {
+                    title: 'Вы выиграли!',
+                    items: gameResult.gifts.map((g) => ({
+                        name: g.name ?? 'Подарок',
+                        price: g.price,
+                        image: g.image,
+                    })),
+                });
+            }
         }
 
         // Ставка забрана сервером — сбрасываем выбор и обновляем инвентарь
