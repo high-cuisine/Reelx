@@ -64,6 +64,20 @@ export class MultiplayerController {
   }
 
   /**
+   * POST /api/multiplayer/table/:ownerId/join
+   * Joins the table, charges bet in table currency if not already seated.
+   */
+  @Post('table/:ownerId/join')
+  @HttpCode(HttpStatus.OK)
+  async joinTable(
+    @Param('ownerId') ownerId: string,
+    @CurrentUser() userId: string,
+  ) {
+    const table = await this.multiplayerService.joinTable(ownerId, userId);
+    return { success: true, table };
+  }
+
+  /**
    * DELETE /api/multiplayer/table
    * Closes the table, refunds all participants, notifies via socket.
    */

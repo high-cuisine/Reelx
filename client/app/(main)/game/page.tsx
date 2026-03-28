@@ -31,7 +31,9 @@ export default function GamePage() {
             <CreateTableModal
                 isOpen={createTableOpen}
                 onClose={() => setCreateTableOpen(false)}
-                onCreateTable={() => router.push('/game/table')}
+                onCreateTable={(ownerId) =>
+                    router.push(`/game/table?owner=${encodeURIComponent(ownerId)}`)
+                }
             />
         </div>
     );

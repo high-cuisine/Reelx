@@ -11,6 +11,19 @@
     border-radius: 20px;
 }
 
+.joinError {
+    grid-column: 1 / -1;
+    margin: 0 0 4px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255, 92, 92, 0.12);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: #ff8a8a;
+    text-align: center;
+}
+
 .emptyState {
     grid-column: 1 / -1;
     margin: 0;

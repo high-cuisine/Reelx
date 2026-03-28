@@ -1,0 +1,28 @@
+.playButton {
+    width: calc(100% - 40px);
+    max-width: 354px;
+    height: 44px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 1.22;
+    color: #1e1d2b;
+    background:
+        linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.6)),
+        linear-gradient(45deg, #7456e9 0%, #8eb3ef 33%, rgba(230, 221, 247, 0.99) 68%, #cfaefe 100%),
+        #2f3293;
+    margin-top: 20px;
+    z-index: 2;
+    transition: opacity 0.2s, transform 0.15s;
+
+    &:hover {
+        opacity: 0.95;
+    }
+
+    &:active {
+        transform: scale(0.98);
+    }
+}

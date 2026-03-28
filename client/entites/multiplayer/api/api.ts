@@ -39,7 +39,16 @@ class MultiplayerService {
     }
 
     async getTable(ownerId: string): Promise<GetTableResponse> {
-        const response = await api.$authHost.get<GetTableResponse>(`/multiplayer/table/${ownerId}`);
+        const response = await api.$authHost.get<GetTableResponse>(
+            `/multiplayer/table/${encodeURIComponent(ownerId)}`,
+        );
+        return response.data;
+    }
+
+    async joinTable(ownerId: string): Promise<GetTableResponse> {
+        const response = await api.$authHost.post<GetTableResponse>(
+            `/multiplayer/table/${encodeURIComponent(ownerId)}/join`,
+        );
         return response.data;
     }
 

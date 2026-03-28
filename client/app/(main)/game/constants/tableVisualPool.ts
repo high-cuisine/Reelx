@@ -13,6 +13,18 @@ export const TABLE_GLOW_COLORS = [
     '#F5D742',
 ] as const;
 
+/** Цвета аватаров на столе и в списке игроков */
+export const TABLE_SEAT_COLORS = [
+    '#640E8C',
+    '#199CB3',
+    '#7456E9',
+    '#20A275',
+    '#E94B4B',
+    '#F5A623',
+    '#5B4FC6',
+    '#0098EA',
+] as const;
+
 /** Псевдо-никнеймы для аватарок в сетке — сервер отдаёт только userId */
 export const TABLE_PLACEHOLDER_NAMES = [
     '@player',

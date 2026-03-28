@@ -20,8 +20,8 @@ const PLAYERS = [2, 3, 4, 5, 6] as const;
 interface CreateTableModalProps {
     isOpen: boolean;
     onClose: () => void;
-    /** Вызывается после успешного создания стола */
-    onCreateTable?: () => void;
+    /** Вызывается после успешного создания стола (ownerId для перехода за стол) */
+    onCreateTable?: (ownerId: string) => void;
 }
 
 const CreateTableModal = ({ isOpen, onClose, onCreateTable }: CreateTableModalProps) => {
@@ -218,13 +218,13 @@ const CreateTableModal = ({ isOpen, onClose, onCreateTable }: CreateTableModalPr
                             setError(null);
                             setIsLoading(true);
                             try {
-                                await multiplayerService.createTable({
+                                const res = await multiplayerService.createTable({
                                     currency: currency === 'ton' ? 'TON' : 'STARS',
                                     betAmount: stake,
                                     maxPlayers: players,
                                 });
                                 updateBalance(-stake, currency);
-                                onCreateTable?.();
+                                onCreateTable?.(res.table.ownerId);
                                 onClose();
                             } catch (e: any) {
                                 const raw = e?.response?.data?.message;
