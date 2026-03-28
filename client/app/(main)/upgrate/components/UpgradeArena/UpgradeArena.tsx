@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import cls from '../../upgrate.module.scss';
 import upgradeArrows from '@/assets/upgrade-arrows.svg';
@@ -92,12 +92,20 @@ export function UpgradeArena({
             setAngle(START_ANGLE);
             targetAngleRef.current = null;
             easeStartRef.current = null;
+            startAngleRef.current = START_ANGLE;
             lastTimeRef.current = null;
             rafRef.current = null;
             pauseStartRef.current = null;
             pendingReturnAngleRef.current = null;
         }
     }, [isPlaying, result]);
+
+    /** Пока игра идёт, позицию задаёт RAF; любой ре-рендер родителя иначе перезаписал бы transform из устаревшего `angle`. */
+    useLayoutEffect(() => {
+        if (isPlaying) {
+            applyIconPositionToEl(iconWrapRef.current, angleRef.current);
+        }
+    });
 
     // Запускаем базовое вращение, когда начинается игра
     useEffect(() => {
@@ -318,7 +326,9 @@ export function UpgradeArena({
                         ref={iconWrapRef}
                         className={cls.upgradeIconCenter}
                         style={{
-                            transform: `translate3d(${left}px, ${top}px, 0)`,
+                            ...(isPlaying
+                                ? {}
+                                : { transform: `translate3d(${left}px, ${top}px, 0)` }),
                             willChange: isPlaying ? 'transform' : 'auto',
                         }}
                     >

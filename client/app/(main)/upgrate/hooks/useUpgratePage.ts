@@ -88,6 +88,7 @@ export function useUpgratePage() {
     };
 
     const startGame = async () => {
+        setGameResult(null);
         setIsPlaying(true);
         try {
             const res = await upgrateService.startGame();
