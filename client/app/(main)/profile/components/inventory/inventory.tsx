@@ -9,6 +9,20 @@ import { GiftItem } from './components/GiftItem';
 import { GameHistoryItem } from './components/GameHistoryItem';
 import { GameDataModal } from '../GameDataModal/GameDataModal';
 import { NftModal } from '../NftModal/NftModal';
+import type { UserGift } from '@/entites/user/api/api';
+import type { GameWinNft } from '@/entites/user/interface/game.interface';
+
+function mapWinNftToUserGift(w: GameWinNft): UserGift {
+    return {
+        id: w.id,
+        giftName: w.giftName,
+        image: w.image ?? undefined,
+        lottieUrl: w.lottieUrl || undefined,
+        price: w.price ?? undefined,
+        isOut: false,
+        createdAt: '',
+    };
+}
 
 export const Inventory = () => {
     const { activeTab, setActiveTab, historyGames, inventoryGifts, isLoading, refetchGifts } = useInventory();
@@ -46,10 +60,11 @@ export const Inventory = () => {
                         <div className={cls.emptyState}>История пуста</div>
                     ) : (
                         historyGames.map((game) => (
-                            <GameHistoryItem 
-                                key={game.id} 
-                                game={game} 
+                            <GameHistoryItem
+                                key={game.id}
+                                game={game}
                                 onClick={openGameModal}
+                                onWinNftClick={(winNft) => openNftModal(mapWinNftToUserGift(winNft))}
                             />
                         ))
                     )}

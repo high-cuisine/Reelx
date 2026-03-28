@@ -162,6 +162,9 @@ export class UserRepository {
         return (await this.prisma.userGames.findMany({
             where: { userId },
             orderBy: { createdAt: 'desc' },
+            include: {
+                userGift: true,
+            },
         }));
     }
 

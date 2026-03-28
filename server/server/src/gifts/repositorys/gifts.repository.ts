@@ -16,4 +16,12 @@ export class GiftsRepository {
       data,
     });
   }
+
+  /** Привязать к записи игры выигранный NFT из user_gifts (колесо). */
+  async linkUserGameWinGift(userGameId: string, userGiftId: string) {
+    return this.prisma.userGames.update({
+      where: { id: userGameId },
+      data: { userGiftId },
+    });
+  }
 }

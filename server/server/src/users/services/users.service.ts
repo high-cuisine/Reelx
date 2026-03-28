@@ -3,7 +3,7 @@ import { UserRepository } from '../repositorys/user.repository';
 import { ChangeUsernameDto } from '../dto/change-username.dto';
 import { TransactionType } from '@prisma/client';
 import { UserGiftRto } from '../rto/user-gift.rto';
-import { UserGameRto } from '../rto/user-game.rto';
+import { UserGameRto, WinNftRto } from '../rto/user-game.rto';
 import { UserGamesType, GameCurrancy } from '@prisma/client';
 
 @Injectable()
@@ -109,13 +109,29 @@ export class UsersService {
 
     async getUserGames(userId: string): Promise<UserGameRto[]> {
         const games = await this.userRepository.getUserGames(userId);
-        return games.map(game => ({
-            id: game.id,
-            type: game.type,
-            priceAmount: game.priceAmount,
-            priceType: game.priceType,
-            createdAt: game.createdAt,
-        }));
+        return games.map((game) => {
+            const row: UserGameRto = {
+                id: game.id,
+                type: game.type,
+                priceAmount: game.priceAmount,
+                priceType: game.priceType,
+                createdAt: game.createdAt,
+            };
+            const g = game.userGift;
+            if (g) {
+                const winNft: WinNftRto = {
+                    id: g.id,
+                    giftName: g.giftName,
+                    giftAddress: g.giftAddress,
+                    collectionAddress: g.collectionAddress,
+                    image: g.image,
+                    price: g.price,
+                    lottieUrl: g.lottieUrl,
+                };
+                row.winNft = winNft;
+            }
+            return row;
+        });
     }
 }
 

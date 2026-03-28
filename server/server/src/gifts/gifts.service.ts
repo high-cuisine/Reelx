@@ -489,7 +489,7 @@ export class GiftsService {
       this.logger.debug(
         `Creating game record for user ${userId}: solo, ${amount} ${currencyType}`,
       );
-      await this.giftsRepository.createUserGame({
+      const userGame = await this.giftsRepository.createUserGame({
         userId,
         type: UserGamesType.solo,
         priceAmount: amount,
@@ -550,6 +550,8 @@ export class GiftsService {
         this.logger.debug(
           `User ${userId} won gift: ${giftPrize.name}`,
         );
+
+        await this.giftsRepository.linkUserGameWinGift(userGame.id, createdGift.id);
 
         return {
           ...formatMinimalPrize(selectedPrize),
@@ -613,6 +615,8 @@ export class GiftsService {
           this.logger.debug(
             `User ${userId} won secret gift: ${secretPrize.name}`,
           );
+
+          await this.giftsRepository.linkUserGameWinGift(userGame.id, createdGift.id);
 
           return {
             ...formatMinimalPrize(selectedPrize),
