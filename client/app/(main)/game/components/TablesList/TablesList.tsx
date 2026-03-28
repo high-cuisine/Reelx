@@ -1,88 +1,92 @@
-'use client'
-import React from 'react';
+'use client';
+
+import React, { useCallback, useEffect, useState } from 'react';
 import cls from './TablesList.module.scss';
 import { TableItem } from '../TableItem/TableItem';
+import { multiplayerService, type TableState } from '@/entites/multiplayer/api/api';
+import {
+    TABLE_GLOW_COLORS,
+    TABLE_GIFT_IMAGES,
+    TABLE_PLACEHOLDER_NAMES,
+    stablePick,
+} from '../../constants/tableVisualPool';
 
-interface Table {
-    id: string;
-    glowColor: string;
-    participantsCount: number;
-    price: number;
-    members: {
-        id: string;
-        name: string;
-        avatar: string | null;
-    }[];
+function mapServerTableToItemProps(table: TableState) {
+    const glowColor = stablePick(TABLE_GLOW_COLORS, table.ownerId);
+    const giftImage = stablePick(TABLE_GIFT_IMAGES, `${table.ownerId}-gift`);
+
+    const members = table.participants.map((userId, index) => ({
+        id: userId,
+        name: stablePick(TABLE_PLACEHOLDER_NAMES, `${table.ownerId}-${userId}-${index}`),
+        avatar: null as string | null,
+    }));
+
+    const currencyType = table.currency === 'TON' ? 'ton' : 'star';
+
+    return {
+        id: table.ownerId,
+        glowColor,
+        giftImage,
+        currency: {
+            price: table.betAmount,
+            type: currencyType as 'ton' | 'star',
+        },
+        members,
+    };
 }
 
 const TablesList = () => {
-    // Захардкоженный список подарков
-    const tables: Table[] = [
-        {
-            id: '1',
-            glowColor: '#00FF00', // Зеленый
-            participantsCount: 2,
-            price: 35,
-            members: [
-                {
-                    id: '1',
-                    name: 'John Doe',
-                    avatar: null
-                },
-                {
-                    id: '2',
-                    name: 'Jane Doe',
-                    avatar: null
-                }
-            ]
-        },
-        {
-            id: '2',
-            glowColor: '#FFA500', // Желтый/Оранжевый
-            participantsCount: 3,
-            price: 25,
-            members: [
-                {
-                    id: '1',
-                    name: 'John Doe',
-                    avatar: null
-                }
-            ]
-        },
-        {
-            id: '3',
-            glowColor: '#FF00FF', // Фиолетовый/Магента
-            participantsCount: 3,
-            price: 15,
-            members: [
-                {
-                    id: '1',
-                    name: 'John Doe',
-                    avatar: null
-                }
-            ]
-        },
-        {
-            id: '4',
-            glowColor: '#00BFFF', // Голубой
-            participantsCount: 3,
-            price: 25,
-            members: [
-                {
-                    id: '1',
-                    name: 'John Doe',
-                    avatar: null
-                }
-            ]
-        }
-    ];
+    const [tables, setTables] = useState<ReturnType<typeof mapServerTableToItemProps>[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [fetchError, setFetchError] = useState<string | null>(null);
+    const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
 
-    const [selectedTableId, setSelectedTableId] = React.useState<string | null>(null);
+    const loadTables = useCallback(async () => {
+        setLoading(true);
+        setFetchError(null);
+        try {
+            const res = await multiplayerService.listTables();
+            setTables(res.tables.map(mapServerTableToItemProps));
+        } catch {
+            setFetchError('Не удалось загрузить столы');
+            setTables([]);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadTables();
+    }, [loadTables]);
+
+    if (loading) {
+        return (
+            <div className={cls.tablesList}>
+                <p className={cls.emptyState}>Загрузка столов…</p>
+            </div>
+        );
+    }
+
+    if (fetchError) {
+        return (
+            <div className={cls.tablesList}>
+                <p className={cls.emptyState}>{fetchError}</p>
+            </div>
+        );
+    }
+
+    if (tables.length === 0) {
+        return (
+            <div className={cls.tablesList}>
+                <p className={cls.emptyState}>Пока нет активных столов</p>
+            </div>
+        );
+    }
 
     return (
         <div className={cls.tablesList}>
             {tables.map((table) => (
-                <div 
+                <div
                     key={table.id}
                     className={cls.tableWrapper}
                     onClick={() => setSelectedTableId(selectedTableId === table.id ? null : table.id)}
@@ -90,10 +94,8 @@ const TablesList = () => {
                     <TableItem
                         id={table.id}
                         glowColor={table.glowColor}
-                        currency={{
-                            price: table.price,
-                            type: 'star'
-                        }}
+                        giftImage={table.giftImage}
+                        currency={table.currency}
                         members={table.members}
                         isSelected={selectedTableId === table.id}
                     />
@@ -104,4 +106,3 @@ const TablesList = () => {
 };
 
 export { TablesList };
-

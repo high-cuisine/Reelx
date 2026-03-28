@@ -24,6 +24,16 @@ export class MultiplayerController {
   ) {}
 
   /**
+   * GET /api/multiplayer/tables
+   * Lists all active tables from Redis.
+   */
+  @Get('tables')
+  async listTables() {
+    const tables = await this.multiplayerService.listTables();
+    return { success: true, tables };
+  }
+
+  /**
    * POST /api/multiplayer/table
    * Creates a table, charges the owner the bet amount in the chosen currency.
    * Redis key: table-{userId}

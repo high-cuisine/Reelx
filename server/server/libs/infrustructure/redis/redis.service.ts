@@ -70,4 +70,22 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     const result = await this.client.exists(key);
     return result === 1;
   }
+
+  /** Non-blocking key discovery (SCAN), safer than KEYS on large DBs */
+  async keysByPattern(pattern: string): Promise<string[]> {
+    const keys: string[] = [];
+    let cursor = '0';
+    do {
+      const [next, batch] = await this.client.scan(
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        100,
+      );
+      cursor = next;
+      keys.push(...batch);
+    } while (cursor !== '0');
+    return keys;
+  }
 }

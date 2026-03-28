@@ -27,6 +27,11 @@ export interface GetTableResponse {
     table: TableState;
 }
 
+export interface ListTablesResponse {
+    success: boolean;
+    tables: TableState[];
+}
+
 class MultiplayerService {
     async createTable(dto: CreateTableDto): Promise<CreateTableResponse> {
         const response = await api.$authHost.post<CreateTableResponse>('/multiplayer/table', dto);
@@ -35,6 +40,11 @@ class MultiplayerService {
 
     async getTable(ownerId: string): Promise<GetTableResponse> {
         const response = await api.$authHost.get<GetTableResponse>(`/multiplayer/table/${ownerId}`);
+        return response.data;
+    }
+
+    async listTables(): Promise<ListTablesResponse> {
+        const response = await api.$authHost.get<ListTablesResponse>('/multiplayer/tables');
         return response.data;
     }
 

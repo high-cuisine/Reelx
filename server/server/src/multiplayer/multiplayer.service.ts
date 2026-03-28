@@ -75,6 +75,34 @@ export class MultiplayerService {
     return table;
   }
 
+  /**
+   * All active tables (Redis keys table-{ownerId}).
+   */
+  async listTables(): Promise<TableState[]> {
+    const keys = await this.redisService.keysByPattern('table-*');
+    const tables: TableState[] = [];
+    for (const key of keys) {
+      const raw = await this.redisService.get(key);
+      if (!raw) continue;
+      try {
+        const parsed = JSON.parse(raw) as TableState;
+        if (
+          parsed &&
+          typeof parsed.ownerId === 'string' &&
+          Array.isArray(parsed.participants) &&
+          typeof parsed.maxPlayers === 'number' &&
+          parsed.betAmount != null
+        ) {
+          tables.push(parsed);
+        }
+      } catch {
+        this.logger.warn(`Skip invalid table JSON for key ${key}`);
+      }
+    }
+    tables.sort((a, b) => b.createdAt - a.createdAt);
+    return tables;
+  }
+
   async joinTable(ownerId: string, userId: string): Promise<TableState> {
     const key = this.tableKey(ownerId);
     const table = await this.getTableOrThrow(ownerId);

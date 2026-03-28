@@ -1,14 +1,15 @@
-'use client'
+'use client';
+
 import cls from './TableItem.module.scss';
 import { configPayments } from '../../config/configPayments';
-import Image from 'next/image';
+import Image, { type StaticImageData } from 'next/image';
 import profileIcon from '@/assets/icons/profile.svg';
 import boxImage from '@/assets/Box.png';
 
 interface TableItemProps {
     id: string;
     glowColor: string;
-    giftImage?: string;
+    giftImage?: string | StaticImageData;
     currency?: {
         price: number;
         type: 'star' | 'ton';
@@ -25,7 +26,6 @@ const TableItem = ({ glowColor, giftImage, currency, isSelected, members = [] }:
     const giftImg = giftImage || boxImage;
     const defaultCurrency = { price: 0, type: 'star' as const };
     const currencyData = currency || defaultCurrency;
-    const currencyIcon = configPayments[currencyData.type].icon;
 
     return (
         <div className={`${cls.tableItem} ${isSelected ? cls.selected : ''}`}>
