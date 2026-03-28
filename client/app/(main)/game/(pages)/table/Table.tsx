@@ -119,7 +119,7 @@ export default function TablePage() {
 
     return (
         <div className={cls.page}>
-            <BankBadge amount={bank} currency={uiCurrency} />
+           
 
             <TableVisual players={seatsPlayers} />
 
