@@ -11,9 +11,17 @@ const CIRCLE_R = 117;
 const STROKE_WIDTH = 6;
 const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_R;
 const FULL_DEG = 360;
-/** Линейная скорость вращения (без ускорений), потом плавное замедление и остановка */
-const LINEAR_SPIN_SPEED = 220; // град/с — постоянная скорость
-const EASE_DURATION = 2400; // мс — плавное замедление до цели
+/** Ожидание ответа: быстрый старт, плавное затухание до пола (экспонента по времени) */
+const SPIN_SPEED_START = 520; // град/с в первый кадр
+const SPIN_SPEED_FLOOR = 130; // град/с — не падаем ниже, пока ждём сервер
+const SPIN_DECAY_PER_S = 1.05; // чем больше, тем быстрее «остывает» оборот
+const MAX_DT_SEC = 0.05; // лимит кадра при возврате с фона вкладки
+const EASE_DURATION = 2600; // мс — финальный заезд на сектор
+/** ease-out куб: резкий старт участка, длинный плавный хвост к остановке */
+function easeOutCubic(t: number) {
+    const u = 1 - t;
+    return 1 - u * u * u;
+}
 const LOSE_PAUSE = 1000; // мс паузы при проигрыше перед возвратом
 const START_ANGLE = 90; // 6 часов (нижняя точка)
 const CENTER = 120;
@@ -71,6 +79,7 @@ export function UpgradeArena({
     const isReturningRef = useRef(false);
     const pauseStartRef = useRef<number | null>(null);
     const pendingReturnAngleRef = useRef<number | null>(null);
+    const spinWaitStartRef = useRef<number | null>(null);
 
 
     useEffect(() => {
@@ -97,6 +106,7 @@ export function UpgradeArena({
             rafRef.current = null;
             pauseStartRef.current = null;
             pendingReturnAngleRef.current = null;
+            spinWaitStartRef.current = null;
         }
     }, [isPlaying, result]);
 
@@ -132,7 +142,10 @@ export function UpgradeArena({
             if (lastTimeRef.current == null) {
                 lastTimeRef.current = timestamp;
             }
-            const dt = (timestamp - lastTimeRef.current) / 1000;
+            const dt = Math.min(
+                MAX_DT_SEC,
+                Math.max(0, (timestamp - lastTimeRef.current) / 1000),
+            );
             lastTimeRef.current = timestamp;
 
             let nextAngle: number;
@@ -144,7 +157,7 @@ export function UpgradeArena({
                 );
                 const start = startAngleRef.current;
                 const end = targetAngleRef.current;
-                const eased = 1 - (1 - progress) * (1 - progress);
+                const eased = easeOutCubic(progress);
                 nextAngle = start + (end - start) * eased;
 
                 angleRef.current = nextAngle;
@@ -189,7 +202,16 @@ export function UpgradeArena({
                     return;
                 }
             } else {
-                nextAngle = angleRef.current + LINEAR_SPIN_SPEED * dt;
+                if (spinWaitStartRef.current == null) {
+                    spinWaitStartRef.current = timestamp;
+                }
+                const elapsed =
+                    (timestamp - spinWaitStartRef.current) / 1000;
+                const omega =
+                    SPIN_SPEED_FLOOR +
+                    (SPIN_SPEED_START - SPIN_SPEED_FLOOR) *
+                        Math.exp(-SPIN_DECAY_PER_S * elapsed);
+                nextAngle = angleRef.current + omega * dt;
                 angleRef.current = nextAngle;
                 applyIconPositionToEl(iconWrapRef.current, nextAngle);
             }
