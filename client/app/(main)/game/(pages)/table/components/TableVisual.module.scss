@@ -202,3 +202,10 @@ $dark-base: #1b1339;
     line-height: 1.22;
     color: #fff;
 }
+
+.seatPhoto {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}

@@ -22,6 +22,10 @@ interface TableItemProps {
     }[];
 }
 
+function isRemoteAvatar(url: string | null): url is string {
+    return typeof url === 'string' && /^https?:\/\//i.test(url);
+}
+
 const TableItem = ({ glowColor, giftImage, currency, isSelected, members = [] }: TableItemProps) => {
     const giftImg = giftImage || boxImage;
     const defaultCurrency = { price: 0, type: 'star' as const };
@@ -48,13 +52,24 @@ const TableItem = ({ glowColor, giftImage, currency, isSelected, members = [] }:
                 <div className={cls.members}>
                     {members.slice(0, 2).map((member) => (
                         <div key={member.id} className={cls.memberAvatar}>
-                            <Image
-                                src={member.avatar || profileIcon}
-                                alt={member.name}
-                                width={16}
-                                height={16}
-                                className={cls.avatarImage}
-                            />
+                            {isRemoteAvatar(member.avatar) ? (
+                                <img
+                                    src={member.avatar}
+                                    alt={member.name}
+                                    width={16}
+                                    height={16}
+                                    className={cls.avatarImage}
+                                    referrerPolicy="no-referrer"
+                                />
+                            ) : (
+                                <Image
+                                    src={member.avatar || profileIcon}
+                                    alt={member.name}
+                                    width={16}
+                                    height={16}
+                                    className={cls.avatarImage}
+                                />
+                            )}
                         </div>
                     ))}
                 </div>

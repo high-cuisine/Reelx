@@ -10,6 +10,10 @@ import WheelRim from '../assets/wheel-rim.svg';
 import { SEAT_POSITIONS } from './constants';
 import type { TablePlayer } from './types';
 
+function isRemotePhoto(url: string | null): url is string {
+    return typeof url === 'string' && /^https?:\/\//i.test(url);
+}
+
 interface TableVisualProps {
     players: TablePlayer[];
     statusText?: string;
@@ -42,15 +46,27 @@ export function TableVisual({ players, statusText = 'Ожидание' }: TableV
                 <div className={cls.seats}>
                     {SEAT_POSITIONS.map((pos, i) => {
                         const player = i < players.length ? players[i] : null;
+                        const showPhoto = player ? isRemotePhoto(player.photoUrl) : false;
                         return (
                             <div key={i} className={cls.seat} style={{ left: pos.left, top: pos.top }}>
                                 <div className={cls.seatRing} />
                                 <div
                                     className={`${cls.seatInner} ${!player ? cls.seatEmpty : ''}`}
-                                    style={player ? { background: player.color } : undefined}
+                                    style={
+                                        player && !showPhoto ? { background: player.color } : undefined
+                                    }
                                 >
                                     {player ? (
-                                        <span className={cls.seatAvatar}>{player.initial}</span>
+                                        showPhoto ? (
+                                            <img
+                                                src={player.photoUrl!}
+                                                alt=""
+                                                className={cls.seatPhoto}
+                                                referrerPolicy="no-referrer"
+                                            />
+                                        ) : (
+                                            <span className={cls.seatAvatar}>{player.initial}</span>
+                                        )
                                     ) : (
                                         <span className={cls.seatPlus}>+</span>
                                     )}

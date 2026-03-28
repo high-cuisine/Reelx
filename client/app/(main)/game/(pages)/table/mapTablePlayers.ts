@@ -1,23 +1,31 @@
 import type { TableState } from '@/entites/multiplayer/api/api';
-import {
-    TABLE_PLACEHOLDER_NAMES,
-    TABLE_SEAT_COLORS,
-    stablePick,
-} from '../../constants/tableVisualPool';
+import { TABLE_SEAT_COLORS, stablePick } from '../../constants/tableVisualPool';
 import type { TablePlayer } from './components/types';
 
+function displayUsername(username: string) {
+    return username.startsWith('@') ? username : `@${username}`;
+}
+
+function initialFromUsername(username: string, userId: string): string {
+    const t = username.trim();
+    if (t.startsWith('@')) {
+        const c = t.slice(1).charAt(0);
+        return (c || userId[0] || '?').toUpperCase();
+    }
+    const c = t.charAt(0);
+    return (c || userId[0] || '?').toUpperCase();
+}
+
 export function mapTableStateToVisualPlayers(table: TableState): TablePlayer[] {
-    return table.participants.map((userId, index) => {
-        const name = stablePick(TABLE_PLACEHOLDER_NAMES, `${table.ownerId}-${userId}-${index}`);
-        const color = stablePick(TABLE_SEAT_COLORS, userId);
-        const tail = name.startsWith('@') ? name.slice(1) : name;
-        const initial = (tail[0] ?? userId[0] ?? '?').toUpperCase();
+    return table.participants.map((p) => {
+        const color = stablePick(TABLE_SEAT_COLORS, p.userId);
         return {
-            id: userId,
-            name,
-            initial,
+            id: p.userId,
+            name: displayUsername(p.username),
+            initial: initialFromUsername(p.username, p.userId),
             color,
             bet: table.betAmount,
+            photoUrl: p.photoUrl,
         };
     });
 }

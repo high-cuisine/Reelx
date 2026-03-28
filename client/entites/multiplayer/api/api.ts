@@ -2,9 +2,15 @@ import * as api from '@/shared/lib/api/api';
 
 export type TableCurrency = 'TON' | 'STARS';
 
+export interface TableParticipant {
+    userId: string;
+    username: string;
+    photoUrl: string | null;
+}
+
 export interface TableState {
     ownerId: string;
-    participants: string[];
+    participants: TableParticipant[];
     maxPlayers: number;
     currency: TableCurrency;
     betAmount: number;

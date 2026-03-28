@@ -4,4 +4,5 @@ export interface TablePlayer {
     initial: string;
     color: string;
     bet: number;
+    photoUrl: string | null;
 }

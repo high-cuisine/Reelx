@@ -6,21 +6,20 @@ import cls from './TablesList.module.scss';
 import { TableItem } from '../TableItem/TableItem';
 import { multiplayerService, type TableState } from '@/entites/multiplayer/api/api';
 import { useUserStore } from '@/entites/user/model/user';
-import {
-    TABLE_GLOW_COLORS,
-    TABLE_GIFT_IMAGES,
-    TABLE_PLACEHOLDER_NAMES,
-    stablePick,
-} from '../../constants/tableVisualPool';
+import { TABLE_GLOW_COLORS, TABLE_GIFT_IMAGES, stablePick } from '../../constants/tableVisualPool';
+
+function displayUsername(username: string) {
+    return username.startsWith('@') ? username : `@${username}`;
+}
 
 function mapServerTableToItemProps(table: TableState) {
     const glowColor = stablePick(TABLE_GLOW_COLORS, table.ownerId);
     const giftImage = stablePick(TABLE_GIFT_IMAGES, `${table.ownerId}-gift`);
 
-    const members = table.participants.map((userId, index) => ({
-        id: userId,
-        name: stablePick(TABLE_PLACEHOLDER_NAMES, `${table.ownerId}-${userId}-${index}`),
-        avatar: null as string | null,
+    const members = table.participants.map((p) => ({
+        id: p.userId,
+        name: displayUsername(p.username),
+        avatar: p.photoUrl,
     }));
 
     const currencyType = table.currency === 'TON' ? 'ton' : 'star';
@@ -86,7 +85,7 @@ const TablesList = () => {
             let wasIn = false;
             try {
                 const prev = await multiplayerService.getTable(ownerId);
-                wasIn = prev.table.participants.includes(uid);
+                wasIn = prev.table.participants.some((p) => p.userId === uid);
             } catch {
                 setJoinError('Стол больше не доступен');
                 await loadTables();

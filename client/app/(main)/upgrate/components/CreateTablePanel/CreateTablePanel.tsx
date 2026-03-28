@@ -53,10 +53,10 @@ export function CreateTablePanel({
                     </div>
                     <div className={cls.tableParticipants}>
                         <span className={cls.tablePanelLabel}>Участники</span>
-                        {table.participants.map((id, i) => (
-                            <div key={id} className={cls.tableParticipantRow}>
+                        {table.participants.map((p, i) => (
+                            <div key={p.userId} className={cls.tableParticipantRow}>
                                 <span className={cls.tableParticipantNum}>{i + 1}.</span>
-                                <span className={cls.tableParticipantId}>{id}</span>
+                                <span className={cls.tableParticipantId}>{p.username}</span>
                             </div>
                         ))}
                     </div>

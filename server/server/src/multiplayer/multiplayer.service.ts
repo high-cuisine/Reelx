@@ -18,6 +18,22 @@ export interface TableState {
   createdAt: number;
 }
 
+/** Участник как отдаём в API (профиль из БД) */
+export interface TableParticipantView {
+  userId: string;
+  username: string;
+  photoUrl: string | null;
+}
+
+export interface TableStateView {
+  ownerId: string;
+  participants: TableParticipantView[];
+  maxPlayers: number;
+  currency: GameCurrancy;
+  betAmount: number;
+  createdAt: number;
+}
+
 @Injectable()
 export class MultiplayerService {
   private readonly logger = new Logger(MultiplayerService.name);
@@ -76,9 +92,9 @@ export class MultiplayerService {
   }
 
   /**
-   * All active tables (Redis keys table-{ownerId}).
+   * Сырые столы из Redis (participants = id).
    */
-  async listTables(): Promise<TableState[]> {
+  private async collectTablesFromRedis(): Promise<TableState[]> {
     const keys = await this.redisService.keysByPattern('table-*');
     const tables: TableState[] = [];
     for (const key of keys) {
@@ -101,6 +117,35 @@ export class MultiplayerService {
     }
     tables.sort((a, b) => b.createdAt - a.createdAt);
     return tables;
+  }
+
+  /**
+   * Все активные столы с username и photoUrl участников.
+   */
+  async listTables(): Promise<TableStateView[]> {
+    const raw = await this.collectTablesFromRedis();
+    return Promise.all(raw.map((t) => this.enrichTable(t)));
+  }
+
+  async enrichTable(state: TableState): Promise<TableStateView> {
+    const participants: TableParticipantView[] = await Promise.all(
+      state.participants.map(async (userId) => {
+        const user = await this.usersService.findUserById(userId);
+        return {
+          userId,
+          username: user?.username ?? `player_${userId.slice(0, 8)}`,
+          photoUrl: user?.photoUrl ?? null,
+        };
+      }),
+    );
+    return {
+      ownerId: state.ownerId,
+      participants,
+      maxPlayers: state.maxPlayers,
+      currency: state.currency,
+      betAmount: state.betAmount,
+      createdAt: state.createdAt,
+    };
   }
 
   async joinTable(ownerId: string, userId: string): Promise<TableState> {

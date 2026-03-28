@@ -11,7 +11,11 @@ import {
 import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '../users/services/jwt.service';
-import { MultiplayerService, TableState } from './multiplayer.service';
+import {
+  MultiplayerService,
+  TableState,
+  type TableStateView,
+} from './multiplayer.service';
 import { JoinTableDto } from './dto/join-table.dto';
 
 interface AuthenticatedSocket extends Socket {
@@ -105,8 +109,8 @@ export class MultiplayerGateway
       await client.join(room);
       this.userTableMap.set(userId, ownerId);
 
-      this.broadcastTableUpdate(ownerId, table);
-      return { success: true, table };
+      const view = await this.enrichAndBroadcast(ownerId, table);
+      return { success: true, table: view };
     } catch (err: any) {
       return { success: false, error: err.message };
     }
@@ -146,7 +150,8 @@ export class MultiplayerGateway
     this.requireUserId(client);
     try {
       const table = await this.multiplayerService.getTableOrThrow(payload.ownerId);
-      return { success: true, table };
+      const view = await this.multiplayerService.enrichTable(table);
+      return { success: true, table: view };
     } catch (err: any) {
       return { success: false, error: err.message };
     }
@@ -180,7 +185,7 @@ export class MultiplayerGateway
     this.userTableMap.delete(userId);
 
     if (updated) {
-      this.broadcastTableUpdate(ownerId, updated);
+      await this.enrichAndBroadcast(ownerId, updated);
     } else {
       // Table was destroyed (no participants left)
       this.server.to(room).emit('table-deleted', { ownerId });
@@ -188,8 +193,13 @@ export class MultiplayerGateway
     }
   }
 
-  private broadcastTableUpdate(ownerId: string, table: TableState) {
-    this.server.to(this.roomName(ownerId)).emit('table-updated', { table });
+  private async enrichAndBroadcast(
+    ownerId: string,
+    table: TableState,
+  ): Promise<TableStateView> {
+    const view = await this.multiplayerService.enrichTable(table);
+    this.server.to(this.roomName(ownerId)).emit('table-updated', { table: view });
+    return view;
   }
 
   private roomName(ownerId: string): string {

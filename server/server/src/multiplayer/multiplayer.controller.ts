@@ -44,12 +44,13 @@ export class MultiplayerController {
     @CurrentUser() userId: string,
     @Body() body: CreateTableDto,
   ) {
-    const table = await this.multiplayerService.createTable(
+    const raw = await this.multiplayerService.createTable(
       userId,
       body.currency,
       body.betAmount,
       body.maxPlayers,
     );
+    const table = await this.multiplayerService.enrichTable(raw);
     return { success: true, table };
   }
 
@@ -59,7 +60,8 @@ export class MultiplayerController {
    */
   @Get('table/:ownerId')
   async getTable(@Param('ownerId') ownerId: string) {
-    const table = await this.multiplayerService.getTableOrThrow(ownerId);
+    const raw = await this.multiplayerService.getTableOrThrow(ownerId);
+    const table = await this.multiplayerService.enrichTable(raw);
     return { success: true, table };
   }
 
@@ -73,7 +75,8 @@ export class MultiplayerController {
     @Param('ownerId') ownerId: string,
     @CurrentUser() userId: string,
   ) {
-    const table = await this.multiplayerService.joinTable(ownerId, userId);
+    const raw = await this.multiplayerService.joinTable(ownerId, userId);
+    const table = await this.multiplayerService.enrichTable(raw);
     return { success: true, table };
   }
 
