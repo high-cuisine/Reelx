@@ -11,24 +11,19 @@ const CIRCLE_R = 117;
 const STROKE_WIDTH = 6;
 const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_R;
 const FULL_DEG = 360;
-/** Ожидание ответа: быстрый старт, плавное затухание до пола (экспонента по времени) */
-const SPIN_SPEED_START = 520; // град/с в первый кадр
-const SPIN_SPEED_FLOOR = 130; // град/с — не падаем ниже, пока ждём сервер
-const SPIN_DECAY_PER_S = 1.05; // чем больше, тем быстрее «остывает» оборот
-const MAX_DT_SEC = 0.05; // лимит кадра при возврате с фона вкладки
-const EASE_DURATION = 2600; // мс — финальный заезд на сектор
-/** ease-out куб: резкий старт участка, длинный плавный хвост к остановке */
-function easeOutCubic(t: number) {
-    const u = 1 - t;
-    return 1 - u * u * u;
-}
-const LOSE_PAUSE = 1000; // мс паузы при проигрыше перед возвратом
-const START_ANGLE = 90; // 6 часов (нижняя точка)
+/** Постоянная скорость ожидания ответа — быстрый старт без задержки */
+const SPIN_SPEED = 600;      // °/с
+/** Quadratic ease-out: начинает ровно с SPIN_SPEED, плавно останавливается */
+const MIN_EASE_MS = 1500;    // мин. длительность торможения
+const MAX_EASE_MS = 5000;    // макс. длительность торможения
+const RETURN_EASE_MS = 1200; // возврат в нижнюю точку при проигрыше
+const LOSE_PAUSE = 1000;     // пауза при проигрыше перед возвратом
+const MAX_DT_SEC = 0.05;     // защита от большого кадра при возврате с фона
+const START_ANGLE = 90;      // нижняя точка (6 часов)
 const CENTER = 120;
 const ORBIT_R = CIRCLE_R - 10;
 const ICON_HALF = 22;
 
-/** Считает left, top иконки по углу (градусы) в пикселях арены 240x240 */
 function angleToPosition(angleDeg: number) {
     const rad = (angleDeg * Math.PI) / 180;
     const x = CENTER + ORBIT_R * Math.cos(rad);
@@ -36,7 +31,6 @@ function angleToPosition(angleDeg: number) {
     return { left: x - ICON_HALF, top: y - ICON_HALF };
 }
 
-/** Обновляет transform иконки по углу без аллокаций (для RAF) */
 function applyIconPositionToEl(el: HTMLElement | null, angleDeg: number) {
     if (!el) return;
     const rad = (angleDeg * Math.PI) / 180;
@@ -49,7 +43,6 @@ interface UpgradeArenaProps {
     chance: number | null;
     isLoadingChance: boolean;
     isPlaying: boolean;
-    /** 'win' | 'lose' | null — результат последней игры */
     result: 'win' | 'lose' | null;
 }
 
@@ -72,15 +65,14 @@ export function UpgradeArena({
     const angleRef = useRef<number>(START_ANGLE);
     const targetAngleRef = useRef<number | null>(null);
     const easeStartRef = useRef<number | null>(null);
-    const startAngleRef = useRef<number>(0);
+    const easeDurationRef = useRef<number>(2500);
+    const startAngleRef = useRef<number>(START_ANGLE);
     const resultRef = useRef<'win' | 'lose' | null>(null);
     const onCompleteRef = useRef<((r: 'win' | 'lose') => void) | null>(null);
     const hasCompletedRef = useRef(false);
     const isReturningRef = useRef(false);
     const pauseStartRef = useRef<number | null>(null);
     const pendingReturnAngleRef = useRef<number | null>(null);
-    const spinWaitStartRef = useRef<number | null>(null);
-
 
     useEffect(() => {
         resultRef.current = result;
@@ -94,7 +86,6 @@ export function UpgradeArena({
         onCompleteRef.current = onAnimationComplete;
     }, [onAnimationComplete]);
 
-    // Сбрасываем шарик в нижнюю точку, когда не играем и результата нет
     useEffect(() => {
         if (!isPlaying && !result) {
             angleRef.current = START_ANGLE;
@@ -102,35 +93,32 @@ export function UpgradeArena({
             targetAngleRef.current = null;
             easeStartRef.current = null;
             startAngleRef.current = START_ANGLE;
+            easeDurationRef.current = 2500;
             lastTimeRef.current = null;
             rafRef.current = null;
             pauseStartRef.current = null;
             pendingReturnAngleRef.current = null;
-            spinWaitStartRef.current = null;
         }
     }, [isPlaying, result]);
 
-    /** Пока игра идёт, позицию задаёт RAF; любой ре-рендер родителя иначе перезаписал бы transform из устаревшего `angle`. */
+    /** Пока игра идёт, позицию задаёт RAF — исключаем перезапись transform ре-рендерами React */
     useLayoutEffect(() => {
         if (isPlaying) {
             applyIconPositionToEl(iconWrapRef.current, angleRef.current);
         }
     });
 
-    // Запускаем базовое вращение, когда начинается игра
     useEffect(() => {
-        if (!isPlaying) {
-            // Если игра закончилась, а easing ещё идёт, дадим ему доработать сам
-            return;
-        }
+        if (!isPlaying) return;
 
         const step = (timestamp: number) => {
-            // Фаза паузы при проигрыше: шарик стоит на месте
+            // Фаза паузы при проигрыше
             if (pauseStartRef.current != null) {
                 if (timestamp - pauseStartRef.current >= LOSE_PAUSE) {
                     pauseStartRef.current = null;
                     startAngleRef.current = angleRef.current;
                     targetAngleRef.current = pendingReturnAngleRef.current!;
+                    easeDurationRef.current = RETURN_EASE_MS;
                     easeStartRef.current = timestamp;
                     lastTimeRef.current = timestamp;
                     pendingReturnAngleRef.current = null;
@@ -142,22 +130,17 @@ export function UpgradeArena({
             if (lastTimeRef.current == null) {
                 lastTimeRef.current = timestamp;
             }
-            const dt = Math.min(
-                MAX_DT_SEC,
-                Math.max(0, (timestamp - lastTimeRef.current) / 1000),
-            );
+            const dt = Math.min(MAX_DT_SEC, Math.max(0, (timestamp - lastTimeRef.current) / 1000));
             lastTimeRef.current = timestamp;
 
             let nextAngle: number;
 
             if (targetAngleRef.current != null && easeStartRef.current != null) {
-                const progress = Math.min(
-                    1,
-                    (timestamp - easeStartRef.current) / EASE_DURATION,
-                );
+                // Quadratic ease-out: v(0) = 2·D/T = SPIN_SPEED (velocity-matched), v(T) = 0
+                const progress = Math.min(1, (timestamp - easeStartRef.current) / easeDurationRef.current);
                 const start = startAngleRef.current;
                 const end = targetAngleRef.current;
-                const eased = easeOutCubic(progress);
+                const eased = 1 - (1 - progress) ** 2;
                 nextAngle = start + (end - start) * eased;
 
                 angleRef.current = nextAngle;
@@ -170,16 +153,12 @@ export function UpgradeArena({
                     if (res === 'lose' && !isReturningRef.current) {
                         isReturningRef.current = true;
 
-                        const currentAngleNorm =
-                            ((nextAngle % FULL_DEG) + FULL_DEG) % FULL_DEG;
+                        const currentAngleNorm = ((nextAngle % FULL_DEG) + FULL_DEG) % FULL_DEG;
                         const localCurrent =
-                            ((currentAngleNorm - START_ANGLE + FULL_DEG) % FULL_DEG +
-                                FULL_DEG) %
-                            FULL_DEG;
+                            ((currentAngleNorm - START_ANGLE + FULL_DEG) % FULL_DEG + FULL_DEG) % FULL_DEG;
                         const deltaLocal = (FULL_DEG - localCurrent) % FULL_DEG;
                         const targetBackGlobal = nextAngle + deltaLocal;
 
-                        // Встаём на паузу, запоминаем куда возвращаться
                         pendingReturnAngleRef.current = targetBackGlobal;
                         pauseStartRef.current = timestamp;
                         targetAngleRef.current = null;
@@ -189,7 +168,6 @@ export function UpgradeArena({
                         return;
                     }
 
-                    // Анимация полностью завершена
                     targetAngleRef.current = null;
                     easeStartRef.current = null;
                     lastTimeRef.current = null;
@@ -202,16 +180,8 @@ export function UpgradeArena({
                     return;
                 }
             } else {
-                if (spinWaitStartRef.current == null) {
-                    spinWaitStartRef.current = timestamp;
-                }
-                const elapsed =
-                    (timestamp - spinWaitStartRef.current) / 1000;
-                const omega =
-                    SPIN_SPEED_FLOOR +
-                    (SPIN_SPEED_START - SPIN_SPEED_FLOOR) *
-                        Math.exp(-SPIN_DECAY_PER_S * elapsed);
-                nextAngle = angleRef.current + omega * dt;
+                // Фаза ожидания: постоянная скорость, нет рывка при переходе к easing
+                nextAngle = angleRef.current + SPIN_SPEED * dt;
                 angleRef.current = nextAngle;
                 applyIconPositionToEl(iconWrapRef.current, nextAngle);
             }
@@ -219,7 +189,6 @@ export function UpgradeArena({
             rafRef.current = requestAnimationFrame(step);
         };
 
-        // Запускаем цикл
         if (rafRef.current == null) {
             rafRef.current = requestAnimationFrame(step);
         }
@@ -234,28 +203,18 @@ export function UpgradeArena({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isPlaying]);
 
-    // Когда появляется результат — один раз вычисляем целевой угол, чтобы остановиться
     useEffect(() => {
         if (!isPlaying || !result || chance == null) return;
-        // если цель уже выставлена — не пересчитываем
         if (targetAngleRef.current != null && easeStartRef.current != null) return;
 
         const filledAngle = (FULL_DEG * percent) / 100;
         const safeFilled = Math.max(0, Math.min(FULL_DEG, filledAngle));
 
-        // Нормализуем текущий угол в [0, 360)
-        const currentAngle =
-            ((angleRef.current % FULL_DEG) + FULL_DEG) % FULL_DEG;
-        // Переводим в локальные координаты относительно нижней точки (START_ANGLE)
-        const localCurrent =
-            ((currentAngle - START_ANGLE + FULL_DEG) % FULL_DEG + FULL_DEG) %
-            FULL_DEG;
+        const currentAngle = ((angleRef.current % FULL_DEG) + FULL_DEG) % FULL_DEG;
 
         let targetLocal: number;
         if (result === 'win') {
-            // Попадаем внутрь закрашенного сектора: [0, safeFilled] в локальных координатах
             if (safeFilled <= 0) {
-                // На всякий случай, если шанс 0 — считаем как проигрыш
                 targetLocal = Math.random() * FULL_DEG;
             } else {
                 const margin = Math.min(10, safeFilled / 4);
@@ -265,9 +224,7 @@ export function UpgradeArena({
                 targetLocal = from + Math.random() * (span || 1);
             }
         } else {
-            // Попадаем в незакрашенную часть
             if (safeFilled >= FULL_DEG) {
-                // Шанс 100% — нет незакрашенной области, считаем как выигрыш
                 targetLocal = Math.random() * FULL_DEG;
             } else {
                 const margin = 10;
@@ -278,21 +235,22 @@ export function UpgradeArena({
             }
         }
 
-        // Переводим локальный угол обратно в глобальные координаты
-        const targetLocalGlobal =
-            ((targetLocal + START_ANGLE) % FULL_DEG + FULL_DEG) % FULL_DEG;
-
-        // Хотим сделать ещё пару полных оборотов перед остановкой.
-        // delta всегда в [0, 360) — чтобы шарик не крутился назад и расстояние было одинаковым.
-        const extraTurns = 3;
-        const baseAngle = angleRef.current;
+        const targetLocalGlobal = ((targetLocal + START_ANGLE) % FULL_DEG + FULL_DEG) % FULL_DEG;
         const delta = ((targetLocalGlobal - currentAngle) + FULL_DEG) % FULL_DEG;
-        const targetGlobal = baseAngle + extraTurns * FULL_DEG + delta;
 
+        // 3 полных оборота + delta до цели
+        const extraTurns = 3;
+        const D = extraTurns * FULL_DEG + delta;
+
+        // Velocity-matched quad ease-out: T = 2·D / v₀
+        // Начальная скорость easing = 2·D/T = SPIN_SPEED → переход без рывка
+        const rawEaseMs = (2 * D / SPIN_SPEED) * 1000;
+        easeDurationRef.current = Math.max(MIN_EASE_MS, Math.min(MAX_EASE_MS, rawEaseMs));
+
+        const baseAngle = angleRef.current;
         startAngleRef.current = baseAngle;
-        targetAngleRef.current = targetGlobal;
+        targetAngleRef.current = baseAngle + D;
         easeStartRef.current = performance.now();
-        // lastTimeRef сбросим, чтобы easing работал от текущего времени
         lastTimeRef.current = null;
     }, [result, chance, percent, isPlaying]);
 
@@ -339,7 +297,6 @@ export function UpgradeArena({
                 <span className={cls.percentage}>{percentageLabel}%</span>
                 <span className={cls.chanceLabel}>Шанс на улучшение</span>
             </div>
-            {/** Иконка: обёртка с translate3d (GPU), внутри обычный img без Next/Image для меньшей нагрузки */}
             {(() => {
                 const { left, top } = angleToPosition(arrowsRotation);
                 const iconSrc = typeof upgradeIcon === 'string' ? upgradeIcon : (upgradeIcon as { src: string }).src;
