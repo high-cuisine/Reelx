@@ -1,53 +1,49 @@
 'use client';
 
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import cls from './GameDrum.module.scss';
 import type { TablePlayer } from './types';
 
-// Figma fill colors for players: fill_C6OJ8Q=#199CB3, fill_P6E4D4=#1775CD, etc.
-const SECTOR_COLORS = [
-    '#199CB3', // teal
-    '#1775CD', // blue
-    '#640E8C', // violet
-    '#45720D', // green
-    '#C24B8D', // pink
-    '#B07B12', // amber
-    '#1A6B5B', // dark-teal
-    '#5B4FC6', // indigo
-];
-
-// Figma drum: 216×216, center at (108,108)
+// ── Figma drum geometry ───────────────────────────────
 const VB = 216;
 const CX = 108;
 const CY = 108;
-const R_OUTER = 107; // outer sector radius (sectors fill x:1,y:1 = 214px circle)
-const R_INNER = 44;  // inner circle edge (Табло: 88x88 at x:64,y:64 → r=44)
-const R_AVATAR = (R_OUTER + R_INNER) / 2; // 75.5 — mid-ring, where avatars sit
-const AVATAR_R = 12; // avatar circle radius in SVG units
+const R_OUTER = 107;
+const R_INNER = 44;   // center circle (Табло 88×88 → r=44)
+const R_AVATAR = (R_OUTER + R_INNER) / 2; // 75.5 — mid-ring
+const AVATAR_R = 12;
 
-function polarXY(r: number, angleDeg: number): { x: number; y: number } {
-    const rad = (angleDeg * Math.PI) / 180;
+// ── Sector fill: same dark felt color for all, NOT bright ────
+const SECTOR_BASE  = 'rgba(24, 16, 58, 0.88)'; // dark felt – same tone as table
+const SECTOR_LIT   = 'rgba(157, 138, 243, 0.40)'; // spotlight overlay colour
+
+// ── Roulette timing (ms per step) ────────────────────────────
+const SPIN_FAST = 100;   // fast cycling speed
+const SPIN_MAX  = 560;   // slowest step before stop
+
+function polarXY(r: number, deg: number): { x: number; y: number } {
+    const rad = (deg * Math.PI) / 180;
     return { x: CX + r * Math.cos(rad), y: CY + r * Math.sin(rad) };
 }
 
 function sectorArcPath(
-    rOuter: number,
-    rInner: number,
+    rO: number,
+    rI: number,
     startDeg: number,
     endDeg: number,
 ): string {
-    const largeArc = endDeg - startDeg > 180 ? 1 : 0;
-    const p1o = polarXY(rOuter, startDeg);
-    const p2o = polarXY(rOuter, endDeg);
-    const p2i = polarXY(rInner, endDeg);
-    const p1i = polarXY(rInner, startDeg);
-    const f = (n: number) => n.toFixed(3);
+    const large = endDeg - startDeg > 180 ? 1 : 0;
+    const f = (v: number) => v.toFixed(3);
+    const p1o = polarXY(rO, startDeg);
+    const p2o = polarXY(rO, endDeg);
+    const p2i = polarXY(rI, endDeg);
+    const p1i = polarXY(rI, startDeg);
     return [
         `M ${f(p1i.x)} ${f(p1i.y)}`,
         `L ${f(p1o.x)} ${f(p1o.y)}`,
-        `A ${rOuter} ${rOuter} 0 ${largeArc} 1 ${f(p2o.x)} ${f(p2o.y)}`,
+        `A ${rO} ${rO} 0 ${large} 1 ${f(p2o.x)} ${f(p2o.y)}`,
         `L ${f(p2i.x)} ${f(p2i.y)}`,
-        `A ${rInner} ${rInner} 0 ${largeArc} 0 ${f(p1i.x)} ${f(p1i.y)}`,
-        'Z',
+        `A ${rI} ${rI} 0 ${large} 0 ${f(p1i.x)} ${f(p1i.y)} Z`,
     ].join(' ');
 }
 
@@ -55,22 +51,95 @@ function isRemotePhoto(url: string | null): url is string {
     return typeof url === 'string' && /^https?:\/\//i.test(url);
 }
 
+// ── Props ─────────────────────────────────────────────────────
 interface GameDrumProps {
     players: TablePlayer[];
     centerText: string;
-    /** Index in `players` array that is being eliminated (highlighted). */
+    /** Which sector is being eliminated (final highlight). null = spinning freely. */
     highlightSectorIndex?: number | null;
+    /** True while the game phase is 'playing' — runs the roulette animation. */
+    spinActive?: boolean;
 }
 
-export function GameDrum({ players, centerText, highlightSectorIndex }: GameDrumProps) {
+// ── Component ─────────────────────────────────────────────────
+export function GameDrum({
+    players,
+    centerText,
+    highlightSectorIndex = null,
+    spinActive = false,
+}: GameDrumProps) {
     const n = players.length;
 
-    // Pre-compute avatar positions so we can reuse them in defs and render
+    // ── Roulette "lit" sector state ───────────────────────────
+    const [litIndex, setLitIndex] = useState<number | null>(null);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const posRef   = useRef(0);
+    const stoppingRef = useRef(false);
+
+    // keep spinActive/highlight ref-current to avoid stale closures
+    const highlightRef = useRef(highlightSectorIndex);
+    useLayoutEffect(() => { highlightRef.current = highlightSectorIndex; }, [highlightSectorIndex]);
+
+    useEffect(() => {
+        // Clear previous animation
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current  = null;
+        stoppingRef.current = false;
+
+        if (n < 2 || !spinActive) {
+            // Static: show highlight (or nothing)
+            setLitIndex(highlightSectorIndex ?? null);
+            return;
+        }
+
+        if (highlightSectorIndex != null) {
+            // ── Stopping sequence ────────────────────────────────
+            stoppingRef.current = true;
+            const target = ((highlightSectorIndex % n) + n) % n;
+            // Run at least 2 full rounds then align to target
+            const extra = n * 2 + ((target - posRef.current + n) % n);
+            let step = 0;
+
+            const decelTick = () => {
+                if (!stoppingRef.current) return;
+                posRef.current = (posRef.current + 1) % n;
+                step++;
+                setLitIndex(posRef.current);
+
+                if (step < extra) {
+                    const t = step / extra; // 0 → 1
+                    // quadratic ease-in deceleration
+                    const delay = SPIN_FAST + t * t * (SPIN_MAX - SPIN_FAST);
+                    timerRef.current = setTimeout(decelTick, delay);
+                }
+                // done: litIndex == target (highlightSectorIndex)
+            };
+
+            timerRef.current = setTimeout(decelTick, SPIN_FAST);
+        } else {
+            // ── Continuous fast spin ─────────────────────────────
+            const spinTick = () => {
+                if (highlightRef.current != null) return; // hand off to stopping
+                posRef.current = (posRef.current + 1) % n;
+                setLitIndex(posRef.current);
+                timerRef.current = setTimeout(spinTick, SPIN_FAST);
+            };
+            timerRef.current = setTimeout(spinTick, SPIN_FAST);
+        }
+
+        return () => {
+            stoppingRef.current = false;
+            if (timerRef.current) clearTimeout(timerRef.current);
+        };
+    }, [spinActive, highlightSectorIndex, n]);
+
+    // ── Avatar positions ──────────────────────────────────────
     const avatarPos = players.map((_, i) => {
-        const midDeg = n > 1 ? -90 + (i + 0.5) * (360 / n) : 0;
+        const midDeg = n > 1 ? -90 + (i + 0.5) * (360 / n) : -90;
         return polarXY(R_AVATAR, midDeg);
     });
 
+    // ── Render ────────────────────────────────────────────────
     return (
         <div className={cls.drumWrap}>
             <svg
@@ -80,12 +149,20 @@ export function GameDrum({ players, centerText, highlightSectorIndex }: GameDrum
                 overflow="hidden"
             >
                 <defs>
-                    {/* Radial gradient for center circle (Табло) — Figma: fill_Y8OHWA */}
                     <radialGradient id="dg-center" cx="50%" cy="50%" r="50%">
-                        <stop offset="0%" stopColor="#24194D" />
+                        <stop offset="0%"  stopColor="#24194D" />
                         <stop offset="80%" stopColor="#24194D" />
                         <stop offset="100%" stopColor="#7456E9" />
                     </radialGradient>
+
+                    {/* Radial glow filter for the lit sector */}
+                    <filter id="dg-glow" x="-30%" y="-30%" width="160%" height="160%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feMerge>
+                            <feMergeNode in="blur" />
+                            <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                    </filter>
 
                     {/* Clip paths for photo avatars */}
                     {avatarPos.map((ap, i) =>
@@ -97,67 +174,72 @@ export function GameDrum({ players, centerText, highlightSectorIndex }: GameDrum
                     )}
                 </defs>
 
-                {/* Drum background — Figma fill_OMK35P: rgba(36,25,77,0.2) + #3D2E78 */}
-                <circle cx={CX} cy={CY} r={R_OUTER} fill="#2A1D60" />
+                {/* ── Base background ────────────────────────────────────── */}
+                <circle cx={CX} cy={CY} r={R_OUTER} fill="#1E1249" />
 
-                {/* ── Sectors ─────────────────────────────────────────── */}
+                {/* ── Sectors ────────────────────────────────────────────── */}
+                {n > 0 && (() => {
+                    const paths = n === 1
+                        ? [{ start: -90, end: 269.9 }]
+                        : players.map((_, i) => ({
+                            start: -90 + i * (360 / n),
+                            end:   -90 + (i + 1) * (360 / n),
+                        }));
 
-                {n === 0 && (
-                    <circle cx={CX} cy={CY} r={R_OUTER} fill="rgba(36,25,77,0.5)" />
-                )}
-
-                {n === 1 && (() => {
-                    const hot = highlightSectorIndex === 0;
-                    const ap = avatarPos[0] ?? polarXY(R_AVATAR, -90);
-                    const p = players[0];
-                    const showPhoto = isRemotePhoto(p.photoUrl);
-                    return (
-                        <>
-                            {/* Single player — full donut */}
-                            <path
-                                d={sectorArcPath(R_OUTER, R_INNER, -90, 269.9)}
-                                fill={SECTOR_COLORS[0]}
-                                stroke="rgba(20,15,45,0.5)"
-                                strokeWidth="0.5"
-                                className={hot ? cls.sectorHot : cls.sector}
-                            />
-                            {/* Avatar */}
-                            <circle cx={ap.x} cy={ap.y} r={AVATAR_R} fill={p.color} stroke="rgba(255,255,255,0.35)" strokeWidth="0.5" />
-                            {showPhoto ? (
-                                <image href={p.photoUrl!} x={ap.x - AVATAR_R} y={ap.y - AVATAR_R} width={AVATAR_R * 2} height={AVATAR_R * 2} clipPath="url(#dg-clip-0)" preserveAspectRatio="xMidYMid slice" />
-                            ) : (
-                                <text x={ap.x} y={ap.y} className={cls.avatarText}>{p.initial}</text>
-                            )}
-                        </>
-                    );
+                    return paths.map((seg, i) => {
+                        const isLit = litIndex === i;
+                        const d = sectorArcPath(R_OUTER, R_INNER, seg.start, seg.end);
+                        return (
+                            <g key={i}>
+                                {/* Dark base sector (same colour for all — like the felt) */}
+                                <path
+                                    d={d}
+                                    fill={SECTOR_BASE}
+                                    stroke="rgba(255,255,255,0.055)"
+                                    strokeWidth="0.6"
+                                />
+                                {/* Spotlight overlay — fades in/out with CSS transition */}
+                                <path
+                                    d={d}
+                                    fill={SECTOR_LIT}
+                                    style={{
+                                        opacity: isLit ? 1 : 0,
+                                        transition: isLit
+                                            ? 'opacity 0.05s ease'
+                                            : 'opacity 0.18s ease',
+                                    }}
+                                    filter="url(#dg-glow)"
+                                />
+                            </g>
+                        );
+                    });
                 })()}
 
-                {n > 1 && players.map((player, i) => {
-                    const sliceDeg = 360 / n;
-                    const startDeg = -90 + i * sliceDeg;
-                    const endDeg = -90 + (i + 1) * sliceDeg;
-                    const color = SECTOR_COLORS[i % SECTOR_COLORS.length];
-                    const hot = highlightSectorIndex === i;
+                {/* ── Avatar circles (on top of sectors) ───────────────── */}
+                {players.map((player, i) => {
                     const ap = avatarPos[i];
                     const showPhoto = isRemotePhoto(player.photoUrl);
+                    const isLit = litIndex === i;
 
                     return (
                         <g key={player.id}>
-                            <path
-                                d={sectorArcPath(R_OUTER, R_INNER, startDeg, endDeg)}
-                                fill={color}
-                                stroke="rgba(20,15,45,0.5)"
-                                strokeWidth="0.5"
-                                className={`${cls.sector} ${hot ? cls.sectorHot : ''}`}
-                            />
-                            {/* Avatar circle on sector */}
+                            {/* Subtle glow ring when this avatar is lit */}
+                            {isLit && (
+                                <circle
+                                    cx={ap.x} cy={ap.y}
+                                    r={AVATAR_R + 4}
+                                    fill="none"
+                                    stroke="rgba(255,255,255,0.35)"
+                                    strokeWidth="1.5"
+                                    className={cls.avatarGlow}
+                                />
+                            )}
                             <circle
-                                cx={ap.x}
-                                cy={ap.y}
+                                cx={ap.x} cy={ap.y}
                                 r={AVATAR_R}
                                 fill={player.color}
-                                stroke="rgba(255,255,255,0.35)"
-                                strokeWidth="0.5"
+                                stroke="rgba(255,255,255,0.30)"
+                                strokeWidth="0.6"
                             />
                             {showPhoto ? (
                                 <image
@@ -178,29 +260,20 @@ export function GameDrum({ players, centerText, highlightSectorIndex }: GameDrum
                     );
                 })}
 
-                {/* ── Outer rim border — Figma: Кант SVG overlay ──────── */}
-                <circle cx={CX} cy={CY} r={R_OUTER - 0.5} fill="none" stroke="rgba(69,52,136,0.7)" strokeWidth="1" />
-                <circle cx={CX} cy={CY} r={R_OUTER - 0.5} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+                {/* ── Outer rim ──────────────────────────────────────────── */}
+                <circle cx={CX} cy={CY} r={R_OUTER - 0.5} fill="none" stroke="rgba(116,86,233,0.45)" strokeWidth="1.2" />
+                <circle cx={CX} cy={CY} r={R_OUTER - 1.5} fill="none" stroke="rgba(255,255,255,0.06)"  strokeWidth="0.8" />
 
-                {/* ── Pointer (Указатель) — Figma: x:103,y:53, 10×10 polygon, fill_TQ3IR3 */}
-                {/* Downward-pointing triangle in top sector area */}
-                <polygon
-                    points="103,49 113,49 108,62"
-                    fill="#ED6D6D"
-                    opacity="0.92"
-                />
-                <polygon
-                    points="103,49 113,49 108,62"
-                    fill="rgba(255,255,255,0.45)"
-                />
+                {/* ── Pointer (Указатель) — fixed at top, points down ──── */}
+                <polygon points="103,49 113,49 108,62" fill="#ED6D6D" opacity="0.90" />
+                <polygon points="103,49 113,49 108,62" fill="rgba(255,255,255,0.40)" />
 
-                {/* ── Center circle (Табло) — Figma: x:64,y:64, 88×88, fill_Y8OHWA ── */}
+                {/* ── Centre circle (Табло) ──────────────────────────────── */}
                 <circle cx={CX} cy={CY} r={R_INNER} fill="url(#dg-center)" />
-                {/* Inner circle subtle border */}
-                <circle cx={CX} cy={CY} r={R_INNER - 0.5} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
+                <circle cx={CX} cy={CY} r={R_INNER - 0.5} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
             </svg>
 
-            {/* Center text (foreignObject replacement — absolute overlay div) */}
+            {/* Centre text overlay */}
             <div className={cls.center}>
                 {centerText.split('\n').map((line, i) => (
                     <span key={i} className={cls.centerLine}>{line}</span>

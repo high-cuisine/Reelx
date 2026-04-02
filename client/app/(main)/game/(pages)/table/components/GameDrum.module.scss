@@ -1,6 +1,4 @@
-// Figma drum: 216×216, border-radius 108px
-// shadow: effect_UQ4DQQ
-
+// Figma drum: 216×216, borderRadius 108px, effect_UQ4DQQ shadow
 .drumWrap {
     position: relative;
     width: 216px;
@@ -17,24 +15,20 @@
     width: 100%;
     height: 100%;
     border-radius: 50%;
+    overflow: hidden;
 }
 
-// ── Sectors ──────────────────────────────────────────
-.sector {
-    transition: opacity 0.25s ease;
+// ── Avatar glow ring (shows when sector is lit) ───────────────
+.avatarGlow {
+    animation: avatar-glow-pulse 0.55s ease-in-out infinite alternate;
 }
 
-.sectorHot {
-    filter: drop-shadow(0 0 8px rgba(237, 109, 109, 0.9));
-    animation: sector-pulse 0.75s ease-in-out infinite;
+@keyframes avatar-glow-pulse {
+    from { opacity: 0.4; r: 16px; }
+    to   { opacity: 0.9; r: 18px; }
 }
 
-@keyframes sector-pulse {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.65; }
-}
-
-// ── Avatar text (SVG <text>) ──────────────────────────
+// ── Avatar letter inside sector ───────────────────────────────
 .avatarText {
     font-size: 10px;
     font-family: 'Montserrat', sans-serif;
@@ -46,8 +40,8 @@
     user-select: none;
 }
 
-// ── Center overlay (absolute, on top of SVG) ─────────
-// Figma: Табло at x:64,y:64, 88×88
+// ── Centre overlay (absolute, sits over SVG) ─────────────────
+// Figma Табло: x:64,y:64, 88×88
 .center {
     position: absolute;
     left: 64px;
@@ -59,11 +53,10 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: 1px;
     padding: 8px;
     box-sizing: border-box;
     pointer-events: none;
-    // Slight shadow from Figma Drop Shadow/400
     box-shadow:
         0px 4px 4px -4px rgba(12, 12, 13, 0.05),
         0px 16px 32px -4px rgba(12, 12, 13, 0.1);

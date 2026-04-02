@@ -210,6 +210,7 @@ export default function TablePage() {
                 drumPlayers={drumPlayers}
                 centerText={centerText}
                 highlightSectorIndex={game.lastEliminatedSectorIndex}
+                spinActive={game.phase === 'playing'}
                 myUserId={myUserId}
                 eliminatedUserIds={eliminatedUserIds}
             />

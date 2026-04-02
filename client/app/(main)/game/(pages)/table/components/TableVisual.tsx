@@ -20,6 +20,8 @@ interface TableVisualProps {
     drumPlayers: TablePlayer[];
     centerText: string;
     highlightSectorIndex?: number | null;
+    /** True when game phase is 'playing' — runs the roulette animation. */
+    spinActive?: boolean;
     /** Current user's userId — their seat gets a gradient ring. */
     myUserId?: string | null;
     /** Set of userIds that have been eliminated — red ring + dimmed + X. */
@@ -31,6 +33,7 @@ export function TableVisual({
     drumPlayers,
     centerText,
     highlightSectorIndex = null,
+    spinActive = false,
     myUserId = null,
     eliminatedUserIds = new Set(),
 }: TableVisualProps) {
@@ -55,6 +58,7 @@ export function TableVisual({
                         players={drumPlayers}
                         centerText={centerText}
                         highlightSectorIndex={highlightSectorIndex}
+                        spinActive={spinActive}
                     />
                 </div>
 
