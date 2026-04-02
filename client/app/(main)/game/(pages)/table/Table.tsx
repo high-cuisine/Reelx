@@ -1,35 +1,22 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import cls from './Table.module.scss';
 
-import TonIcon from '@/assets/ton.svg';
-import StarIcon from '@/assets/star.svg';
 import { multiplayerService, type TableState } from '@/entites/multiplayer/api/api';
+import { useTableSocket } from '@/entites/multiplayer/hooks/useTableSocket';
 
 import { TableInfo, TablePlayButton, TableVisual } from './components';
 import { SEAT_POSITIONS } from './components/constants';
 import {
-    bankTotal,
     mapTableStateToVisualPlayers,
     tableCurrencyToUi,
+    tableWheelStatusText,
 } from './mapTablePlayers';
 
-const POLL_MS = 3000;
-
-function BankBadge({ amount, currency }: { amount: number; currency: 'ton' | 'star' }) {
-    const Icon = currency === 'ton' ? TonIcon : StarIcon;
-    return (
-        <div className={cls.bank}>
-            <span className={cls.bankLabel}>Банк</span>
-            <span className={cls.bankAmount}>{amount.toFixed(2)}</span>
-            <Image src={Icon} alt="" width={15} height={15} />
-        </div>
-    );
-}
+const FALLBACK_POLL_MS = 12000;
 
 export default function TablePage() {
     const searchParams = useSearchParams();
@@ -67,9 +54,23 @@ export default function TablePage() {
         setTable(null);
         setLoadError(null);
         fetchTable();
-        const t = setInterval(fetchTable, POLL_MS);
-        return () => clearInterval(t);
     }, [ownerId, fetchTable]);
+
+    const { connected: socketConnected } = useTableSocket({
+        ownerId,
+        onTable: setTable,
+        onTableDeleted: () => {
+            setLoadError('Стол закрыт');
+            setTable(null);
+        },
+    });
+
+    /** Если сокет не поднялся, редко подтягиваем состав с REST. */
+    useEffect(() => {
+        if (!ownerId || socketConnected) return;
+        const t = setInterval(fetchTable, FALLBACK_POLL_MS);
+        return () => clearInterval(t);
+    }, [ownerId, socketConnected, fetchTable]);
 
     const players = useMemo(() => (table ? mapTableStateToVisualPlayers(table) : []), [table]);
     const seatsPlayers = useMemo(
@@ -77,7 +78,6 @@ export default function TablePage() {
         [players],
     );
     const uiCurrency = table ? tableCurrencyToUi(table) : 'ton';
-    const bank = table ? bankTotal(table) : 0;
     const gameId = ownerId ? `#${ownerId.slice(0, 8)}` : '#—';
     const hashShort = ownerId
         ? `${ownerId.slice(0, 6)}…${ownerId.slice(-4)}`
@@ -121,7 +121,10 @@ export default function TablePage() {
         <div className={cls.page}>
            
 
-            <TableVisual players={seatsPlayers} />
+            <TableVisual
+                players={seatsPlayers}
+                statusText={tableWheelStatusText(table)}
+            />
 
             <TablePlayButton stake={table.betAmount} currency={uiCurrency} />
 

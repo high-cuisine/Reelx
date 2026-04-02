@@ -156,9 +156,7 @@ const Bets = ({
                             strokeLinecap="round"
                         />
                     </svg>
-                    {giftCount > 0 && (
-                        <span className={cls.badge}>{giftCount}</span>
-                    )}
+                    
                 </button>
             </div>
 

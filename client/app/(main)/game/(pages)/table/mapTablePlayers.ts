@@ -37,3 +37,11 @@ export function tableCurrencyToUi(table: TableState): 'ton' | 'star' {
 export function bankTotal(table: TableState): number {
     return table.participants.length * table.betAmount;
 }
+
+/** Текст в центре «колеса» на столе: полный набор мест или ожидание. */
+export function tableWheelStatusText(table: TableState): string {
+    const n = table.participants.length;
+    const max = table.maxPlayers;
+    if (n >= max) return 'Все на месте';
+    return `Ожидание ${n}/${max}`;
+}
