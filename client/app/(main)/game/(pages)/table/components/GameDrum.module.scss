@@ -1,116 +1,83 @@
-$hot: rgba(255, 120, 72, 0.95);
+// Figma drum: 216×216, border-radius 108px
+// shadow: effect_UQ4DQQ
 
 .drumWrap {
     position: relative;
-    width: 214px;
-    height: 214px;
+    width: 216px;
+    height: 216px;
     flex-shrink: 0;
-}
-
-.pointer {
-    position: absolute;
-    left: 50%;
-    top: -2px;
-    transform: translateX(-50%);
-    width: 0;
-    height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-bottom: 12px solid rgba(255, 255, 255, 0.95);
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
-    z-index: 5;
+    border-radius: 50%;
+    box-shadow:
+        0px 4px 4px -4px rgba(12, 12, 13, 0.05),
+        0px 16px 32px -4px rgba(12, 12, 13, 0.1);
 }
 
 .drumSvg {
+    display: block;
     width: 100%;
     height: 100%;
-    display: block;
     border-radius: 50%;
-    box-shadow:
-        0 4px 4px -4px rgba(12, 12, 13, 0.05),
-        0 16px 32px -4px rgba(12, 12, 13, 0.1);
 }
 
+// ── Sectors ──────────────────────────────────────────
 .sector {
-    stroke: rgba(20, 15, 45, 0.55);
-    stroke-width: 0.35;
+    transition: opacity 0.25s ease;
 }
 
 .sectorHot {
-    stroke: $hot;
-    stroke-width: 1.1;
-    filter: drop-shadow(0 0 6px rgba(255, 120, 72, 0.75));
+    filter: drop-shadow(0 0 8px rgba(237, 109, 109, 0.9));
+    animation: sector-pulse 0.75s ease-in-out infinite;
 }
 
-.emptyCircle {
-    fill: rgba(116, 86, 233, 0.35);
-    stroke: rgba(255, 255, 255, 0.12);
-    stroke-width: 0.5;
+@keyframes sector-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.65; }
 }
 
-.avatarFo {
-    overflow: visible;
-    pointer-events: none;
-}
-
-.avatarSlot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    border: 0.5px solid rgba(255, 255, 255, 0.35);
-    box-sizing: border-box;
-}
-
-.avatarImg {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-.avatarLetter {
+// ── Avatar text (SVG <text>) ──────────────────────────
+.avatarText {
+    font-size: 10px;
     font-family: 'Montserrat', sans-serif;
-    font-weight: 600;
-    font-size: 5px;
-    color: #fff;
-    line-height: 1;
+    font-weight: 500;
+    fill: #fff;
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
+    user-select: none;
 }
 
+// ── Center overlay (absolute, on top of SVG) ─────────
+// Figma: Табло at x:64,y:64, 88×88
 .center {
     position: absolute;
-    left: 50%;
-    top: 50%;
+    left: 64px;
+    top: 64px;
     width: 88px;
     height: 88px;
-    transform: translate(-50%, -50%);
     border-radius: 50%;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    z-index: 4;
-    text-align: center;
-    padding: 6px;
+    gap: 2px;
+    padding: 8px;
     box-sizing: border-box;
-    background:
-        radial-gradient(circle at 50% 50%, rgba(36, 25, 77, 0) 70%, rgba(81, 255, 194, 0.35) 100%),
-        radial-gradient(circle at 50% 50%, rgba(36, 25, 77, 0) 80%, #7456e9 100%),
-        #24194d;
+    pointer-events: none;
+    // Slight shadow from Figma Drop Shadow/400
     box-shadow:
-        0 4px 4px -4px rgba(12, 12, 13, 0.05),
-        inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+        0px 4px 4px -4px rgba(12, 12, 13, 0.05),
+        0px 16px 32px -4px rgba(12, 12, 13, 0.1);
 }
 
-.centerText {
+// Figma style_35MFSQ: Montserrat 600 10px
+.centerLine {
     font-family: 'Montserrat', sans-serif;
     font-weight: 600;
-    font-size: 9px;
-    line-height: 1.25;
+    font-size: 10px;
+    line-height: 1.22;
     color: #fff;
+    text-align: center;
+    display: block;
     max-width: 100%;
     word-break: break-word;
-    white-space: pre-line;
 }

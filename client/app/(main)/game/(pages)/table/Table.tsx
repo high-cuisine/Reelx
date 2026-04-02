@@ -82,22 +82,38 @@ export default function TablePage() {
         return () => clearInterval(t);
     }, [ownerId, socketConnected, fetchTable]);
 
-    const players = useMemo(() => (table ? mapTableStateToVisualPlayers(table) : []), [table]);
+    // All participants as visual players (for seats around the table)
+    const players = useMemo(
+        () => (table ? mapTableStateToVisualPlayers(table) : []),
+        [table],
+    );
 
     const game = useMemo(
         () => (table ? defaultTableGameClient(table) : null),
         [table],
     );
 
+    // Players on the drum (only those still active)
     const drumPlayers = useMemo(() => {
         if (!table || !game) return [];
         return orderedPlayersByUserIds(players, game.activeUserIds);
     }, [table, game, players]);
 
-    const centerText = useMemo(() => {
-        if (!table || !game) return '—';
-        return tableDrumCenterText(table, game);
-    }, [table, game]);
+    // Set of eliminated user IDs (in participants, but not in activeUserIds)
+    const eliminatedUserIds = useMemo<Set<string>>(() => {
+        if (!game) return new Set();
+        const activeSet = new Set(game.activeUserIds);
+        return new Set(
+            (table?.participants ?? [])
+                .map((p) => p.userId)
+                .filter((id) => !activeSet.has(id)),
+        );
+    }, [game, table]);
+
+    const centerText = useMemo(
+        () => (table && game ? tableDrumCenterText(table, game) : '—'),
+        [table, game],
+    );
 
     const uiCurrency = table ? tableCurrencyToUi(table) : 'ton';
     const gameId = ownerId ? `#${ownerId.slice(0, 8)}` : '#—';
@@ -115,9 +131,7 @@ export default function TablePage() {
         const myReady = myUserId ? game.readyUserIds.includes(myUserId) : false;
 
         if (!myUserId) {
-            return (
-                <p className={cls.actionHint}>Войдите в аккаунт, чтобы нажать «Готов».</p>
-            );
+            return <p className={cls.actionHint}>Войдите в аккаунт</p>;
         }
         if (game.phase === 'finished') {
             return (
@@ -143,7 +157,7 @@ export default function TablePage() {
         if (myReady) {
             return (
                 <button type="button" className={playCls.playButton} disabled>
-                    Вы нажали «Готов»
+                    Ожидаем остальных…
                 </button>
             );
         }
@@ -161,13 +175,13 @@ export default function TablePage() {
         );
     }, [table, game, myUserId, emitGameReady]);
 
+    // ── Guards ────────────────────────────────────────────────────────────────
+
     if (!ownerId) {
         return (
             <div className={cls.page}>
                 <p className={cls.fallbackText}>Выберите стол в списке или создайте свой.</p>
-                <Link href="/game" className={cls.fallbackLink}>
-                    К списку столов
-                </Link>
+                <Link href="/game" className={cls.fallbackLink}>К списку столов</Link>
             </div>
         );
     }
@@ -184,16 +198,21 @@ export default function TablePage() {
         return (
             <div className={cls.page}>
                 <p className={cls.fallbackText}>{loadError ?? 'Стол недоступен'}</p>
-                <Link href="/game" className={cls.fallbackLink}>
-                    К списку столов
-                </Link>
+                <Link href="/game" className={cls.fallbackLink}>К списку столов</Link>
             </div>
         );
     }
 
     return (
         <div className={cls.page}>
-            <TableVisual drumPlayers={drumPlayers} centerText={centerText} />
+            <TableVisual
+                seatPlayers={players}
+                drumPlayers={drumPlayers}
+                centerText={centerText}
+                highlightSectorIndex={game.lastEliminatedSectorIndex}
+                myUserId={myUserId}
+                eliminatedUserIds={eliminatedUserIds}
+            />
 
             {readyErr && <p className={cls.readyError}>{readyErr}</p>}
             {actionButton}

@@ -1,7 +1,9 @@
-$purple: #7456e9;
-$felt: #24194d;
-$dark-base: #1b1339;
+// Figma Стол: 316×508, borderRadius 182px
+$purple:    #7456E9;
+$felt:      #24194D;
+$dark-base: #1B1339;
 
+// ── Table wrapper ─────────────────────────────────────
 .tableWrap {
     position: relative;
     width: 316px;
@@ -11,24 +13,32 @@ $dark-base: #1b1339;
     flex-shrink: 0;
 }
 
+// Figma: glow fill_RKDLNM #7456E9, blur 170px, opacity 0.48
 .tableGlow {
     position: absolute;
     inset: 0;
+    background: #7456E9;
     opacity: 0.48;
     border-radius: 177px;
     filter: blur(170px);
     pointer-events: none;
+    z-index: 0;
 }
 
+// Figma: Сукно frame 316×508, borderRadius 182px, Drop Shadow/600
 .tableOuter {
     position: absolute;
     inset: 0;
     border-radius: 182px;
-    background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), $dark-base;
-    box-shadow: 0 16px 32px -8px rgba(12, 12, 13, 0.4);
+    background:
+        linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)),
+        $dark-base;
+    box-shadow: 0px 16px 32px -8px rgba(12, 12, 13, 0.4);
     overflow: hidden;
+    z-index: 1;
 }
 
+// Figma: Борта inset shadow rgba(157,138,243,0.6)
 .tableBorder {
     position: absolute;
     inset: 0;
@@ -36,14 +46,16 @@ $dark-base: #1b1339;
     border: 1px solid rgba(255, 255, 255, 0.03);
     box-shadow: inset 0 0 6px 0 rgba(157, 138, 243, 0.6);
     pointer-events: none;
+    z-index: 3;
 }
 
+// Figma: Highlights SVG overlay (Блики)
 .tableHighlights {
     position: absolute;
     inset: 0;
     border-radius: 182px;
     pointer-events: none;
-    z-index: 3;
+    z-index: 4;
 
     img {
         width: 100%;
@@ -51,6 +63,8 @@ $dark-base: #1b1339;
     }
 }
 
+// Figma: Сукно inner rect at x:12,y:12, 292×484, borderRadius 269px
+// fill_0AFERG: rgba(114,89,217,0.14) + #24194D, stroke gradient, inset shadow
 .tableFeltInner {
     position: absolute;
     top: 12px;
@@ -64,106 +78,53 @@ $dark-base: #1b1339;
     border: 1px solid rgba(157, 138, 243, 0.4);
     box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
     overflow: hidden;
+    z-index: 1;
 }
 
+// Figma: Ellipse 95 at x:108,y:204 100×100, fill #9D8AF3, blur 140px, opacity 0.3
 .tableCenterGlow {
     position: absolute;
-    left: 50%;
-    top: 50%;
+    left: 96px;    // 108 - (296-12)/2 offset; relative to tableFeltInner (292px)
+    top: 192px;    // 204 - 12 (parent offset)
     width: 100px;
     height: 100px;
-    transform: translate(-50%, -50%);
-    background: #9d8af3;
+    background: #9D8AF3;
     opacity: 0.3;
     border-radius: 50%;
     filter: blur(140px);
     pointer-events: none;
 }
 
+// Figma: Барабан at x:50,y:146 216×216
 .wheel {
     position: absolute;
-    left: 50%;
+    left: 50px;
     top: 146px;
     width: 216px;
     height: 216px;
-    transform: translateX(-50%);
-    border-radius: 50%;
-    box-shadow:
-        0 4px 4px -4px rgba(12, 12, 13, 0.05),
-        0 16px 32px -4px rgba(12, 12, 13, 0.1);
     z-index: 2;
 }
 
-.wheelSectors {
-    position: absolute;
-    top: 1px;
-    left: 1px;
-    width: 214px;
-    height: 214px;
-    border-radius: 50%;
-    overflow: hidden;
-
-    img {
-        width: 100%;
-        height: 100%;
-    }
-}
-
-.wheelRim {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-
-    img {
-        width: 100%;
-        height: 100%;
-    }
-}
-
-.wheelStatus {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 88px;
-    height: 88px;
-    transform: translate(-50%, -50%);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 3;
-    background:
-        radial-gradient(circle at 50% 50%, rgba(36, 25, 77, 0) 70%, rgba(81, 255, 194, 1) 100%),
-        radial-gradient(circle at 50% 50%, rgba(36, 25, 77, 0) 80%, $purple 100%),
-        $felt;
-    box-shadow:
-        0 4px 4px -4px rgba(12, 12, 13, 0.05),
-        0 16px 32px -4px rgba(12, 12, 13, 0.1);
-}
-
-.wheelStatusText {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 600;
-    font-size: 10px;
-    line-height: 1.22;
-    color: #fff;
-}
-
+// ── Player seats (Group 74 at x:32,y:44 252×420) ─────
 .seats {
     position: absolute;
-    top: 44px;
     left: 32px;
+    top: 44px;
     width: 252px;
     height: 420px;
-    z-index: 4;
+    z-index: 5;
+    pointer-events: none;
 }
 
+// Each seat: 48×48 absolute frame
+// Figma: Frame 633 48×48
 .seat {
     position: absolute;
     width: 48px;
     height: 48px;
 }
 
+// Figma: Ellipse 98 48×48, stroke_YVQQ7Q rgba(116,86,233,0.2) 2px — Other
 .seatRing {
     position: absolute;
     inset: 0;
@@ -171,6 +132,21 @@ $dark-base: #1b1339;
     border: 2px solid rgba(116, 86, 233, 0.2);
 }
 
+// Figma: My player — stroke_LAJVZP gradient linear(0deg, #7456E9 → #CFAEFE)
+// CSS gradient-border via background clip trick
+.seatRingMy {
+    border: none;
+    background: linear-gradient(0deg, rgba(116, 86, 233, 1) 0%, rgba(207, 174, 254, 1) 100%);
+    // The .seatInner (40×40 at top:4,left:4) covers center — only the 4px ring shows gradient
+}
+
+// Figma: Выбыл — stroke_LKQR9A rgba(116,86,233,0.2) + rgba(237,109,109,0.6)
+.seatRingEliminated {
+    border: 2px solid rgba(116, 86, 233, 0.15);
+    box-shadow: inset 0 0 0 2px rgba(237, 109, 109, 0.55);
+}
+
+// Figma: Userpic 40×40 at top:4,left:4 inside the 48×48 frame
 .seatInner {
     position: absolute;
     top: 4px;
@@ -181,8 +157,17 @@ $dark-base: #1b1339;
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
+    // For My: we need a solid dark bg so gradient ring shows around edge
+    background: $dark-base;
 }
 
+// Figma: Выбыл — Userpic opacity 0.5
+.seatInnerEliminated {
+    opacity: 0.5;
+}
+
+// Empty seat (waiting for player)
 .seatEmpty {
     background: rgba(116, 86, 233, 0.7);
 }
@@ -195,6 +180,7 @@ $dark-base: #1b1339;
     line-height: 1;
 }
 
+// Figma: style_G9VEQP Montserrat 500 14px white — letter initial in seat
 .seatAvatar {
     font-family: 'Montserrat', sans-serif;
     font-weight: 500;
@@ -208,4 +194,18 @@ $dark-base: #1b1339;
     height: 100%;
     object-fit: cover;
     display: block;
+}
+
+// Figma: Выбыл — "X" label below seat, fill_0GDPSL #ED6D6D, style_35MFSQ 600 10px
+.seatEliminatedLabel {
+    position: absolute;
+    top: 52px;    // below the 48px seat
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 10px;
+    line-height: 1.22;
+    color: #ED6D6D;
+    white-space: nowrap;
 }
