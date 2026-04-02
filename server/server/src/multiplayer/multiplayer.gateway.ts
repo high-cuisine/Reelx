@@ -40,6 +40,9 @@ export class MultiplayerGateway
   /** userId → ownerId of the table they are currently in */
   private readonly userTableMap = new Map<string, string>();
 
+  /** ownerId → таймер следующего раунда исключения */
+  private readonly eliminationTimers = new Map<string, NodeJS.Timeout>();
+
   constructor(
     private readonly jwtService: JwtService,
     private readonly multiplayerService: MultiplayerService,
@@ -157,12 +160,36 @@ export class MultiplayerGateway
     }
   }
 
+  /**
+   * Event: game-ready
+   * Когда все места заняты и каждый нажал готовность — старт и цепочка раундов исключения.
+   */
+  @SubscribeMessage('game-ready')
+  async onGameReady(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: JoinTableDto,
+  ) {
+    const userId = this.requireUserId(client);
+    const { ownerId } = payload;
+    try {
+      const { table, didStartGame } = await this.multiplayerService.setGameReady(ownerId, userId);
+      const view = await this.enrichAndBroadcast(ownerId, table);
+      if (didStartGame) {
+        this.scheduleEliminationAfter(ownerId, 2800);
+      }
+      return { success: true, table: view };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Public helpers (called from controller)
   // ---------------------------------------------------------------------------
 
   /** Broadcast table-deleted event and remove all clients from the room */
   notifyTableDeleted(ownerId: string) {
+    this.clearEliminationTimer(ownerId);
     const room = this.roomName(ownerId);
     this.server.to(room).emit('table-deleted', { ownerId });
     this.server.in(room).socketsLeave(room);
@@ -180,12 +207,17 @@ export class MultiplayerGateway
     const userId = client.userId!;
     const room = this.roomName(ownerId);
 
+    this.clearEliminationTimer(ownerId);
     const updated = await this.multiplayerService.leaveTable(ownerId, userId);
     await client.leave(room);
     this.userTableMap.delete(userId);
 
     if (updated) {
       await this.enrichAndBroadcast(ownerId, updated);
+      const g = updated.game;
+      if (g?.phase === 'playing' && g.activeUserIds.length > 1) {
+        this.scheduleEliminationAfter(ownerId, 2200);
+      }
     } else {
       // Table was destroyed (no participants left)
       this.server.to(room).emit('table-deleted', { ownerId });
@@ -217,5 +249,29 @@ export class MultiplayerGateway
     client.emit('error', { message: reason });
     client.disconnect(true);
     this.logger.warn(`Client ${client.id} disconnected: ${reason}`);
+  }
+
+  private clearEliminationTimer(ownerId: string) {
+    const t = this.eliminationTimers.get(ownerId);
+    if (t) clearTimeout(t);
+    this.eliminationTimers.delete(ownerId);
+  }
+
+  private scheduleEliminationAfter(ownerId: string, delayMs: number) {
+    this.clearEliminationTimer(ownerId);
+    const tid = setTimeout(async () => {
+      this.eliminationTimers.delete(ownerId);
+      try {
+        const table = await this.multiplayerService.runEliminationRound(ownerId);
+        await this.enrichAndBroadcast(ownerId, table);
+        const g = table.game;
+        if (g?.phase === 'playing' && g.activeUserIds.length > 1) {
+          this.scheduleEliminationAfter(ownerId, 3600);
+        }
+      } catch (err: any) {
+        this.logger.error(`Elimination round failed for ${ownerId}: ${err.message}`);
+      }
+    }, delayMs);
+    this.eliminationTimers.set(ownerId, tid);
   }
 }

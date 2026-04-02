@@ -12,17 +12,22 @@ type JoinTableAck =
     | { success: true; table: TableState }
     | { success: false; error: string };
 
+type GameReadyAck = JoinTableAck;
+
 export interface UseTableSocketOptions {
     ownerId: string | null;
     /** Вызывается при любом актуальном состоянии стола (join, broadcast, disconnect других). */
     onTable: (table: TableState) => void;
     /** Стол удалён (владелец закрыл или последний вышел). */
     onTableDeleted: () => void;
+    /** Ошибка ack на game-ready (например, стол не полный). */
+    onGameReadyError?: (message: string) => void;
 }
 
 export interface UseTableSocketResult {
     connected: boolean;
     socketError: string | null;
+    emitGameReady: () => void;
 }
 
 /**
@@ -33,16 +38,20 @@ export function useTableSocket({
     ownerId,
     onTable,
     onTableDeleted,
+    onGameReadyError,
 }: UseTableSocketOptions): UseTableSocketResult {
     const [connected, setConnected] = useState(false);
     const [socketError, setSocketError] = useState<string | null>(null);
 
     const onTableRef = useRef(onTable);
     const onTableDeletedRef = useRef(onTableDeleted);
+    const onGameReadyErrorRef = useRef(onGameReadyError);
+    const socketRef = useRef<Socket | null>(null);
     useLayoutEffect(() => {
         onTableRef.current = onTable;
         onTableDeletedRef.current = onTableDeleted;
-    }, [onTable, onTableDeleted]);
+        onGameReadyErrorRef.current = onGameReadyError;
+    }, [onTable, onTableDeleted, onGameReadyError]);
 
     const joinTable = useCallback((socket: Socket, oid: string) => {
         socket.emit('join-table', { ownerId: oid }, (ack: JoinTableAck) => {
@@ -54,6 +63,18 @@ export function useTableSocket({
             }
         });
     }, []);
+
+    const emitGameReady = useCallback(() => {
+        const socket = socketRef.current;
+        if (!ownerId || !socket?.connected) return;
+        socket.emit('game-ready', { ownerId }, (ack: GameReadyAck) => {
+            if (ack?.success && ack.table) {
+                onTableRef.current(ack.table);
+            } else if (ack && 'success' in ack && !ack.success) {
+                onGameReadyErrorRef.current?.(ack.error ?? 'Не удалось подтвердить готовность');
+            }
+        });
+    }, [ownerId]);
 
     useEffect(() => {
         if (!ownerId) return;
@@ -69,6 +90,7 @@ export function useTableSocket({
             path: '/socket.io',
             transports: ['websocket', 'polling'],
         });
+        socketRef.current = socket;
 
         const handleConnect = () => {
             setConnected(true);
@@ -118,8 +140,9 @@ export function useTableSocket({
                 socket.emit('leave-table', { ownerId });
             }
             socket.disconnect();
+            socketRef.current = null;
         };
     }, [ownerId, joinTable]);
 
-    return { connected, socketError };
+    return { connected, socketError, emitGameReady };
 }

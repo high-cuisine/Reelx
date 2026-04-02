@@ -9,6 +9,21 @@ import { GameCurrancy } from '@prisma/client';
 import { RedisService } from '../../libs/infrustructure/redis/redis.service';
 import { UsersService } from '../users/services/users.service';
 
+export type TableGamePhase = 'lobby' | 'playing' | 'finished';
+
+/** Состояние розыгрыша на столе (Redis). */
+export interface TableGameState {
+  phase: TableGamePhase;
+  readyUserIds: string[];
+  /** В лобби — копия состава; после старта — порядок секторов барабана (остаются только в игре). */
+  activeUserIds: string[];
+  lastEliminatedUserId: string | null;
+  /** Индекс выбывшего в activeUserIds до удаления (для UI). */
+  lastEliminatedSectorIndex: number | null;
+  winnerUserId: string | null;
+  round: number;
+}
+
 export interface TableState {
   ownerId: string;
   participants: string[];
@@ -16,6 +31,7 @@ export interface TableState {
   currency: GameCurrancy;
   betAmount: number;
   createdAt: number;
+  game?: TableGameState;
 }
 
 /** Участник как отдаём в API (профиль из БД) */
@@ -32,6 +48,7 @@ export interface TableStateView {
   currency: GameCurrancy;
   betAmount: number;
   createdAt: number;
+  game: TableGameState;
 }
 
 @Injectable()
@@ -46,6 +63,35 @@ export class MultiplayerService {
 
   private tableKey(ownerId: string): string {
     return `table-${ownerId}`;
+  }
+
+  private defaultGame(participantIds: string[]): TableGameState {
+    return {
+      phase: 'lobby',
+      readyUserIds: [],
+      activeUserIds: [...participantIds],
+      lastEliminatedUserId: null,
+      lastEliminatedSectorIndex: null,
+      winnerUserId: null,
+      round: 0,
+    };
+  }
+
+  /** Гарантирует поле game (в т.ч. для старых записей в Redis). */
+  ensureGame(table: TableState): TableGameState {
+    if (!table.game) {
+      table.game = this.defaultGame(table.participants);
+    }
+    return table.game;
+  }
+
+  private shuffle<T>(items: T[]): T[] {
+    const arr = [...items];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
   }
 
   // ---------------------------------------------------------------------------
@@ -72,6 +118,7 @@ export class MultiplayerService {
       currency,
       betAmount,
       createdAt: Date.now(),
+      game: this.defaultGame([ownerId]),
     };
 
     await this.redisService.set(key, JSON.stringify(state), this.TABLE_TTL);
@@ -109,6 +156,9 @@ export class MultiplayerService {
           typeof parsed.maxPlayers === 'number' &&
           parsed.betAmount != null
         ) {
+          if (!parsed.game) {
+            parsed.game = this.defaultGame(parsed.participants);
+          }
           tables.push(parsed);
         }
       } catch {
@@ -128,6 +178,7 @@ export class MultiplayerService {
   }
 
   async enrichTable(state: TableState): Promise<TableStateView> {
+    const game = this.ensureGame(state);
     const participants: TableParticipantView[] = await Promise.all(
       state.participants.map(async (userId) => {
         const user = await this.usersService.findUserById(userId);
@@ -145,14 +196,21 @@ export class MultiplayerService {
       currency: state.currency,
       betAmount: state.betAmount,
       createdAt: state.createdAt,
+      game: { ...game },
     };
   }
 
   async joinTable(ownerId: string, userId: string): Promise<TableState> {
     const key = this.tableKey(ownerId);
     const table = await this.getTableOrThrow(ownerId);
+    const game = this.ensureGame(table);
+    if (game.phase !== 'lobby') {
+      throw new ConflictException('Game already started or finished');
+    }
 
     if (table.participants.includes(userId)) {
+      game.activeUserIds = [...table.participants];
+      await this.redisService.set(key, JSON.stringify(table), this.TABLE_TTL);
       return table;
     }
 
@@ -163,6 +221,7 @@ export class MultiplayerService {
     await this.chargeUser(userId, table.currency, table.betAmount);
 
     table.participants.push(userId);
+    game.activeUserIds = [...table.participants];
     await this.redisService.set(key, JSON.stringify(table), this.TABLE_TTL);
     this.logger.log(`User ${userId} joined table ${key}`);
     return table;
@@ -174,6 +233,18 @@ export class MultiplayerService {
 
     if (!table.participants.includes(userId)) {
       return table;
+    }
+
+    const game = this.ensureGame(table);
+    game.readyUserIds = game.readyUserIds.filter((id) => id !== userId);
+    if (game.phase === 'playing') {
+      game.activeUserIds = game.activeUserIds.filter((id) => id !== userId);
+      game.lastEliminatedUserId = null;
+      game.lastEliminatedSectorIndex = null;
+      if (game.activeUserIds.length <= 1) {
+        game.phase = 'finished';
+        game.winnerUserId = game.activeUserIds[0] ?? null;
+      }
     }
 
     await this.refundUser(userId, table.currency, table.betAmount);
@@ -205,6 +276,91 @@ export class MultiplayerService {
 
     await this.redisService.del(key);
     this.logger.log(`Table ${key} deleted, all participants refunded`);
+  }
+
+  /**
+   * Игрок нажал «Готов». Когда все места заняты и все готовы — старт игры (фаза playing).
+   * didStartGame — только при переходе lobby→playing (для одного таймера первого раунда).
+   */
+  async setGameReady(
+    ownerId: string,
+    userId: string,
+  ): Promise<{ table: TableState; didStartGame: boolean }> {
+    const key = this.tableKey(ownerId);
+    const table = await this.getTableOrThrow(ownerId);
+    const game = this.ensureGame(table);
+
+    if (game.phase !== 'lobby') {
+      return { table, didStartGame: false };
+    }
+    if (!table.participants.includes(userId)) {
+      throw new BadRequestException('You are not at this table');
+    }
+    if (table.participants.length !== table.maxPlayers) {
+      throw new BadRequestException('Not all seats are filled');
+    }
+
+    if (!game.readyUserIds.includes(userId)) {
+      game.readyUserIds.push(userId);
+    }
+
+    let didStartGame = false;
+    const allReady = table.participants.every((id) => game.readyUserIds.includes(id));
+    if (allReady) {
+      game.phase = 'playing';
+      game.activeUserIds = this.shuffle([...table.participants]);
+      game.readyUserIds = [];
+      game.round = 0;
+      game.lastEliminatedUserId = null;
+      game.lastEliminatedSectorIndex = null;
+      game.winnerUserId = null;
+      didStartGame = true;
+      this.logger.log(`Table ${key}: game started, ${game.activeUserIds.length} players`);
+    }
+
+    await this.redisService.set(key, JSON.stringify(table), this.TABLE_TTL);
+    return { table, didStartGame };
+  }
+
+  /**
+   * Один раунд: случайно убирает одного из activeUserIds. При одном оставшемся — finished + winner.
+   */
+  async runEliminationRound(ownerId: string): Promise<TableState> {
+    const key = this.tableKey(ownerId);
+    const table = await this.getTableOrThrow(ownerId);
+    const game = this.ensureGame(table);
+
+    if (game.phase !== 'playing') {
+      return table;
+    }
+
+    if (game.activeUserIds.length <= 1) {
+      game.phase = 'finished';
+      game.winnerUserId = game.activeUserIds[0] ?? null;
+      game.lastEliminatedUserId = null;
+      game.lastEliminatedSectorIndex = null;
+      await this.redisService.set(key, JSON.stringify(table), this.TABLE_TTL);
+      return table;
+    }
+
+    const n = game.activeUserIds.length;
+    const idx = Math.floor(Math.random() * n);
+    const victim = game.activeUserIds[idx];
+    game.lastEliminatedUserId = victim;
+    game.lastEliminatedSectorIndex = idx;
+    game.activeUserIds = game.activeUserIds.filter((_, i) => i !== idx);
+    game.round += 1;
+
+    if (game.activeUserIds.length === 1) {
+      game.phase = 'finished';
+      game.winnerUserId = game.activeUserIds[0];
+    }
+
+    await this.redisService.set(key, JSON.stringify(table), this.TABLE_TTL);
+    this.logger.log(
+      `Table ${key}: round ${game.round}, eliminated ${victim}, active=${game.activeUserIds.length}`,
+    );
+    return table;
   }
 
   // ---------------------------------------------------------------------------

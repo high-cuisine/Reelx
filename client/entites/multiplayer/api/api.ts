@@ -8,6 +8,18 @@ export interface TableParticipant {
     photoUrl: string | null;
 }
 
+export type TableGamePhase = 'lobby' | 'playing' | 'finished';
+
+export interface TableGameState {
+    phase: TableGamePhase;
+    readyUserIds: string[];
+    activeUserIds: string[];
+    lastEliminatedUserId: string | null;
+    lastEliminatedSectorIndex: number | null;
+    winnerUserId: string | null;
+    round: number;
+}
+
 export interface TableState {
     ownerId: string;
     participants: TableParticipant[];
@@ -15,6 +27,8 @@ export interface TableState {
     currency: TableCurrency;
     betAmount: number;
     createdAt: number;
+    /** С сервера приходит всегда после обновления API; для старых кэшей см. defaultTableGameClient. */
+    game?: TableGameState;
 }
 
 export interface CreateTableDto {

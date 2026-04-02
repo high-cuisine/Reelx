@@ -4,16 +4,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import cls from './Table.module.scss';
+import playCls from './components/TablePlayButton.module.scss';
 
 import { multiplayerService, type TableState } from '@/entites/multiplayer/api/api';
 import { useTableSocket } from '@/entites/multiplayer/hooks/useTableSocket';
+import { useUserStore } from '@/entites/user/model/user';
 
-import { TableInfo, TablePlayButton, TableVisual } from './components';
-import { SEAT_POSITIONS } from './components/constants';
+import { TableInfo, TableVisual } from './components';
 import {
+    defaultTableGameClient,
     mapTableStateToVisualPlayers,
+    orderedPlayersByUserIds,
     tableCurrencyToUi,
-    tableWheelStatusText,
+    tableDrumCenterText,
 } from './mapTablePlayers';
 
 const FALLBACK_POLL_MS = 12000;
@@ -21,11 +24,17 @@ const FALLBACK_POLL_MS = 12000;
 export default function TablePage() {
     const searchParams = useSearchParams();
     const ownerId = searchParams.get('owner');
+    const myUserId = useUserStore((s) => s.user?.userId ?? null);
 
     const [table, setTable] = useState<TableState | null>(null);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [bootLoading, setBootLoading] = useState(true);
+    const [readyErr, setReadyErr] = useState<string | null>(null);
     const firstLoadRef = useRef(true);
+
+    const onGameReadyError = useCallback((message: string) => {
+        setReadyErr(message);
+    }, []);
 
     const fetchTable = useCallback(async () => {
         if (!ownerId) return;
@@ -53,19 +62,20 @@ export default function TablePage() {
         setBootLoading(true);
         setTable(null);
         setLoadError(null);
+        setReadyErr(null);
         fetchTable();
     }, [ownerId, fetchTable]);
 
-    const { connected: socketConnected } = useTableSocket({
+    const { connected: socketConnected, emitGameReady } = useTableSocket({
         ownerId,
         onTable: setTable,
         onTableDeleted: () => {
             setLoadError('Стол закрыт');
             setTable(null);
         },
+        onGameReadyError,
     });
 
-    /** Если сокет не поднялся, редко подтягиваем состав с REST. */
     useEffect(() => {
         if (!ownerId || socketConnected) return;
         const t = setInterval(fetchTable, FALLBACK_POLL_MS);
@@ -73,10 +83,22 @@ export default function TablePage() {
     }, [ownerId, socketConnected, fetchTable]);
 
     const players = useMemo(() => (table ? mapTableStateToVisualPlayers(table) : []), [table]);
-    const seatsPlayers = useMemo(
-        () => players.slice(0, SEAT_POSITIONS.length),
-        [players],
+
+    const game = useMemo(
+        () => (table ? defaultTableGameClient(table) : null),
+        [table],
     );
+
+    const drumPlayers = useMemo(() => {
+        if (!table || !game) return [];
+        return orderedPlayersByUserIds(players, game.activeUserIds);
+    }, [table, game, players]);
+
+    const centerText = useMemo(() => {
+        if (!table || !game) return '—';
+        return tableDrumCenterText(table, game);
+    }, [table, game]);
+
     const uiCurrency = table ? tableCurrencyToUi(table) : 'ton';
     const gameId = ownerId ? `#${ownerId.slice(0, 8)}` : '#—';
     const hashShort = ownerId
@@ -86,6 +108,58 @@ export default function TablePage() {
     const handleCopyHash = () => {
         if (ownerId) navigator.clipboard.writeText(ownerId);
     };
+
+    const actionButton = useMemo(() => {
+        if (!table || !game) return null;
+        const full = table.participants.length === table.maxPlayers;
+        const myReady = myUserId ? game.readyUserIds.includes(myUserId) : false;
+
+        if (!myUserId) {
+            return (
+                <p className={cls.actionHint}>Войдите в аккаунт, чтобы нажать «Готов».</p>
+            );
+        }
+        if (game.phase === 'finished') {
+            return (
+                <button type="button" className={playCls.playButton} disabled>
+                    Игра окончена
+                </button>
+            );
+        }
+        if (game.phase === 'playing') {
+            return (
+                <button type="button" className={playCls.playButton} disabled>
+                    Идёт розыгрыш…
+                </button>
+            );
+        }
+        if (!full) {
+            return (
+                <button type="button" className={playCls.playButton} disabled>
+                    Ждём игроков ({table.participants.length}/{table.maxPlayers})
+                </button>
+            );
+        }
+        if (myReady) {
+            return (
+                <button type="button" className={playCls.playButton} disabled>
+                    Вы нажали «Готов»
+                </button>
+            );
+        }
+        return (
+            <button
+                type="button"
+                className={playCls.playButton}
+                onClick={() => {
+                    setReadyErr(null);
+                    emitGameReady();
+                }}
+            >
+                Готов
+            </button>
+        );
+    }, [table, game, myUserId, emitGameReady]);
 
     if (!ownerId) {
         return (
@@ -106,7 +180,7 @@ export default function TablePage() {
         );
     }
 
-    if (loadError || !table) {
+    if (loadError || !table || !game) {
         return (
             <div className={cls.page}>
                 <p className={cls.fallbackText}>{loadError ?? 'Стол недоступен'}</p>
@@ -119,14 +193,10 @@ export default function TablePage() {
 
     return (
         <div className={cls.page}>
-           
+            <TableVisual drumPlayers={drumPlayers} centerText={centerText} />
 
-            <TableVisual
-                players={seatsPlayers}
-                statusText={tableWheelStatusText(table)}
-            />
-
-            <TablePlayButton stake={table.betAmount} currency={uiCurrency} />
+            {readyErr && <p className={cls.readyError}>{readyErr}</p>}
+            {actionButton}
 
             <TableInfo
                 players={players}

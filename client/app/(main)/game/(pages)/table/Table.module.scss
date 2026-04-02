@@ -92,3 +92,23 @@ $felt: #24194d;
     opacity: 0.25;
     pointer-events: none;
 }
+
+.readyError {
+    margin: 8px 24px 0;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: #ff9a8a;
+    text-align: center;
+    max-width: 340px;
+}
+
+.actionHint {
+    margin: 20px 24px 0;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.55);
+    text-align: center;
+    max-width: 340px;
+}
