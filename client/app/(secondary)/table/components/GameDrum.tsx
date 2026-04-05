@@ -20,6 +20,8 @@ const SECTOR_LIT   = 'rgba(157, 138, 243, 0.40)'; // spotlight overlay colour
 // ── Roulette timing (ms per step) ────────────────────────────
 const SPIN_FAST = 100;   // fast cycling speed
 const SPIN_MAX  = 560;   // slowest step before stop
+/** Сглаживание стрелки к целевому углу за кадр (rAF), 0..1 */
+const POINTER_EASE = 0.42;
 
 function polarXY(r: number, deg: number): { x: number; y: number } {
     const rad = (deg * Math.PI) / 180;
@@ -72,6 +74,14 @@ export function GameDrum({
 
     // ── Roulette "lit" sector state ───────────────────────────
     const [litIndex, setLitIndex] = useState<number | null>(null);
+    /** Текущий угол стрелки (°), сглаженный rAF */
+    const [pointerDeg, setPointerDeg] = useState(0);
+    /** Последний «целевой» накопленный угол (для расчёта следующего шага без отката по кругу) */
+    const pointerCommittedRef = useRef(0);
+    const pointerTargetRef = useRef(0);
+    const pointerDisplayRef = useRef(0);
+    const spinPointerRafRef = useRef<number>(0);
+    const wasSpinningRef = useRef(false);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const posRef   = useRef(0);
     const stoppingRef = useRef(false);
@@ -133,15 +143,83 @@ export function GameDrum({
         };
     }, [spinActive, highlightSectorIndex, n]);
 
+    // Новый заход в фазу playing: база для накопленного угла — текущее положение стрелки
+    useEffect(() => {
+        if (spinActive && !wasSpinningRef.current) {
+            pointerCommittedRef.current = pointerDisplayRef.current;
+        }
+        wasSpinningRef.current = spinActive;
+    }, [spinActive]);
+
+    // Стрелка в статике — сразу на сектор, без анимации
+    useEffect(() => {
+        if (n < 2 || spinActive) return;
+        if (spinPointerRafRef.current) {
+            cancelAnimationFrame(spinPointerRafRef.current);
+            spinPointerRafRef.current = 0;
+        }
+        const li = highlightSectorIndex ?? litIndex;
+        const deg =
+            li != null && n > 0
+                ? n === 1
+                    ? 0
+                    : (li + 0.5) * (360 / n)
+                : 0;
+        pointerCommittedRef.current = deg;
+        pointerTargetRef.current = deg;
+        pointerDisplayRef.current = deg;
+        setPointerDeg(deg);
+    }, [n, spinActive, highlightSectorIndex, litIndex]);
+
+    // Целевой угол стрелки следует за подсветкой сектора (накопление вперёд по кругу)
+    useEffect(() => {
+        if (n < 2 || !spinActive || litIndex == null) return;
+        const sector = 360 / n;
+        const ideal = ((litIndex + 0.5) * sector) % 360;
+        let next = ideal;
+        const base = pointerCommittedRef.current;
+        while (next <= base - 0.01) next += 360;
+        pointerCommittedRef.current = next;
+        pointerTargetRef.current = next;
+    }, [litIndex, spinActive, n]);
+
+    // Плавное вращение стрелки к цели каждый кадр
+    useEffect(() => {
+        if (n < 2 || !spinActive) {
+            if (spinPointerRafRef.current) {
+                cancelAnimationFrame(spinPointerRafRef.current);
+                spinPointerRafRef.current = 0;
+            }
+            return;
+        }
+
+        const tick = () => {
+            const target = pointerTargetRef.current;
+            let cur = pointerDisplayRef.current;
+            const d = target - cur;
+            if (Math.abs(d) < 0.06) {
+                cur = target;
+            } else {
+                cur += d * POINTER_EASE;
+            }
+            pointerDisplayRef.current = cur;
+            setPointerDeg(cur);
+            spinPointerRafRef.current = requestAnimationFrame(tick);
+        };
+        spinPointerRafRef.current = requestAnimationFrame(tick);
+        return () => {
+            if (spinPointerRafRef.current) {
+                cancelAnimationFrame(spinPointerRafRef.current);
+                spinPointerRafRef.current = 0;
+            }
+        };
+    }, [spinActive, n]);
+
     // ── Avatar positions ──────────────────────────────────────
     const avatarPos = players.map((_, i) => {
         const midDeg = n > 1 ? -90 + (i + 0.5) * (360 / n) : -90;
         return polarXY(R_AVATAR, midDeg);
     });
-
-    /** Указатель на верху; поворот вокруг центра к середине подсвеченного сектора (как на барабане). */
-    const pointerDeg =
-        litIndex != null && n > 0 ? (n === 1 ? 0 : (litIndex + 0.5) * (360 / n)) : 0;
 
     // ── Render ────────────────────────────────────────────────
     return (
@@ -268,7 +346,7 @@ export function GameDrum({
                 <circle cx={CX} cy={CY} r={R_OUTER - 0.5} fill="none" stroke="rgba(116,86,233,0.45)" strokeWidth="1.2" />
                 <circle cx={CX} cy={CY} r={R_OUTER - 1.5} fill="none" stroke="rgba(255,255,255,0.06)"  strokeWidth="0.8" />
 
-                {/* ── Pointer — вращается к середине сектора с подсветкой (совпадает с «выбором») ─── */}
+                {/* ── Pointer — rotate вокруг центра барабана; угол сглаживается rAF (без телепорта) ─── */}
                 <g transform={`rotate(${pointerDeg} ${CX} ${CY})`}>
                     <polygon points="103,49 113,49 108,62" fill="#F2C4C4" opacity="0.95" />
                     <polygon points="103,49 113,49 108,62" fill="rgba(255,255,255,0.35)" />
