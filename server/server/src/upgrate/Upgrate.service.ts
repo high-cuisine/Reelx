@@ -455,10 +455,48 @@ export class UpgrateService {
   /**
    * Как в gifts: purchase через NFT buyer (если есть address), запрос lottie, создание записи через UsersService.
    */
+  /**
+   * Один подарок по сумме банка (TON): стол и др. — покупка + запись в инвентарь.
+   */
+  async awardSingleGiftForPotTon(
+    winnerUserId: string,
+    potTon: number,
+  ): Promise<{
+    giftId: string;
+    name: string;
+    image?: string | null;
+    priceTon?: number;
+    lottieUrl?: string | null;
+  } | null> {
+    if (!Number.isFinite(potTon) || potTon <= 0) {
+      this.logger.warn(`awardSingleGiftForPotTon: invalid potTon ${potTon}`);
+      return null;
+    }
+    const gifts = await this.fetchGiftsByPrice(potTon);
+    if (gifts.length === 0) {
+      this.logger.warn(`awardSingleGiftForPotTon: no gifts for pot ${potTon}`);
+      return null;
+    }
+    const g = gifts[Math.floor(Math.random() * gifts.length)];
+    const created = await this.createUserGiftFromWin(winnerUserId, g);
+    return {
+      giftId: created.id,
+      name: created.giftName,
+      image: created.image,
+      priceTon: priceToTon(g.price),
+      lottieUrl: created.lottieUrl ?? null,
+    };
+  }
+
   private async createUserGiftFromWin(
     userId: string,
     g: NftBuyerGift,
-  ): Promise<{ id: string; giftName: string; image: string | null }> {
+  ): Promise<{
+    id: string;
+    giftName: string;
+    image: string | null;
+    lottieUrl?: string | null;
+  }> {
     const saleAddress = g.ownerAddress ?? g.address;
     const priceTon = priceToTon(g.price);
 
@@ -508,6 +546,7 @@ export class UpgrateService {
       id: createdGift.id,
       giftName: createdGift.giftName,
       image: createdGift.image,
+      lottieUrl: lottieUrl || null,
     };
   }
 

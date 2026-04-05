@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import cls from './CreateTableModal.module.scss';
 import TonIcon from '@/assets/ton.svg';
 import StarIcon from '@/assets/star.svg';
 import TableTypeIconSvg from './icons/table-type-icon.svg';
 import SettingsIconSvg from './icons/settings-icon.svg';
+import { giftsService } from '@/entites/gifts/api/api';
 import { multiplayerService } from '@/entites/multiplayer/api/api';
 import { useUserStore } from '@/entites/user/model/user';
 
@@ -14,7 +15,8 @@ const SHEET_CLOSE_MS = 420;
 
 type Currency = 'ton' | 'stars';
 
-const STAKES = [1, 5, 10, 25, 50, 100, 250, 500, 1000] as const;
+const TON_STAKES = [3, 5, 10, 25, 50, 100, 250, 500, 1000] as const;
+const STAR_STAKE_CANDIDATES = [100, 200, 300, 500, 1000, 2500, 5000, 10000, 25000] as const;
 const PLAYERS = [2, 3, 4, 5, 6] as const;
 
 interface CreateTableModalProps {
@@ -30,8 +32,9 @@ const CreateTableModal = ({ isOpen, onClose, onCreateTable }: CreateTableModalPr
     const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [currency, setCurrency] = useState<Currency>('ton');
-    const [stake, setStake] = useState<(typeof STAKES)[number]>(1);
+    const [stake, setStake] = useState<number>(3);
     const [players, setPlayers] = useState<(typeof PLAYERS)[number]>(2);
+    const [minPrices, setMinPrices] = useState<{ ton: number; stars: number } | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -84,6 +87,32 @@ const CreateTableModal = ({ isOpen, onClose, onCreateTable }: CreateTableModalPr
         document.addEventListener('keydown', onKey);
         return () => document.removeEventListener('keydown', onKey);
     }, [mounted, onClose]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        void giftsService
+            .getMinPrice()
+            .then((r) => setMinPrices({ ton: r.ton, stars: r.stars }))
+            .catch(() => setMinPrices({ ton: 3, stars: 300 }));
+    }, [isOpen]);
+
+    const starStakes = useMemo(() => {
+        const m = minPrices?.stars ?? 300;
+        const list = STAR_STAKE_CANDIDATES.filter((x) => x >= m);
+        return list.length > 0 ? list : [m];
+    }, [minPrices?.stars]);
+
+    const visibleStakes = useMemo(
+        () => (currency === 'ton' ? [...TON_STAKES] : starStakes),
+        [currency, starStakes],
+    );
+
+    useEffect(() => {
+        if (visibleStakes.length === 0) return;
+        if (!visibleStakes.includes(stake)) {
+            setStake(visibleStakes[0]);
+        }
+    }, [currency, visibleStakes, stake]);
 
     if (!mounted) return null;
 
@@ -159,7 +188,7 @@ const CreateTableModal = ({ isOpen, onClose, onCreateTable }: CreateTableModalPr
                             <p className={cls.label}>Ставка</p>
                             <div className={cls.chipsRowWrap}>
                                 <div className={cls.chipsRow}>
-                                    {STAKES.map((v) => (
+                                    {visibleStakes.map((v) => (
                                         <button
                                             key={v}
                                             type="button"

@@ -3,8 +3,13 @@
 import { useUserStore } from '@/entites/user/model/user';
 import { copyOwnerIdToClipboard, formatOwnerHashShort, formatTableGameId } from './helpers/ownerDisplay';
 import { useEliminationFlash } from './hooks/useEliminationFlash';
-import { useRedirectWhenGameFinished } from './hooks/useRedirectWhenGameFinished';
+import {
+    DEFAULT_REDIRECT_MS,
+    REDIRECT_WHEN_WIN_MODAL_MS,
+    useRedirectWhenGameFinished,
+} from './hooks/useRedirectWhenGameFinished';
 import { useTableLiveData } from './hooks/useTableLiveData';
+import { useTableWinnerWinModal } from './hooks/useTableWinnerWinModal';
 import { useTableOwnerId } from './hooks/useTableOwnerId';
 import { useTablePageDerived } from './hooks/useTablePageDerived';
 import { useTablePrimaryAction } from './hooks/useTablePrimaryAction';
@@ -33,7 +38,19 @@ export default function TablePage() {
     const canShowTableUi = Boolean(
         ownerId && !bootLoading && !loadError && table && game,
     );
-    useRedirectWhenGameFinished(game?.phase, canShowTableUi);
+
+    const winnerGetsGiftModal =
+        Boolean(
+            myUserId &&
+                game?.phase === 'finished' &&
+                game?.winnerUserId === myUserId &&
+                game?.winnerPrize?.giftId,
+        );
+
+    useTableWinnerWinModal(table, game, myUserId);
+    useRedirectWhenGameFinished(game?.phase, canShowTableUi, {
+        delayMs: winnerGetsGiftModal ? REDIRECT_WHEN_WIN_MODAL_MS : DEFAULT_REDIRECT_MS,
+    });
 
     const gameId = formatTableGameId(ownerId);
     const hashShort = formatOwnerHashShort(ownerId);

@@ -5,6 +5,7 @@ import "./globals.css";
 import { AuthInit } from "@/features/auth/AuthInit";
 import { AuthGate } from "@/features/auth/AuthGate";
 import { TonConnectProvider } from "@/shared/providers/TonConnectProvider";
+import { WinModal } from "@/shared/layout/WinModal/WinModal";
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -74,7 +75,10 @@ export default function RootLayout({
         />
         <TonConnectProvider manifestUrl={manifestUrl}>
           <AuthInit />
-          <AuthGate>{children}</AuthGate>
+          <AuthGate>
+            {children}
+            <WinModal />
+          </AuthGate>
         </TonConnectProvider>
       </body>
     </html>

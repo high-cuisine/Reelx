@@ -7,7 +7,9 @@ import {
 } from '@nestjs/common';
 import { GameCurrancy } from '@prisma/client';
 import { RedisService } from '../../libs/infrustructure/redis/redis.service';
+import { CurrancyService } from '../../libs/common/modules/Currancy/services/Currancy.service';
 import { UsersService } from '../users/services/users.service';
+import { UpgrateService } from '../upgrate/Upgrate.service';
 
 export type TableGamePhase = 'lobby' | 'playing' | 'round_break' | 'finished';
 
@@ -22,6 +24,20 @@ export interface TableGameState {
   lastEliminatedSectorIndex: number | null;
   winnerUserId: string | null;
   round: number;
+  /** Уже вызывали выдачу приза (чтобы не дублировать). */
+  winnerPrizeDispatched?: boolean;
+  /** Приз победителю (NFT в инвентарь); null если подобрать/купить не удалось. */
+  winnerPrize?: TableWinnerPrize | null;
+  /** Сумма банка в TON для UI (WinModal). */
+  potTon?: number;
+}
+
+export interface TableWinnerPrize {
+  giftId: string;
+  name: string;
+  image?: string | null;
+  priceTon?: number;
+  lottieUrl?: string | null;
 }
 
 export interface TableState {
@@ -56,9 +72,13 @@ export class MultiplayerService {
   private readonly logger = new Logger(MultiplayerService.name);
   private readonly TABLE_TTL = 24 * 60 * 60;
 
+  private static readonly MIN_TABLE_BET_TON = 3;
+
   constructor(
     private readonly redisService: RedisService,
     private readonly usersService: UsersService,
+    private readonly currancyService: CurrancyService,
+    private readonly upgrateService: UpgrateService,
   ) {}
 
   private tableKey(ownerId: string): string {
@@ -109,6 +129,8 @@ export class MultiplayerService {
       throw new ConflictException('You already have an active table');
     }
 
+    await this.assertTableBetMinimum(currency, betAmount);
+
     await this.chargeUser(ownerId, currency, betAmount);
 
     const state: TableState = {
@@ -121,7 +143,7 @@ export class MultiplayerService {
       game: this.defaultGame([ownerId]),
     };
 
-    await this.redisService.set(key, JSON.stringify(state), this.TABLE_TTL);
+    await this.persistTable(key, state);
     this.logger.log(`Table created: ${key} (${currency} ${betAmount})`);
     return state;
   }
@@ -210,7 +232,7 @@ export class MultiplayerService {
 
     if (table.participants.includes(userId)) {
       game.activeUserIds = [...table.participants];
-      await this.redisService.set(key, JSON.stringify(table), this.TABLE_TTL);
+      await this.persistTable(key, table);
       return table;
     }
 
@@ -222,7 +244,7 @@ export class MultiplayerService {
 
     table.participants.push(userId);
     game.activeUserIds = [...table.participants];
-    await this.redisService.set(key, JSON.stringify(table), this.TABLE_TTL);
+    await this.persistTable(key, table);
     this.logger.log(`User ${userId} joined table ${key}`);
     return table;
   }
@@ -252,6 +274,8 @@ export class MultiplayerService {
 
     await this.refundUser(userId, table.currency, table.betAmount);
 
+    await this.dispatchTableWinnerPrize(table);
+
     table.participants = table.participants.filter((id) => id !== userId);
 
     if (table.participants.length === 0) {
@@ -267,7 +291,7 @@ export class MultiplayerService {
       table.participants.includes(id),
     );
 
-    await this.redisService.set(key, JSON.stringify(table), this.TABLE_TTL);
+    await this.persistTable(key, table);
     this.logger.log(`User ${userId} left table ${key}`);
     return table;
   }
@@ -352,7 +376,7 @@ export class MultiplayerService {
       }
     }
 
-    await this.redisService.set(key, JSON.stringify(table), this.TABLE_TTL);
+    await this.persistTable(key, table);
     return { table, didStartGame };
   }
 
@@ -373,7 +397,7 @@ export class MultiplayerService {
       game.winnerUserId = game.activeUserIds[0] ?? null;
       game.lastEliminatedUserId = null;
       game.lastEliminatedSectorIndex = null;
-      await this.redisService.set(key, JSON.stringify(table), this.TABLE_TTL);
+      await this.persistTable(key, table);
       return table;
     }
 
@@ -394,7 +418,7 @@ export class MultiplayerService {
       game.lastEliminatedSectorIndex = null;
     }
 
-    await this.redisService.set(key, JSON.stringify(table), this.TABLE_TTL);
+    await this.persistTable(key, table);
     this.logger.log(
       `Table ${key}: round ${game.round}, eliminated ${victim}, active=${game.activeUserIds.length}`,
     );
@@ -404,6 +428,79 @@ export class MultiplayerService {
   // ---------------------------------------------------------------------------
   // Balance helpers
   // ---------------------------------------------------------------------------
+
+  private async persistTable(key: string, table: TableState): Promise<void> {
+    await this.dispatchTableWinnerPrize(table);
+    await this.redisService.set(key, JSON.stringify(table), this.TABLE_TTL);
+  }
+
+  private async assertTableBetMinimum(
+    currency: GameCurrancy,
+    betAmount: number,
+  ): Promise<void> {
+    const minTon = MultiplayerService.MIN_TABLE_BET_TON;
+    if (currency === GameCurrancy.TON) {
+      if (betAmount < minTon) {
+        throw new BadRequestException(`Минимальная ставка ${minTon} TON`);
+      }
+      return;
+    }
+    const rates = await this.currancyService.getCurrancyRates();
+    if (rates.ton <= 0 || rates.stars <= 0) {
+      const fallbackMinStars = 300;
+      if (betAmount < fallbackMinStars) {
+        throw new BadRequestException(
+          `Минимальная ставка ${fallbackMinStars} Stars (эквивалент ~${minTon} TON)`,
+        );
+      }
+      return;
+    }
+    const minStars = Math.ceil((minTon * rates.ton) / rates.stars);
+    if (betAmount < minStars) {
+      throw new BadRequestException(
+        `Минимальная ставка ${minStars} Stars (эквивалент ${minTon} TON)`,
+      );
+    }
+  }
+
+  private async computePotTon(table: TableState): Promise<number> {
+    const bank = table.betAmount * table.participants.length;
+    if (table.currency === GameCurrancy.TON) {
+      return Number(bank.toFixed(6));
+    }
+    const rates = await this.currancyService.getCurrancyRates();
+    if (rates.ton <= 0) {
+      return Number(bank.toFixed(6));
+    }
+    const ton =
+      rates.stars > 0 ? (bank * rates.stars) / rates.ton : bank;
+    return Number(ton.toFixed(6));
+  }
+
+  private async dispatchTableWinnerPrize(table: TableState): Promise<void> {
+    const game = table.game;
+    if (!game || game.phase !== 'finished' || !game.winnerUserId) {
+      return;
+    }
+    if (game.winnerPrizeDispatched) {
+      return;
+    }
+    game.winnerPrizeDispatched = true;
+    const potTon = await this.computePotTon(table);
+    game.potTon = potTon;
+    try {
+      const prize = await this.upgrateService.awardSingleGiftForPotTon(
+        game.winnerUserId,
+        potTon,
+      );
+      game.winnerPrize = prize;
+    } catch (err: unknown) {
+      this.logger.error(
+        `Table winner prize failed: ${(err as Error).message}`,
+      );
+      game.winnerPrize = null;
+    }
+  }
 
   private async chargeUser(
     userId: string,

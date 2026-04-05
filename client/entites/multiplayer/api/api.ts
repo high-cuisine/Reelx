@@ -10,6 +10,14 @@ export interface TableParticipant {
 
 export type TableGamePhase = 'lobby' | 'playing' | 'round_break' | 'finished';
 
+export interface TableWinnerPrize {
+    giftId: string;
+    name: string;
+    image?: string | null;
+    priceTon?: number;
+    lottieUrl?: string | null;
+}
+
 export interface TableGameState {
     phase: TableGamePhase;
     readyUserIds: string[];
@@ -18,6 +26,10 @@ export interface TableGameState {
     lastEliminatedSectorIndex: number | null;
     winnerUserId: string | null;
     round: number;
+    winnerPrizeDispatched?: boolean;
+    winnerPrize?: TableWinnerPrize | null;
+    /** Сумма банка в TON (для WinModal). */
+    potTon?: number;
 }
 
 export interface TableState {
