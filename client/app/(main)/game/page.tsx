@@ -32,7 +32,7 @@ export default function GamePage() {
                 isOpen={createTableOpen}
                 onClose={() => setCreateTableOpen(false)}
                 onCreateTable={(ownerId) =>
-                    router.push(`/game/table?owner=${encodeURIComponent(ownerId)}`)
+                    router.push(`/table?owner=${encodeURIComponent(ownerId)}`)
                 }
             />
         </div>

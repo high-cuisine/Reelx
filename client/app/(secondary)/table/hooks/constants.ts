@@ -1,0 +1,1 @@
+export const TABLE_FALLBACK_POLL_MS = 12000;

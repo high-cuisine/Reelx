@@ -24,8 +24,10 @@ interface TableVisualProps {
     spinActive?: boolean;
     /** Current user's userId — their seat gets a gradient ring. */
     myUserId?: string | null;
-    /** Set of userIds that have been eliminated — red ring + dimmed + X. */
+    /** Set of userIds that have been eliminated — red ring + полупрозрачность до конца игры. */
     eliminatedUserIds?: Set<string>;
+    /** На 1.5 с после выбывания — центральный крестик и X под местом этого игрока. */
+    eliminationFlashUserId?: string | null;
 }
 
 export function TableVisual({
@@ -36,6 +38,7 @@ export function TableVisual({
     spinActive = false,
     myUserId = null,
     eliminatedUserIds = new Set(),
+    eliminationFlashUserId = null,
 }: TableVisualProps) {
     return (
         <div className={cls.tableWrap}>
@@ -60,6 +63,15 @@ export function TableVisual({
                         highlightSectorIndex={highlightSectorIndex}
                         spinActive={spinActive}
                     />
+                    {eliminationFlashUserId && (
+                        <div
+                            key={eliminationFlashUserId}
+                            className={cls.eliminationCrossOverlay}
+                            aria-hidden
+                        >
+                            <span className={cls.eliminationCross}>×</span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Seats — Figma: Group 74 at x:32,y:44 252×420 */}
@@ -88,7 +100,7 @@ export function TableVisual({
                         return (
                             <div
                                 key={player.id}
-                                className={cls.seat}
+                                className={`${cls.seat} ${isEliminated ? cls.seatEliminated : ''}`}
                                 style={{ left: pos.left, top: pos.top }}
                             >
                                 {/* Figma stroke_LAJVZP for My, stroke_LKQR9A for Выбыл, stroke_YVQQ7Q for Other */}
@@ -96,7 +108,7 @@ export function TableVisual({
                                     className={`${cls.seatRing} ${isMe ? cls.seatRingMy : ''} ${isEliminated ? cls.seatRingEliminated : ''}`}
                                 />
                                 <div
-                                    className={`${cls.seatInner} ${isEliminated ? cls.seatInnerEliminated : ''}`}
+                                    className={cls.seatInner}
                                     style={
                                         player && !showPhoto ? { background: player.color } : undefined
                                     }
@@ -112,9 +124,8 @@ export function TableVisual({
                                         <span className={cls.seatAvatar}>{player.initial}</span>
                                     )}
                                 </div>
-                                {/* Figma: eliminated → Username "X" text in #ED6D6D below seat */}
-                                {isEliminated && (
-                                    <span className={cls.seatEliminatedLabel}>X</span>
+                                {eliminationFlashUserId === player.id && (
+                                    <span className={cls.seatEliminatedLabel}>×</span>
                                 )}
                             </div>
                         );

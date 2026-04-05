@@ -1,5 +1,5 @@
 import type { TableGameState, TableState } from '@/entites/multiplayer/api/api';
-import { TABLE_SEAT_COLORS, stablePick } from '../../constants/tableVisualPool';
+import { TABLE_SEAT_COLORS, stablePick } from '../../(main)/game/constants/tableVisualPool';
 import type { TablePlayer } from './components/types';
 
 function displayUsername(username: string) {

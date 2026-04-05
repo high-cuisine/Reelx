@@ -95,7 +95,7 @@ const TablesList = () => {
             if (!wasIn) {
                 updateBalance(-betAmount, currency === 'star' ? 'stars' : 'ton');
             }
-            router.push(`/game/table?owner=${encodeURIComponent(ownerId)}`);
+            router.push(`/table?owner=${encodeURIComponent(ownerId)}`);
         } catch (err: any) {
             const raw = err?.response?.data?.message;
             setJoinError(
