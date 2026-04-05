@@ -81,6 +81,25 @@ export class MultiplayerController {
   }
 
   /**
+   * POST /api/multiplayer/table/:ownerId/leave
+   * Выход со стола (возврат ставки). Если участников не осталось — ключ Redis удаляется, сокетам шлётся table-deleted.
+   */
+  @Post('table/:ownerId/leave')
+  @HttpCode(HttpStatus.OK)
+  async leaveTable(
+    @Param('ownerId') ownerId: string,
+    @CurrentUser() userId: string,
+  ) {
+    const updated = await this.multiplayerService.leaveTable(ownerId, userId);
+    if (!updated) {
+      this.multiplayerGateway.notifyTableDeleted(ownerId);
+      return { success: true, table: null, empty: true };
+    }
+    const view = await this.multiplayerGateway.broadcastTableUpdated(ownerId, updated);
+    return { success: true, table: view, empty: false };
+  }
+
+  /**
    * DELETE /api/multiplayer/table
    * Closes the table, refunds all participants, notifies via socket.
    */

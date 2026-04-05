@@ -162,7 +162,8 @@ export class MultiplayerGateway
 
   /**
    * Event: game-ready
-   * Когда все места заняты и каждый нажал готовность — старт и цепочка раундов исключения.
+   * Лобби: полный стол + все готовы → playing + один таймер исключения.
+   * Пауза между раундами: все выжившие готовы → снова playing + таймер (без автоцепочки).
    */
   @SubscribeMessage('game-ready')
   async onGameReady(
@@ -175,7 +176,9 @@ export class MultiplayerGateway
       const { table, didStartGame } = await this.multiplayerService.setGameReady(ownerId, userId);
       const view = await this.enrichAndBroadcast(ownerId, table);
       if (didStartGame) {
-        this.scheduleEliminationAfter(ownerId, 2800);
+        const r = table.game?.round ?? 0;
+        const delayMs = r === 0 ? 2800 : 3600;
+        this.scheduleEliminationAfter(ownerId, delayMs);
       }
       return { success: true, table: view };
     } catch (err: any) {
@@ -190,10 +193,20 @@ export class MultiplayerGateway
   /** Broadcast table-deleted event and remove all clients from the room */
   notifyTableDeleted(ownerId: string) {
     this.clearEliminationTimer(ownerId);
+    for (const [uid, oid] of [...this.userTableMap.entries()]) {
+      if (oid === ownerId) {
+        this.userTableMap.delete(uid);
+      }
+    }
     const room = this.roomName(ownerId);
     this.server.to(room).emit('table-deleted', { ownerId });
     this.server.in(room).socketsLeave(room);
     this.logger.log(`Table ${room} deleted — all clients evicted`);
+  }
+
+  /** Синхронизация состояния после HTTP leave (и др.). */
+  async broadcastTableUpdated(ownerId: string, table: TableState): Promise<TableStateView> {
+    return this.enrichAndBroadcast(ownerId, table);
   }
 
   // ---------------------------------------------------------------------------
@@ -215,13 +228,14 @@ export class MultiplayerGateway
     if (updated) {
       await this.enrichAndBroadcast(ownerId, updated);
       const g = updated.game;
-      if (g?.phase === 'playing' && g.activeUserIds.length > 1) {
+      if (
+        g?.phase === 'playing' &&
+        g.activeUserIds.length > 1
+      ) {
         this.scheduleEliminationAfter(ownerId, 2200);
       }
     } else {
-      // Table was destroyed (no participants left)
-      this.server.to(room).emit('table-deleted', { ownerId });
-      this.server.in(room).socketsLeave(room);
+      this.notifyTableDeleted(ownerId);
     }
   }
 
@@ -262,12 +276,13 @@ export class MultiplayerGateway
     const tid = setTimeout(async () => {
       this.eliminationTimers.delete(ownerId);
       try {
+        const snap = await this.multiplayerService.getTable(ownerId);
+        const g = snap?.game;
+        if (!snap || g?.phase !== 'playing') {
+          return;
+        }
         const table = await this.multiplayerService.runEliminationRound(ownerId);
         await this.enrichAndBroadcast(ownerId, table);
-        const g = table.game;
-        if (g?.phase === 'playing' && g.activeUserIds.length > 1) {
-          this.scheduleEliminationAfter(ownerId, 3600);
-        }
       } catch (err: any) {
         this.logger.error(`Elimination round failed for ${ownerId}: ${err.message}`);
       }

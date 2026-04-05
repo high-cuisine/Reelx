@@ -9,7 +9,7 @@ import { GameCurrancy } from '@prisma/client';
 import { RedisService } from '../../libs/infrustructure/redis/redis.service';
 import { UsersService } from '../users/services/users.service';
 
-export type TableGamePhase = 'lobby' | 'playing' | 'finished';
+export type TableGamePhase = 'lobby' | 'playing' | 'round_break' | 'finished';
 
 /** Состояние розыгрыша на столе (Redis). */
 export interface TableGameState {
@@ -229,7 +229,10 @@ export class MultiplayerService {
 
   async leaveTable(ownerId: string, userId: string): Promise<TableState | null> {
     const key = this.tableKey(ownerId);
-    const table = await this.getTableOrThrow(ownerId);
+    const table = await this.getTable(ownerId);
+    if (!table) {
+      return null;
+    }
 
     if (!table.participants.includes(userId)) {
       return table;
@@ -237,7 +240,7 @@ export class MultiplayerService {
 
     const game = this.ensureGame(table);
     game.readyUserIds = game.readyUserIds.filter((id) => id !== userId);
-    if (game.phase === 'playing') {
+    if (game.phase === 'playing' || game.phase === 'round_break') {
       game.activeUserIds = game.activeUserIds.filter((id) => id !== userId);
       game.lastEliminatedUserId = null;
       game.lastEliminatedSectorIndex = null;
@@ -256,6 +259,13 @@ export class MultiplayerService {
       this.logger.log(`Table ${key} deleted (empty after leave)`);
       return null;
     }
+
+    game.activeUserIds = game.activeUserIds.filter((id) =>
+      table.participants.includes(id),
+    );
+    game.readyUserIds = game.readyUserIds.filter((id) =>
+      table.participants.includes(id),
+    );
 
     await this.redisService.set(key, JSON.stringify(table), this.TABLE_TTL);
     this.logger.log(`User ${userId} left table ${key}`);
@@ -279,8 +289,9 @@ export class MultiplayerService {
   }
 
   /**
-   * Игрок нажал «Готов». Когда все места заняты и все готовы — старт игры (фаза playing).
-   * didStartGame — только при переходе lobby→playing (для одного таймера первого раунда).
+   * Игрок нажал «Готов».
+   * lobby + полный стол → все участники готовы → playing (первый раунд).
+   * round_break → все ещё в игре (activeUserIds) готовы → снова playing (следующий розыгрыш).
    */
   async setGameReady(
     ownerId: string,
@@ -290,32 +301,55 @@ export class MultiplayerService {
     const table = await this.getTableOrThrow(ownerId);
     const game = this.ensureGame(table);
 
-    if (game.phase !== 'lobby') {
+    if (game.phase !== 'lobby' && game.phase !== 'round_break') {
       return { table, didStartGame: false };
     }
     if (!table.participants.includes(userId)) {
       throw new BadRequestException('You are not at this table');
     }
-    if (table.participants.length !== table.maxPlayers) {
-      throw new BadRequestException('Not all seats are filled');
-    }
-
-    if (!game.readyUserIds.includes(userId)) {
-      game.readyUserIds.push(userId);
-    }
 
     let didStartGame = false;
-    const allReady = table.participants.every((id) => game.readyUserIds.includes(id));
-    if (allReady) {
-      game.phase = 'playing';
-      game.activeUserIds = this.shuffle([...table.participants]);
-      game.readyUserIds = [];
-      game.round = 0;
-      game.lastEliminatedUserId = null;
-      game.lastEliminatedSectorIndex = null;
-      game.winnerUserId = null;
-      didStartGame = true;
-      this.logger.log(`Table ${key}: game started, ${game.activeUserIds.length} players`);
+
+    if (game.phase === 'lobby') {
+      if (table.participants.length !== table.maxPlayers) {
+        throw new BadRequestException('Not all seats are filled');
+      }
+      if (!game.readyUserIds.includes(userId)) {
+        game.readyUserIds.push(userId);
+      }
+      const allReady = table.participants.every((id) => game.readyUserIds.includes(id));
+      if (allReady) {
+        game.phase = 'playing';
+        game.activeUserIds = this.shuffle([...table.participants]);
+        game.readyUserIds = [];
+        game.round = 0;
+        game.lastEliminatedUserId = null;
+        game.lastEliminatedSectorIndex = null;
+        game.winnerUserId = null;
+        didStartGame = true;
+        this.logger.log(`Table ${key}: game started, ${game.activeUserIds.length} players`);
+      }
+    } else {
+      // round_break — только выжившие жмут «Готов»
+      if (!game.activeUserIds.includes(userId)) {
+        throw new BadRequestException('You are not active in this round');
+      }
+      if (!game.readyUserIds.includes(userId)) {
+        game.readyUserIds.push(userId);
+      }
+      const allActiveReady = game.activeUserIds.every((id) =>
+        game.readyUserIds.includes(id),
+      );
+      if (allActiveReady) {
+        game.phase = 'playing';
+        game.readyUserIds = [];
+        game.lastEliminatedUserId = null;
+        game.lastEliminatedSectorIndex = null;
+        didStartGame = true;
+        this.logger.log(
+          `Table ${key}: round resumed, ${game.activeUserIds.length} active, round=${game.round}`,
+        );
+      }
     }
 
     await this.redisService.set(key, JSON.stringify(table), this.TABLE_TTL);
@@ -354,6 +388,10 @@ export class MultiplayerService {
     if (game.activeUserIds.length === 1) {
       game.phase = 'finished';
       game.winnerUserId = game.activeUserIds[0];
+    } else {
+      game.phase = 'round_break';
+      game.readyUserIds = [];
+      game.lastEliminatedSectorIndex = null;
     }
 
     await this.redisService.set(key, JSON.stringify(table), this.TABLE_TTL);
