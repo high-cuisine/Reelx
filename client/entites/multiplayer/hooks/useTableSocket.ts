@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
+import { multiplayerService } from '../api/api';
 import type { TableState } from '../api/api';
 import { getSocketBaseUrl } from '../lib/socketBaseUrl';
 
@@ -139,6 +140,7 @@ export function useTableSocket({
             if (socket.connected) {
                 socket.emit('leave-table', { ownerId });
             }
+            void multiplayerService.leaveTable(ownerId).catch(() => {});
             socket.disconnect();
             socketRef.current = null;
         };
