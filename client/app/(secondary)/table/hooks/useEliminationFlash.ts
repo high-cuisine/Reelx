@@ -1,40 +1,21 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { TableGamePhase } from '@/entites/multiplayer/api/api';
 
 const ELIMINATION_FLASH_MS = 1500;
 
 /**
- * При смене lastEliminatedUserId в фазе playing — 1.5 с показываем центральный крестик и X под местом
- * выбывшего. Вход в playing / реконнект без смены uid не анимирует.
+ * При смене lastEliminatedUserId (новое выбывание) — 1.5 с центральный крестик и × под местом.
+ * Первый синхронный рендер без анимации (реконнект).
  */
-export function useEliminationFlash(phase: TableGamePhase, lastEliminatedUserId: string | null) {
+export function useEliminationFlash(lastEliminatedUserId: string | null) {
     const [flashUserId, setFlashUserId] = useState<string | null>(null);
-    const skipNextDiffRef = useRef(true);
-    const prevPhaseRef = useRef<TableGamePhase>(phase);
+    const isFirstSyncRef = useRef(true);
     const prevUidRef = useRef<string | null>(lastEliminatedUserId);
 
     useEffect(() => {
-        const prevPhase = prevPhaseRef.current;
-        prevPhaseRef.current = phase;
-
-        if (phase !== 'playing') {
-            setFlashUserId(null);
-            prevUidRef.current = lastEliminatedUserId;
-            if (phase === 'lobby') {
-                skipNextDiffRef.current = true;
-            }
-            return;
-        }
-
-        if (skipNextDiffRef.current) {
-            skipNextDiffRef.current = false;
-            prevUidRef.current = lastEliminatedUserId;
-            return;
-        }
-
-        if (prevPhase !== 'playing') {
+        if (isFirstSyncRef.current) {
+            isFirstSyncRef.current = false;
             prevUidRef.current = lastEliminatedUserId;
             return;
         }
@@ -48,7 +29,7 @@ export function useEliminationFlash(phase: TableGamePhase, lastEliminatedUserId:
         }
 
         prevUidRef.current = cur;
-    }, [phase, lastEliminatedUserId]);
+    }, [lastEliminatedUserId]);
 
     return flashUserId;
 }

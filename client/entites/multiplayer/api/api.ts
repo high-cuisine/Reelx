@@ -8,7 +8,7 @@ export interface TableParticipant {
     photoUrl: string | null;
 }
 
-export type TableGamePhase = 'lobby' | 'playing' | 'finished';
+export type TableGamePhase = 'lobby' | 'playing' | 'round_break' | 'finished';
 
 export interface TableGameState {
     phase: TableGamePhase;

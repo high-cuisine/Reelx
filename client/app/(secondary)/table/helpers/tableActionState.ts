@@ -19,6 +19,22 @@ export function resolveTablePrimaryAction(
     if (game.phase === 'playing') {
         return { kind: 'disabled', label: 'Идёт розыгрыш…' };
     }
+    if (game.phase === 'round_break') {
+        if (!game.activeUserIds.includes(myUserId)) {
+            return { kind: 'disabled', label: 'Вы выбыли' };
+        }
+        const need = game.activeUserIds.length;
+        const readyAmongActive = game.activeUserIds.filter((id) =>
+            game.readyUserIds.includes(id),
+        ).length;
+        if (readyAmongActive < need) {
+            if (game.readyUserIds.includes(myUserId)) {
+                return { kind: 'disabled', label: 'Ожидаем остальных…' };
+            }
+            return { kind: 'ready' };
+        }
+        return { kind: 'disabled', label: 'Старт…' };
+    }
     const full = table.participants.length === table.maxPlayers;
     if (!full) {
         return {

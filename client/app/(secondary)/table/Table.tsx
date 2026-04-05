@@ -3,6 +3,7 @@
 import { useUserStore } from '@/entites/user/model/user';
 import { copyOwnerIdToClipboard, formatOwnerHashShort, formatTableGameId } from './helpers/ownerDisplay';
 import { useEliminationFlash } from './hooks/useEliminationFlash';
+import { useRedirectWhenGameFinished } from './hooks/useRedirectWhenGameFinished';
 import { useTableLiveData } from './hooks/useTableLiveData';
 import { useTableOwnerId } from './hooks/useTableOwnerId';
 import { useTablePageDerived } from './hooks/useTablePageDerived';
@@ -27,10 +28,12 @@ export default function TablePage() {
 
     const primaryAction = useTablePrimaryAction(table, game, myUserId);
 
-    const eliminationFlashUserId = useEliminationFlash(
-        game?.phase ?? 'lobby',
-        game?.lastEliminatedUserId ?? null,
+    const eliminationFlashUserId = useEliminationFlash(game?.lastEliminatedUserId ?? null);
+
+    const canShowTableUi = Boolean(
+        ownerId && !bootLoading && !loadError && table && game,
     );
+    useRedirectWhenGameFinished(game?.phase, canShowTableUi);
 
     const gameId = formatTableGameId(ownerId);
     const hashShort = formatOwnerHashShort(ownerId);

@@ -75,12 +75,12 @@ export function tableDrumCenterText(table: TableState, game: TableGameState): st
         const r = game.readyUserIds.length;
         return `Готовность\n${r}/${max}`;
     }
+    if (game.phase === 'round_break') {
+        const need = game.activeUserIds.length;
+        const r = game.activeUserIds.filter((id) => game.readyUserIds.includes(id)).length;
+        return `Готовность\n${r}/${need}`;
+    }
     if (game.phase === 'playing') {
-        if (game.lastEliminatedUserId) {
-            const u = table.participants.find((p) => p.userId === game.lastEliminatedUserId);
-            const tag = u ? displayNameShort(u.username) : '…';
-            return `Выбывает\n${tag}`;
-        }
         return game.round === 0 ? 'Старт' : `Раунд ${game.round}`;
     }
     if (game.phase === 'finished' && game.winnerUserId) {
