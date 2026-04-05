@@ -151,7 +151,13 @@ export class MultiplayerService {
   async getTable(ownerId: string): Promise<TableState | null> {
     const data = await this.redisService.get(this.tableKey(ownerId));
     if (!data) return null;
-    return JSON.parse(data) as TableState;
+    const table = JSON.parse(data) as TableState;
+    if (Array.isArray(table.participants) && table.participants.length === 0) {
+      await this.redisService.del(this.tableKey(ownerId));
+      this.logger.warn(`Pruned stale empty table ${this.tableKey(ownerId)}`);
+      return null;
+    }
+    return table;
   }
 
   async getTableOrThrow(ownerId: string): Promise<TableState> {
@@ -178,6 +184,11 @@ export class MultiplayerService {
           typeof parsed.maxPlayers === 'number' &&
           parsed.betAmount != null
         ) {
+          if (parsed.participants.length === 0) {
+            await this.redisService.del(key);
+            this.logger.warn(`Pruned empty table key ${key}`);
+            continue;
+          }
           if (!parsed.game) {
             parsed.game = this.defaultGame(parsed.participants);
           }

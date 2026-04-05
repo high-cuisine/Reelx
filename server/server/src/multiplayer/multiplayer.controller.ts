@@ -50,6 +50,7 @@ export class MultiplayerController {
       body.betAmount,
       body.maxPlayers,
     );
+    this.multiplayerGateway.trackUserAtTable(userId, userId);
     const table = await this.multiplayerService.enrichTable(raw);
     return { success: true, table };
   }
@@ -76,6 +77,7 @@ export class MultiplayerController {
     @CurrentUser() userId: string,
   ) {
     const raw = await this.multiplayerService.joinTable(ownerId, userId);
+    this.multiplayerGateway.trackUserAtTable(userId, ownerId);
     const table = await this.multiplayerService.enrichTable(raw);
     return { success: true, table };
   }
@@ -91,6 +93,7 @@ export class MultiplayerController {
     @CurrentUser() userId: string,
   ) {
     const updated = await this.multiplayerService.leaveTable(ownerId, userId);
+    this.multiplayerGateway.forgetUserTable(userId);
     if (!updated) {
       this.multiplayerGateway.notifyTableDeleted(ownerId);
       return { success: true, table: null, empty: true };

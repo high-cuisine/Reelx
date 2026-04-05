@@ -190,6 +190,19 @@ export class MultiplayerGateway
   // Public helpers (called from controller)
   // ---------------------------------------------------------------------------
 
+  /**
+   * HTTP create/join: игрок уже в Redis, но сокет join-table мог ещё не пройти —
+   * без записи в карте handleDisconnect не вызовет leave и стол «зависает» в списке.
+   */
+  trackUserAtTable(userId: string, ownerId: string) {
+    this.userTableMap.set(userId, ownerId);
+  }
+
+  /** HTTP leave или явный сброс привязки (сокет ещё жив). */
+  forgetUserTable(userId: string) {
+    this.userTableMap.delete(userId);
+  }
+
   /** Broadcast table-deleted event and remove all clients from the room */
   notifyTableDeleted(ownerId: string) {
     this.clearEliminationTimer(ownerId);

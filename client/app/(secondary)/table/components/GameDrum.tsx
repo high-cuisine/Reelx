@@ -139,6 +139,10 @@ export function GameDrum({
         return polarXY(R_AVATAR, midDeg);
     });
 
+    /** Указатель на верху; поворот вокруг центра к середине подсвеченного сектора (как на барабане). */
+    const pointerDeg =
+        litIndex != null && n > 0 ? (n === 1 ? 0 : (litIndex + 0.5) * (360 / n)) : 0;
+
     // ── Render ────────────────────────────────────────────────
     return (
         <div className={cls.drumWrap}>
@@ -264,9 +268,11 @@ export function GameDrum({
                 <circle cx={CX} cy={CY} r={R_OUTER - 0.5} fill="none" stroke="rgba(116,86,233,0.45)" strokeWidth="1.2" />
                 <circle cx={CX} cy={CY} r={R_OUTER - 1.5} fill="none" stroke="rgba(255,255,255,0.06)"  strokeWidth="0.8" />
 
-                {/* ── Pointer (Указатель) — fixed at top, points down ──── */}
-                <polygon points="103,49 113,49 108,62" fill="#ED6D6D" opacity="0.90" />
-                <polygon points="103,49 113,49 108,62" fill="rgba(255,255,255,0.40)" />
+                {/* ── Pointer — вращается к середине сектора с подсветкой (совпадает с «выбором») ─── */}
+                <g transform={`rotate(${pointerDeg} ${CX} ${CY})`}>
+                    <polygon points="103,49 113,49 108,62" fill="#F2C4C4" opacity="0.95" />
+                    <polygon points="103,49 113,49 108,62" fill="rgba(255,255,255,0.35)" />
+                </g>
 
                 {/* ── Centre circle (Табло) ──────────────────────────────── */}
                 <circle cx={CX} cy={CY} r={R_INNER} fill="url(#dg-center)" />
