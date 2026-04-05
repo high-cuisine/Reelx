@@ -59,7 +59,7 @@ export function TableVisual({
                 <div className={cls.wheel}>
                     <GameDrum
                         players={drumPlayers}
-                        centerText={centerText}
+                        centerText={eliminationFlashUserId ? '' : centerText}
                         highlightSectorIndex={highlightSectorIndex}
                         spinActive={spinActive}
                     />

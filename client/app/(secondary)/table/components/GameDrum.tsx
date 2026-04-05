@@ -273,11 +273,13 @@ export function GameDrum({
                 <circle cx={CX} cy={CY} r={R_INNER - 0.5} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
             </svg>
 
-            {/* Centre text overlay */}
+            {/* Centre text overlay — пусто во время вспышки крестика на столе */}
             <div className={cls.center}>
-                {centerText.split('\n').map((line, i) => (
-                    <span key={i} className={cls.centerLine}>{line}</span>
-                ))}
+                {centerText.trim()
+                    ? centerText.split('\n').map((line, i) => (
+                        <span key={i} className={cls.centerLine}>{line}</span>
+                    ))
+                    : null}
             </div>
         </div>
     );

@@ -81,7 +81,8 @@ export function tableDrumCenterText(table: TableState, game: TableGameState): st
         return `Готовность\n${r}/${need}`;
     }
     if (game.phase === 'playing') {
-        return game.round === 0 ? 'Старт' : `Раунд ${game.round}`;
+        // round на сервере — число завершённых исключений; текущий прокрут = следующий номер раунда
+        return `Раунд ${game.round + 1}`;
     }
     if (game.phase === 'finished' && game.winnerUserId) {
         const w = table.participants.find((p) => p.userId === game.winnerUserId);
