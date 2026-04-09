@@ -105,11 +105,15 @@ export const GiftImageOrLottie = ({
             return true;
         };
 
-        if (!hideBgLayers()) {
-            const t = setTimeout(hideBgLayers, 50);
-            return () => clearTimeout(t);
-        }
-    }, [lottieData, hideLottieBackground]);
+        if (hideBgLayers()) return;
+
+        // При remount (повтор по клику) svg может появиться чуть позже.
+        // Делаем несколько попыток, чтобы фон гарантированно скрывался в барабане.
+        const timeouts = [50, 120, 220].map((ms) => setTimeout(hideBgLayers, ms));
+        return () => {
+            timeouts.forEach((t) => clearTimeout(t));
+        };
+    }, [lottieData, hideLottieBackground, replayToken]);
 
     const sizeStyle = fillContainer
         ? { width: '100%', height: '100%' as const }
