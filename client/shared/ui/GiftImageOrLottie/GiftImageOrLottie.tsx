@@ -17,6 +17,8 @@ interface GiftImageOrLottieProps {
     fillContainer?: boolean;
     /** Скрывать фоновые слои в Lottie (первые два <g> после <defs>). Если не передан — фон не трогаем. */
     hideLottieBackground?: boolean;
+    /** Зацикливать анимацию (по умолчанию да). */
+    loop?: boolean;
     className?: string;
     imageClassName?: string;
     placeholder?: React.ReactNode;
@@ -33,6 +35,7 @@ export const GiftImageOrLottie = ({
     height = 0,
     fillContainer = false,
     hideLottieBackground,
+    loop = true,
     className,
     imageClassName,
     placeholder,
@@ -75,6 +78,28 @@ export const GiftImageOrLottie = ({
             if (!container) return;
             const svg = container.querySelector('svg');
             if (!svg) return false;
+
+            // 1) Частый случай: фон — это прямоугольник на весь viewBox.
+            // Прячем такие rect'ы, чтобы у лотти оставалась прозрачность.
+            const viewBox = svg.getAttribute('viewBox');
+            if (viewBox) {
+                const parts = viewBox.split(/\s+/).map((p) => Number(p));
+                const vbW = parts.length === 4 ? parts[2] : null;
+                const vbH = parts.length === 4 ? parts[3] : null;
+                if (vbW && vbH) {
+                    const rects = Array.from(svg.querySelectorAll('rect'));
+                    rects.forEach((r) => {
+                        const w = Number(r.getAttribute('width'));
+                        const h = Number(r.getAttribute('height'));
+                        const x = Number(r.getAttribute('x') ?? '0');
+                        const y = Number(r.getAttribute('y') ?? '0');
+                        const hasStroke = r.getAttribute('stroke') && r.getAttribute('stroke') !== 'none';
+                        if (!hasStroke && x === 0 && y === 0 && w === vbW && h === vbH) {
+                            (r as unknown as SVGElement).style.display = 'none';
+                        }
+                    });
+                }
+            }
 
             let pastDefs = false;
             let wrapperG: Element | null = null;
@@ -131,7 +156,7 @@ export const GiftImageOrLottie = ({
                 <Lottie
                     key={playId}
                     animationData={lottieData}
-                    loop={false}
+                    loop={loop}
                     style={sizeStyle}
                 />
             </div>

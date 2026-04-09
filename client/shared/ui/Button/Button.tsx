@@ -1,17 +1,38 @@
 'use client'
-import { useState } from 'react';
 import cls from './Button.module.scss';
 
 interface ButtonProps {
     text: string;
-    customClass?:string
+    customClass?: string
+    disabled?: boolean
+    loading?: boolean
+    loadingText?: string
+    onClick?: React.MouseEventHandler<HTMLButtonElement>
+    type?: 'button' | 'submit' | 'reset'
 }
 
-const Button = ({text, customClass}:ButtonProps) => {
+const Button = ({
+    text,
+    customClass,
+    disabled,
+    loading,
+    loadingText,
+    onClick,
+    type = 'button',
+}: ButtonProps) => {
+    const isDisabled = Boolean(disabled || loading);
 
-    return(
-        <button className={`${cls.button} ${customClass}`}>{text}</button>
-    )
+    return (
+        <button
+            type={type}
+            className={`${cls.button} ${customClass ?? ''}`}
+            onClick={onClick}
+            disabled={isDisabled}
+            aria-disabled={isDisabled}
+        >
+            {loading ? (loadingText ?? 'Загрузка...') : text}
+        </button>
+    );
 }
 
 export { Button }

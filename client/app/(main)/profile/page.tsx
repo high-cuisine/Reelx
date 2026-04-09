@@ -12,17 +12,47 @@ import copyImage from '@/assets/copyId.svg'
 import { useUserStore } from '@/entites/user/model/user';
 import { copyToClipboard } from '@/shared/lib/helpers/copyToClipboard';
 import { useUserTotalWon } from './hooks/useUserTotalWon';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 const ProfilePage = () => {
     const { username, usernameInitial, photoUrl } = useTelegram();
     const { user, games } = useUserStore();
     const { tonBalance, setGames } = useUserTotalWon();
+    const [idCopied, setIdCopied] = useState(false);
+    const copiedTimeoutRef = useRef<number | null>(null);
 
     useEffect(() => {
         setGames(games ?? []);
     }, [games, setGames]);
 
+    useEffect(() => {
+        return () => {
+            if (copiedTimeoutRef.current !== null) {
+                window.clearTimeout(copiedTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    const fullUserId = user?.userId ?? '';
+    const shortUserId = useMemo(() => {
+        if (!fullUserId) return '';
+        return `${fullUserId.slice(0, 5)}...`;
+    }, [fullUserId]);
+
+    const handleCopyUserId = async () => {
+        if (!fullUserId) return;
+        const ok = await copyToClipboard(fullUserId);
+        if (!ok) return;
+
+        setIdCopied(true);
+        if (copiedTimeoutRef.current !== null) {
+            window.clearTimeout(copiedTimeoutRef.current);
+        }
+        copiedTimeoutRef.current = window.setTimeout(() => {
+            setIdCopied(false);
+            copiedTimeoutRef.current = null;
+        }, 2000);
+    };
 
   return (
     <div className={cls.profile}>
@@ -53,8 +83,19 @@ const ProfilePage = () => {
         
        
         <span className={cls.name}>{username || usernameInitial}</span>
-        <span className={cls.userId} onClick={() => copyToClipboard(user?.userId || '')}>
-            <span>User ID {user?.userId}</span>
+        <span
+            className={cls.userId}
+            onClick={handleCopyUserId}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    void handleCopyUserId();
+                }
+            }}
+        >
+            <span>{idCopied ? 'copied' : `User ID ${shortUserId}`}</span>
             <Image src={copyImage} alt='' height={10} width={8.6}></Image>
         </span>
 

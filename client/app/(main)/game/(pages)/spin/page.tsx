@@ -23,11 +23,29 @@ export default function SpinPage() {
         onSpinComplete,
         targetIndex,
         mode,
+        moneyWinToast,
+        clearMoneyWinToast,
     } = useSpinPage();
 
     return (
         <div className={cls.container}>
             <div className={cls.spinPage}>
+                {moneyWinToast && (
+                    <div
+                        className={`${cls.toast} ${
+                            moneyWinToast.currency === 'ton' ? cls.toastTon : cls.toastStars
+                        }`}
+                        role="status"
+                        aria-live="polite"
+                        onClick={clearMoneyWinToast}
+                    >
+                        <div className={cls.toastTitle}>Выигрыш</div>
+                        <div className={cls.toastText}>
+                            Вы выиграли {moneyWinToast.amount}{' '}
+                            {moneyWinToast.currency === 'ton' ? 'TON' : 'STARS'}
+                        </div>
+                    </div>
+                )}
                 <div className={cls.spinContainer}>
                     <Wheel 
                         items={wheelItems}

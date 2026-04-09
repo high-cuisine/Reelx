@@ -6,10 +6,11 @@ import playCls from './TablePlayButton.module.scss';
 
 type Props = {
     action: TablePrimaryActionModel;
-    onReady: () => void;
+    onReady: () => void | Promise<void>;
+    pending?: boolean;
 };
 
-export function TablePrimaryAction({ action, onReady }: Props) {
+export function TablePrimaryAction({ action, onReady, pending }: Props) {
     if (action.kind === 'login_hint') {
         return <p className={cls.actionHint}>Войдите в аккаунт</p>;
     }
@@ -21,8 +22,13 @@ export function TablePrimaryAction({ action, onReady }: Props) {
         );
     }
     return (
-        <button type="button" className={playCls.playButton} onClick={onReady}>
-            Готов
+        <button
+            type="button"
+            className={playCls.playButton}
+            onClick={onReady}
+            disabled={pending}
+        >
+            {pending ? 'Ожидание...' : 'Готов'}
         </button>
     );
 }

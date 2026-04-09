@@ -1,5 +1,5 @@
 'use client'
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import Image from 'next/image';
 import cls from './Bets.module.scss';
 import starIcon from '@/assets/star.svg';
@@ -14,7 +14,7 @@ interface WheelItem {
     lottie?: string;
 }
 
-interface BetsProps {
+export interface BetsProps {
     rolls: number;
     pricePerRoll: number;
     totalPrice: number;
@@ -28,10 +28,10 @@ interface BetsProps {
     onToggleCurrency: () => void;
     onIncreaseRolls: () => void;
     onDecreaseRolls: () => void;
-    onPlay: () => void;
+    onPlay: () => void | Promise<void>;
 }
 
-const Bets = ({ 
+const Bets: React.FC<BetsProps> = ({ 
     rolls,
     pricePerRoll,
     totalPrice,
@@ -46,17 +46,23 @@ const Bets = ({
     onIncreaseRolls,
     onDecreaseRolls,
     onPlay,
-}: BetsProps) => {
+}) => {
     const playLockRef = useRef(false);
+    const [isAwaitingServer, setIsAwaitingServer] = useState(false);
 
     useEffect(() => {
-        if (!isSpinning) playLockRef.current = false;
-    }, [isSpinning]);
+        if (!isSpinning && !isAwaitingServer) playLockRef.current = false;
+    }, [isSpinning, isAwaitingServer]);
 
-    const handlePlay = () => {
-        if (isSpinning || !canPlay || playLockRef.current) return;
+    const handlePlay = async () => {
+        if (isSpinning || isAwaitingServer || !canPlay || playLockRef.current) return;
         playLockRef.current = true;
-        onPlay();
+        try {
+            setIsAwaitingServer(true);
+            await onPlay();
+        } finally {
+            setIsAwaitingServer(false);
+        }
     };
 
     const handleGiftClick = () => {
@@ -98,7 +104,7 @@ const Bets = ({
                     <button 
                         className={`${cls.iconButton} ${cls.currencyButton}`} 
                         onClick={onToggleCurrency}
-                        disabled={isSpinning}
+                        disabled={isSpinning || isAwaitingServer}
                         title={`Переключить на ${currency === 'stars' ? 'TON' : 'STARS'}`}
                     >
                         {renderCurrencyIcon()}
@@ -120,7 +126,7 @@ const Bets = ({
                     <button 
                         className={cls.controlButton}
                         onClick={onDecreaseRolls}
-                        disabled={isSpinning || totalPrice <= minStake}
+                        disabled={isSpinning || isAwaitingServer || totalPrice <= minStake}
                     >
                         <span className={cls.minus}>−</span>
                     </button>
@@ -130,13 +136,13 @@ const Bets = ({
                     <button 
                         className={cls.controlButton}
                         onClick={onIncreaseRolls}
-                        disabled={isSpinning}
+                        disabled={isSpinning || isAwaitingServer}
                     >
                         <span className={cls.plus}>+</span>
                     </button>
                 </div>
 
-                <button className={cls.giftButton} onClick={handleGiftClick}>
+                <button className={cls.giftButton} onClick={handleGiftClick} disabled={isAwaitingServer}>
                     <svg 
                         width="24" 
                         height="24" 
@@ -162,11 +168,11 @@ const Bets = ({
 
             <div
                 onClick={handlePlay}
-                style={isSpinning ? { pointerEvents: 'none', cursor: 'not-allowed' } : undefined}
+                style={(isSpinning || isAwaitingServer) ? { pointerEvents: 'none', cursor: 'not-allowed' } : undefined}
             >
                 <Button
-                    text={isSpinning ? 'Крутится...' : 'Играть'}
-                    customClass={!canPlay || isSpinning ? cls.disabled : ''}
+                    text={isSpinning ? 'Крутится...' : (isAwaitingServer ? 'Ожидайте' : 'Играть')}
+                    customClass={!canPlay || isSpinning || isAwaitingServer ? cls.disabled : ''}
                 />
             </div>
         </div>

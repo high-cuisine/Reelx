@@ -6,12 +6,23 @@ import { useMinPrice } from './useMinPrice';
 import { getModeByTon } from '../helpers/getMode.helper';
 import { useUserStore } from '@/entites/user/model/user';
 import { updateUserBalance } from '@/features/user/user';
+import { useEffect, useState } from 'react';
 
 export const useSpinPage = () => {
     const { currency, toggleCurrency } = useCurrency();
     const { startGame, handleGameComplete } = useGameResult();
     const { user } = useUserStore();
     const { minStakeTon, stepTon, minStakeStars, stepStars } = useMinPrice();
+    const [moneyWinToast, setMoneyWinToast] = useState<{
+        currency: 'ton' | 'stars';
+        amount: number;
+    } | null>(null);
+
+    useEffect(() => {
+        if (!moneyWinToast) return;
+        const t = setTimeout(() => setMoneyWinToast(null), 3500);
+        return () => clearTimeout(t);
+    }, [moneyWinToast]);
 
     const minStake = currency === 'ton' ? minStakeTon : minStakeStars;
     const step = currency === 'ton' ? stepTon : stepStars;
@@ -34,7 +45,17 @@ export const useSpinPage = () => {
             step,
             giftCount: 1,
         },
-        (result) => handleGameComplete(result, currency)
+        (result) => {
+            const isMoneyWin = result.selectedItem.name === 'TON' || result.selectedItem.name === 'STARS';
+            if (isMoneyWin) {
+                const amount = result.selectedItem.price ?? 0;
+                const winCurrency = result.selectedItem.name === 'TON' ? 'ton' : 'stars';
+                if (amount > 0) {
+                    setMoneyWinToast({ currency: winCurrency, amount });
+                }
+            }
+            handleGameComplete(result, currency);
+        }
     );
 
     const { wheelItems, isLoadingGifts } = useGifts(currency, totalPrice);
@@ -73,13 +94,15 @@ export const useSpinPage = () => {
             return;
         }
 
-        handlePlayInternal(wheelItems, startGame);
+        const p = handlePlayInternal(wheelItems, startGame);
 
         // Локально уменьшаем баланс пользователя, чтобы Header сразу обновился
         updateUserBalance(
             -totalPrice,
             currency === 'stars' ? 'stars' : 'ton',
         );
+
+        return p;
     };
 
     return {
@@ -100,5 +123,7 @@ export const useSpinPage = () => {
         onSpinComplete,
         targetIndex,
         mode,
+        moneyWinToast,
+        clearMoneyWinToast: () => setMoneyWinToast(null),
     };
 };

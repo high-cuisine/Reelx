@@ -28,7 +28,8 @@ export interface UseTableSocketOptions {
 export interface UseTableSocketResult {
     connected: boolean;
     socketError: string | null;
-    emitGameReady: () => void;
+    emitGameReady: () => Promise<void>;
+    leaveTableNow: () => Promise<void>;
 }
 
 /**
@@ -48,6 +49,7 @@ export function useTableSocket({
     const onTableDeletedRef = useRef(onTableDeleted);
     const onGameReadyErrorRef = useRef(onGameReadyError);
     const socketRef = useRef<Socket | null>(null);
+    const manualLeftRef = useRef(false);
     useLayoutEffect(() => {
         onTableRef.current = onTable;
         onTableDeletedRef.current = onTableDeleted;
@@ -65,16 +67,33 @@ export function useTableSocket({
         });
     }, []);
 
-    const emitGameReady = useCallback(() => {
+    const emitGameReady = useCallback((): Promise<void> => {
         const socket = socketRef.current;
-        if (!ownerId || !socket?.connected) return;
-        socket.emit('game-ready', { ownerId }, (ack: GameReadyAck) => {
-            if (ack?.success && ack.table) {
-                onTableRef.current(ack.table);
-            } else if (ack && 'success' in ack && !ack.success) {
-                onGameReadyErrorRef.current?.(ack.error ?? 'Не удалось подтвердить готовность');
-            }
+        if (!ownerId || !socket?.connected) return Promise.resolve();
+        return new Promise((resolve) => {
+            socket.emit('game-ready', { ownerId }, (ack: GameReadyAck) => {
+                if (ack?.success && ack.table) {
+                    onTableRef.current(ack.table);
+                } else if (ack && 'success' in ack && !ack.success) {
+                    onGameReadyErrorRef.current?.(ack.error ?? 'Не удалось подтвердить готовность');
+                }
+                resolve();
+            });
         });
+    }, [ownerId]);
+
+    const leaveTableNow = useCallback(async (): Promise<void> => {
+        const socket = socketRef.current;
+        if (!ownerId) return;
+        manualLeftRef.current = true;
+        if (socket?.connected) {
+            await new Promise<void>((resolve) => {
+                socket.emit('leave-table', { ownerId }, () => resolve());
+            });
+        }
+        socket?.disconnect();
+        socketRef.current = null;
+        setConnected(false);
     }, [ownerId]);
 
     useEffect(() => {
@@ -137,14 +156,16 @@ export function useTableSocket({
             socket.off('table-deleted', handleTableDeleted);
             socket.off('connect_error', handleConnectError);
 
-            if (socket.connected) {
-                socket.emit('leave-table', { ownerId });
+            if (!manualLeftRef.current) {
+                if (socket.connected) {
+                    socket.emit('leave-table', { ownerId });
+                }
+                void multiplayerService.leaveTable(ownerId).catch(() => {});
             }
-            void multiplayerService.leaveTable(ownerId).catch(() => {});
             socket.disconnect();
             socketRef.current = null;
         };
     }, [ownerId, joinTable]);
 
-    return { connected, socketError, emitGameReady };
+    return { connected, socketError, emitGameReady, leaveTableNow };
 }

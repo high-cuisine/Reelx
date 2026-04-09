@@ -28,6 +28,7 @@ const DepositPage = () => {
   } = useDeposit();
 
   const isDisabled = isProcessing || tonLoading || insufficientBalance;
+  const isSubmitLoading = isProcessing || tonLoading;
 
   return (
     <div className={cls.deposit}>
@@ -46,39 +47,33 @@ const DepositPage = () => {
 
       <DepositAmountInput activeCard={activeCard} value={inputValue} onChange={setInputValue} />
 
-      <DepositPresetButtons amounts={presetAmounts} onSelect={setInputValue} />
+      <DepositPresetButtons amounts={presetAmounts} onSelect={setInputValue} disabled={isSubmitLoading} />
 
       {!walletConnected && (
-        <div
-          style={{ marginBottom: '10px' }}
-          onClick={() => {
-            if (!isDisabled) {
-              handleConnectWallet();
-            }
-          }}
-        >
-          <Button customClass={cls.depositButton} text="Подключить TON кошелёк" />
+        <div style={{ marginBottom: '10px' }}>
+          <Button
+            customClass={cls.depositButton}
+            text="Подключить TON кошелёк"
+            onClick={() => {
+              if (!isDisabled) handleConnectWallet();
+            }}
+            disabled={isDisabled}
+          />
         </div>
       )}
 
       {/* Кнопка пополнения скрыта, пока кошелёк не подключен */}
       {walletConnected && (
-        <div
+        <Button
+          customClass={cls.depositButton}
+          text={`Пополнить на ${inputValue} ${activeCard.item}`}
+          loading={isSubmitLoading}
+          loadingText="Ожидание..."
+          disabled={isDisabled}
           onClick={() => {
-            if (!isDisabled) {
-              handleSubmit();
-            }
+            if (!isDisabled) handleSubmit();
           }}
-          style={{
-            opacity: isDisabled ? 0.6 : 1,
-            cursor: isDisabled ? 'not-allowed' : 'pointer',
-          }}
-        >
-          <Button
-            customClass={cls.depositButton}
-            text={`Пополнить на ${inputValue} ${activeCard.item}`}
-          />
-        </div>
+        />
       )}
 
       {walletConnected && walletDisplayAddress && (

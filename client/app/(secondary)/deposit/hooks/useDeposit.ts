@@ -154,11 +154,17 @@ export const useDeposit = (): UseDepositReturn => {
     const type: DepositCurrencyType = activeCard.type;
 
     if (type === 'stars') {
-      await handlePayment(amount, 'stars');
+      if (isProcessing) return;
+      try {
+        setIsProcessing(true);
+        await handlePayment(amount, 'stars');
+      } finally {
+        setIsProcessing(false);
+      }
     } else if (type === 'ton') {
       await handleTonDeposit(amount);
     }
-  }, [activeCard.type, handlePayment, handleTonDeposit, inputValue]);
+  }, [activeCard.type, handlePayment, handleTonDeposit, inputValue, isProcessing]);
 
   return {
     cards: DEPOSIT_CARDS,

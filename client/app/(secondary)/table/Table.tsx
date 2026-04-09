@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/entites/user/model/user';
 import { copyOwnerIdToClipboard, formatOwnerHashShort, formatTableGameId } from './helpers/ownerDisplay';
 import { useEliminationFlash } from './hooks/useEliminationFlash';
@@ -17,15 +19,18 @@ import cls from './Table.module.scss';
 import {
     TableInfo,
     TablePageFallback,
-    TablePrimaryAction,
     TableVisual,
 } from './components';
+import { TablePrimaryAction } from './components/TablePrimaryAction';
 
 export default function TablePage() {
+    const router = useRouter();
     const ownerId = useTableOwnerId();
     const myUserId = useUserStore((s) => s.user?.userId ?? null);
+    const [readyPending, setReadyPending] = useState(false);
+    const [exitPending, setExitPending] = useState(false);
 
-    const { table, loadError, bootLoading, readyErr, emitGameReady, clearReadyErr } =
+    const { table, loadError, bootLoading, readyErr, emitGameReady, leaveTableNow, clearReadyErr } =
         useTableLiveData(ownerId);
 
     const { players, game, drumPlayers, eliminatedUserIds, centerText, uiCurrency } =
@@ -55,9 +60,29 @@ export default function TablePage() {
     const gameId = formatTableGameId(ownerId);
     const hashShort = formatOwnerHashShort(ownerId);
 
-    const handleReady = () => {
+    const handleReady = async () => {
+        if (readyPending) return;
         clearReadyErr();
-        emitGameReady();
+        try {
+            setReadyPending(true);
+            await emitGameReady();
+        } finally {
+            setReadyPending(false);
+        }
+    };
+
+    const gamePhase = game?.phase ?? null;
+    const showExitButton = gamePhase === 'lobby' || gamePhase === 'round_break';
+
+    const handleExit = async () => {
+        if (exitPending) return;
+        try {
+            setExitPending(true);
+            await leaveTableNow();
+        } finally {
+            setExitPending(false);
+            router.push('/game');
+        }
     };
 
     if (!ownerId) {
@@ -74,6 +99,16 @@ export default function TablePage() {
 
     return (
         <div className={cls.page}>
+            {showExitButton && (
+                <button
+                    type="button"
+                    className={cls.exitButton}
+                    onClick={handleExit}
+                    disabled={exitPending}
+                >
+                    {exitPending ? 'Выходим…' : 'Выйти'}
+                </button>
+            )}
             <TableVisual
                 seatPlayers={players}
                 drumPlayers={drumPlayers}
@@ -87,7 +122,7 @@ export default function TablePage() {
 
             {readyErr && <p className={cls.readyError}>{readyErr}</p>}
             {primaryAction && (
-                <TablePrimaryAction action={primaryAction} onReady={handleReady} />
+                <TablePrimaryAction action={primaryAction} onReady={handleReady} pending={readyPending} />
             )}
 
             <TableInfo

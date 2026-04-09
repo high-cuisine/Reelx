@@ -12,6 +12,29 @@ $felt: #24194d;
     padding-top: 6vh;
 }
 
+.exitButton {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 30;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(36, 25, 77, 0.72);
+    color: rgba(255, 255, 255, 0.92);
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: opacity 120ms ease;
+
+    &:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+}
+
 .fallbackText {
     margin: 24px 20px 12px;
     font-family: 'Montserrat', sans-serif;

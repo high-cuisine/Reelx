@@ -48,7 +48,7 @@ export function useTableLiveData(ownerId: string | null) {
         void fetchTable();
     }, [ownerId, fetchTable]);
 
-    const { connected: socketConnected, emitGameReady } = useTableSocket({
+    const { connected: socketConnected, emitGameReady, leaveTableNow } = useTableSocket({
         ownerId,
         onTable: setTable,
         onTableDeleted: () => {
@@ -70,6 +70,8 @@ export function useTableLiveData(ownerId: string | null) {
         bootLoading,
         readyErr,
         emitGameReady,
+        leaveTableNow,
+        socketConnected,
         clearReadyErr,
     };
 }
