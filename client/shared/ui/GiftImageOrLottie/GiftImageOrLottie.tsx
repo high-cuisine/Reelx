@@ -35,24 +35,29 @@ export const GiftImageOrLottie = ({
     height = 0,
     fillContainer = false,
     hideLottieBackground,
-    loop = true,
+    loop = false,
     className,
     imageClassName,
     placeholder,
 }: GiftImageOrLottieProps) => {
     const [lottieData, setLottieData] = useState<object | null>(null);
+    const [replayToken, setReplayToken] = useState(0);
     const lottieContainerRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         if (!lottieUrl) {
             setLottieData(null);
+            setReplayToken(0);
             return;
         }
         let cancelled = false;
         fetch(lottieUrl)
             .then((r) => r.json())
             .then((data) => {
-                if (!cancelled) setLottieData(data);
+                if (!cancelled) {
+                    setLottieData(data);
+                    setReplayToken(0);
+                }
             })
             .catch(() => {
                 if (!cancelled) setLottieData(null);
@@ -118,12 +123,22 @@ export const GiftImageOrLottie = ({
                 ref={lottieContainerRef}
                 className={`${cls.lottieWrap} ${fillContainer ? cls.fillContainer : ''} ${className ?? ''}`}
                 style={sizeStyle}
+                onClick={() => {
+                    if (!loop) {
+                        // Remount Lottie to replay once from start.
+                        setReplayToken((prev) => prev + 1);
+                    }
+                }}
             >
                 <Lottie
+                    key={`${lottieUrl ?? 'lottie'}-${replayToken}`}
                     animationData={lottieData}
                     loop={loop}
                     autoplay
-                    style={sizeStyle}
+                    style={{
+                        ...sizeStyle,
+                        cursor: loop ? 'default' : 'pointer',
+                    }}
                 />
             </div>
         );
