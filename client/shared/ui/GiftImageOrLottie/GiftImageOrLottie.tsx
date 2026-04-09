@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image, { StaticImageData } from 'next/image';
 import dynamic from 'next/dynamic';
 import cls from './GiftImageOrLottie.module.scss';
@@ -42,7 +42,6 @@ export const GiftImageOrLottie = ({
 }: GiftImageOrLottieProps) => {
     const [lottieData, setLottieData] = useState<object | null>(null);
     const lottieContainerRef = useRef<HTMLDivElement | null>(null);
-    const [playId, setPlayId] = useState(0);
 
     useEffect(() => {
         if (!lottieUrl) {
@@ -63,14 +62,8 @@ export const GiftImageOrLottie = ({
         };
     }, [lottieUrl]);
 
-    useEffect(() => {
-        if (!lottieData) return;
-        setPlayId((v) => v + 1);
-    }, [lottieData]);
-
-    // Убираем фоновые слои из SVG, которые lottie-react рендерит.
-    // Нужно перезапускать после каждого remount (playId), потому что
-    // key={playId} пересоздаёт DOM и старые скрытия теряются.
+    // Хак: для Lottie (фрагменты подарков) по флагу убираем фон:
+    // берём первый <g>, который идёт после <defs>, и скрываем первые два его дочерних <g>.
     useEffect(() => {
         if (hideLottieBackground !== true || !lottieData || !lottieContainerRef.current) return;
 
@@ -80,63 +73,38 @@ export const GiftImageOrLottie = ({
             const svg = container.querySelector('svg');
             if (!svg) return false;
 
-            let found = false;
+            let pastDefs = false;
+            let wrapperG: Element | null = null;
 
-            // 1) rect на весь viewBox — частый вариант подложки
-            const viewBox = svg.getAttribute('viewBox');
-            if (viewBox) {
-                const parts = viewBox.split(/\s+/).map((p) => Number(p));
-                const vbW = parts.length === 4 ? parts[2] : null;
-                const vbH = parts.length === 4 ? parts[3] : null;
-                if (vbW && vbH) {
-                    Array.from(svg.querySelectorAll('rect')).forEach((r) => {
-                        const w = Number(r.getAttribute('width'));
-                        const h = Number(r.getAttribute('height'));
-                        const x = Number(r.getAttribute('x') ?? '0');
-                        const y = Number(r.getAttribute('y') ?? '0');
-                        const hasStroke = r.getAttribute('stroke') && r.getAttribute('stroke') !== 'none';
-                        if (!hasStroke && x === 0 && y === 0 && w === vbW && h === vbH) {
-                            (r as unknown as SVGElement).style.display = 'none';
-                            found = true;
-                        }
-                    });
+            for (const child of Array.from(svg.children)) {
+                if (child.tagName.toLowerCase() === 'defs') {
+                    pastDefs = true;
+                    continue;
+                }
+                if (pastDefs && child.tagName.toLowerCase() === 'g') {
+                    wrapperG = child;
+                    break;
                 }
             }
 
-            // 2) Находим первый <g> после <defs>, внутри него скрываем первые 2 дочерних <g>.
-            // Структура: <svg> → <defs/> → <g clip-path> → [<g фон1>, <g фон2>, <g контент>...]
-            let firstGAfterDefs: Element | null = null;
-            let pastDefs = false;
-            for (const child of Array.from(svg.children)) {
-                const tag = child.tagName.toLowerCase();
-                if (tag === 'defs') { pastDefs = true; continue; }
-                if (pastDefs && tag === 'g') { firstGAfterDefs = child; break; }
-            }
-            if (firstGAfterDefs) {
-                const childGs = Array.from(firstGAfterDefs.children).filter(
-                    (el) => el.tagName.toLowerCase() === 'g',
-                );
-                childGs.slice(0, 2).forEach((g) => {
-                    (g as unknown as SVGElement).style.display = 'none';
-                });
-                found = true;
-            }
+            if (!wrapperG) return false;
 
-            return found;
+            const childGs = Array.from(wrapperG.children).filter(
+                (el) => el.tagName.toLowerCase() === 'g',
+            );
+
+            childGs.slice(0, 2).forEach((g) => {
+                (g as unknown as SVGElement).style.display = 'none';
+            });
+
+            return true;
         };
 
-        // SVG может ещё не появиться в DOM — пробуем несколько раз
-        let attempts = 0;
-        const maxAttempts = 10;
-        const tryHide = () => {
-            if (hideBgLayers()) return;
-            attempts++;
-            if (attempts < maxAttempts) {
-                requestAnimationFrame(tryHide);
-            }
-        };
-        requestAnimationFrame(tryHide);
-    }, [lottieData, hideLottieBackground, playId]);
+        if (!hideBgLayers()) {
+            const t = setTimeout(hideBgLayers, 50);
+            return () => clearTimeout(t);
+        }
+    }, [lottieData, hideLottieBackground]);
 
     const sizeStyle = fillContainer
         ? { width: '100%', height: '100%' as const }
@@ -144,21 +112,14 @@ export const GiftImageOrLottie = ({
           ? { width: '18vw', height: '18vw' as const }
           : { width: 56, height: 56 };
 
-    const handleReplay = useCallback(() => {
-        if (!lottieData) return;
-        setPlayId((v) => v + 1);
-    }, [lottieData]);
-
     if (lottieData) {
         return (
             <div
                 ref={lottieContainerRef}
                 className={`${cls.lottieWrap} ${fillContainer ? cls.fillContainer : ''} ${className ?? ''}`}
                 style={sizeStyle}
-                onClick={loop ? undefined : handleReplay}
             >
                 <Lottie
-                    key={playId}
                     animationData={lottieData}
                     loop={loop}
                     autoplay

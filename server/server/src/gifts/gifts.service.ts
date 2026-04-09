@@ -150,14 +150,13 @@ export class GiftsService {
     let originalGifts: any[] = [];
 
     // Правила формирования слотов:
-    // 1) amount <= 5: 4 подарка + no-loot, при этом вероятность:
-    //    4 * 5% (подарки) + 80% (no-loot) — реализуем через 20 слотов:
-    //    4 подарка по 1 слоту и 16 слотов no-loot
+    // 1) amount <= 5: больше подарков при мелкой ставке
+    //    (до 6 уникальных подарков и 60% gift-слотов / 40% no-loot)
     // 2) 10 <= amount < 20: 10 игрушек по 10% (10 слотов, без no-loot)
     // 3) остальное — старая логика (getCountGifts)
 
     if (amount <= 5) {
-      const maxGifts = Math.min(4, allRawGifts.length);
+      const maxGifts = Math.min(6, allRawGifts.length);
       originalGifts = allRawGifts.slice(0, maxGifts);
 
       if (onOriginalData) {
@@ -169,9 +168,9 @@ export class GiftsService {
       );
 
       const totalSlots = 20;
-      const noLootShare = 0.6; // 60% слотов — no-loot
-      const noLootSlotsCount = Math.round(totalSlots * noLootShare); // 12 из 20
-      let giftSlotsToDistribute = Math.max(0, totalSlots - noLootSlotsCount); // оставшиеся 8 слотов под подарки
+      const noLootShare = 0.4; // 40% слотов — no-loot
+      const noLootSlotsCount = Math.round(totalSlots * noLootShare); // 8 из 20
+      const giftSlotsToDistribute = Math.max(0, totalSlots - noLootSlotsCount); // 12 слотов под подарки
 
       const slots: any[] = [];
 
@@ -204,7 +203,7 @@ export class GiftsService {
         }
       });
 
-      // Добавляем no-loot слоты (60% от барабана)
+      // Добавляем no-loot слоты (40% от барабана)
       for (let i = 0; i < noLootSlotsCount; i++) {
         slots.push({
           type: 'no-loot',
