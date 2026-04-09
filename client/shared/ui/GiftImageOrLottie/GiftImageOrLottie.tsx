@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Image, { StaticImageData } from 'next/image';
 import dynamic from 'next/dynamic';
 import cls from './GiftImageOrLottie.module.scss';
@@ -39,6 +39,7 @@ export const GiftImageOrLottie = ({
 }: GiftImageOrLottieProps) => {
     const [lottieData, setLottieData] = useState<object | null>(null);
     const lottieContainerRef = useRef<HTMLDivElement | null>(null);
+    const [playId, setPlayId] = useState(0);
 
     useEffect(() => {
         if (!lottieUrl) {
@@ -58,6 +59,11 @@ export const GiftImageOrLottie = ({
             cancelled = true;
         };
     }, [lottieUrl]);
+
+    useEffect(() => {
+        if (!lottieData) return;
+        setPlayId((v) => v + 1);
+    }, [lottieData]);
 
     // Хак: для Lottie (фрагменты подарков) по флагу убираем фон:
     // берём первый <g>, который идёт после <defs>, и скрываем первые два его дочерних <g>.
@@ -109,16 +115,23 @@ export const GiftImageOrLottie = ({
           ? { width: '18vw', height: '18vw' as const }
           : { width: 56, height: 56 };
 
+    const handleReplay = useCallback(() => {
+        if (!lottieData) return;
+        setPlayId((v) => v + 1);
+    }, [lottieData]);
+
     if (lottieData) {
         return (
             <div
                 ref={lottieContainerRef}
                 className={`${cls.lottieWrap} ${fillContainer ? cls.fillContainer : ''} ${className ?? ''}`}
                 style={sizeStyle}
+                onClick={handleReplay}
             >
                 <Lottie
+                    key={playId}
                     animationData={lottieData}
-                    loop
+                    loop={false}
                     style={sizeStyle}
                 />
             </div>

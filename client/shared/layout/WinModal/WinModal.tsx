@@ -38,6 +38,7 @@ const WinModal = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [winData, setWinData] = useState<WinData | null>(null);
     const [lottieData, setLottieData] = useState<object | null>(null);
+    const [playId, setPlayId] = useState(0);
     const [isSelling, setIsSelling] = useState(false);
     const [sellError, setSellError] = useState<string | null>(null);
     const isProfile = pathname?.includes('/profile') ?? false;
@@ -66,6 +67,11 @@ const WinModal = () => {
             cancelled = true;
         };
     }, [isOpen, winData?.selectedItem?.lottie]);
+
+    useEffect(() => {
+        if (!lottieData) return;
+        setPlayId((v) => v + 1);
+    }, [lottieData]);
 
     useEffect(() => {
         const handleOpenModal = (data: WinData) => {
@@ -157,10 +163,15 @@ const WinModal = () => {
                 {!isNoLoot ? (
                     <>
                         {lottieData ? (
-                            <div className={cls.lottieWrap}>
+                            <div
+                                className={cls.lottieWrap}
+                                onClick={() => setPlayId((v) => v + 1)}
+                                style={{ cursor: 'pointer' }}
+                            >
                                 <Lottie
+                                    key={playId}
                                     animationData={lottieData}
-                                    loop
+                                    loop={false}
                                     style={{ width: 167, height: 191 }}
                                 />
                             </div>
