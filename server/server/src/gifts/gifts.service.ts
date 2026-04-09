@@ -151,12 +151,12 @@ export class GiftsService {
 
     // Правила формирования слотов:
     // 1) amount <= 5: больше подарков при мелкой ставке
-    //    (до 6 уникальных подарков и 60% gift-слотов / 40% no-loot)
+    //    (до 7 уникальных подарков и 60% gift-слотов / 40% no-loot)
     // 2) 10 <= amount < 20: 10 игрушек по 10% (10 слотов, без no-loot)
     // 3) остальное — старая логика (getCountGifts)
 
     if (amount <= 5) {
-      const maxGifts = Math.min(6, allRawGifts.length);
+      const maxGifts = Math.min(7, allRawGifts.length);
       originalGifts = allRawGifts.slice(0, maxGifts);
 
       if (onOriginalData) {

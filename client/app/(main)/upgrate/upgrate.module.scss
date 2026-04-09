@@ -20,6 +20,51 @@
     z-index: 0;
 }
 
+.toast {
+    position: fixed;
+    left: 50%;
+    top: 18px;
+    transform: translateX(-50%);
+    z-index: 1000;
+    width: min(520px, calc(100vw - 24px));
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+    animation: toastIn 180ms ease-out;
+}
+
+.toastTitle {
+    font-size: 13px;
+    font-weight: 700;
+    opacity: 0.95;
+    margin-bottom: 4px;
+}
+
+.toastText {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.toastLose {
+    background: linear-gradient(135deg, rgba(116, 86, 233, 0.92), rgba(65, 48, 131, 0.9));
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes toastIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
 /* ── Header ── */
 .header {
     position: relative;
