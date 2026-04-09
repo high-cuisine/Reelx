@@ -156,111 +156,127 @@ const WinModal = () => {
     const sellPrice = selectedItem.price ? selectedItem.price.toFixed(2) : '0.00';
 
     return (
-        <div className={`${cls.winModal} ${isOpen ? cls.open : ''}`}>
-            <div className={cls.background} onClick={handleClose} />
+        <div className={`${cls.bottomSheet} ${isOpen ? cls.open : ''}`}>
+            <div className={cls.dimmer} onClick={handleClose} />
 
-            <div className={cls.prizeCard}>
-                {!isNoLoot ? (
-                    <>
-                        {lottieData ? (
-                            <div
-                                className={cls.lottieWrap}
-                                onClick={() => setPlayId((v) => v + 1)}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                <Lottie
-                                    key={playId}
-                                    animationData={lottieData}
-                                    loop={false}
-                                    style={{ width: 167, height: 191 }}
-                                />
-                            </div>
-                        ) : selectedItem.image ? (
-                            <Image 
-                                src={selectedItem.image} 
-                                alt={selectedItem.name}
-                                width={167}
-                                height={191}
-                                className={cls.nftImage}
-                            />
+            <div className={cls.content}>
+                <div className={cls.header}>
+                    <h2 className={cls.headerTitle}>{isNoLoot ? 'Результат' : 'Выигрыш'}</h2>
+                    <button className={cls.closeButton} onClick={handleClose} aria-label="Закрыть">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="10" cy="10" r="10" fill="rgba(255, 255, 255, 0.08)"/>
+                            <path d="M6 6L14 14M14 6L6 14" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div className={cls.body}>
+                    <div className={cls.prizeCard}>
+                        {!isNoLoot ? (
+                            <>
+                                {lottieData ? (
+                                    <div
+                                        className={cls.lottieWrap}
+                                        onClick={() => setPlayId((v) => v + 1)}
+                                        style={{ cursor: 'pointer' }}
+                                    >
+                                        <Lottie
+                                            key={playId}
+                                            animationData={lottieData}
+                                            loop={false}
+                                            style={{ width: 167, height: 191 }}
+                                        />
+                                    </div>
+                                ) : selectedItem.image ? (
+                                    <Image
+                                        src={selectedItem.image}
+                                        alt={selectedItem.name}
+                                        width={167}
+                                        height={191}
+                                        className={cls.nftImage}
+                                    />
+                                ) : (
+                                    <div className={cls.prizePlaceholder}>🎁</div>
+                                )}
+                                <div className={cls.giftName}>
+                                    {selectedItem.name.includes('#') ? (
+                                        <span className={cls.giftNameTitle}>
+                                            {selectedItem.name.split('#')[0].trim()} #{selectedItem.name.split('#')[1]}
+                                        </span>
+                                    ) : (
+                                        <span className={cls.giftNameTitle}>{selectedItem.name}</span>
+                                    )}
+                                </div>
+                            </>
                         ) : (
-                            <div className={cls.prizePlaceholder}>🎁</div>
+                            <>
+                                <div className={cls.prizePlaceholder}>😔</div>
+                                <div className={cls.giftName}>NO LOOT</div>
+                            </>
                         )}
-                        <div className={cls.giftName}>
-                            {selectedItem.name.includes('#') ? (
-                                <span className={cls.giftNameTitle}>
-                                    {selectedItem.name.split('#')[0].trim()} #{selectedItem.name.split('#')[1]}
-                                </span>
+                    </div>
+
+                    <div className={cls.winText}>
+                        <h2 className={cls.title}>{isNoLoot ? 'Не повезло' : 'Вы выиграли'}</h2>
+                        <p className={cls.description}>
+                            {isNoLoot
+                                ? 'В этот раз ничего не выпало, но попробуйте еще раз! 🎲'
+                                : 'Отлично! Ты выиграл крутой стикер 🔥'}
+                        </p>
+                    </div>
+
+                    {!isNoLoot && (
+                        <div className={cls.actions}>
+                            <button
+                                className={cls.sellButton}
+                                onClick={isWalletConnected ? handleSell : handleConnectWallet}
+                                disabled={isSelling || !winData.giftId}
+                            >
+                                <span>{isSelling ? 'Продаём...' : 'Продать за'}</span>
+                                {!isSelling && (
+                                    <div className={cls.priceTag}>
+                                        <TonIcon />
+                                        <span>{sellPrice}</span>
+                                    </div>
+                                )}
+                            </button>
+                            {sellError && <div className={cls.sellError}>{sellError}</div>}
+
+                            <button className={cls.claimButton} onClick={handleClaim}>
+                                <span>Забрать</span>
+                            </button>
+
+                            {isWalletConnected ? (
+                                <div className={cls.walletCard}>
+                                    <span className={cls.walletCardLabel}>Привязанный кошелек:</span>
+                                    <div className={cls.walletCardRow}>
+                                        <span className={cls.walletCardAddress}>{walletDisplayAddress}</span>
+                                        <button
+                                            type="button"
+                                            className={cls.walletCardDisconnect}
+                                            onClick={handleDisconnectWallet}
+                                        >
+                                            Отвязать
+                                        </button>
+                                    </div>
+                                </div>
                             ) : (
-                                <span className={cls.giftNameTitle}>{selectedItem.name}</span>
+                                <div onClick={handleConnectWallet}>
+                                    <Button customClass={cls.walletConnectButton} text="Подключить TON кошелёк" />
+                                </div>
                             )}
                         </div>
-                    </>
-                ) : (
-                    <>
-                        <div className={cls.prizePlaceholder}>😔</div>
-                        <div className={cls.giftName}>NO LOOT</div>
-                    </>
-                )}
-            </div>
+                    )}
 
-            <div className={cls.winText}>
-                <h2 className={cls.title}>
-                    {isNoLoot ? 'Не повезло' : 'Вы выиграли'}
-                </h2>
-                <p className={cls.description}>
-                    {isNoLoot 
-                        ? 'В этот раз ничего не выпало, но попробуйте еще раз! 🎲' 
-                        : 'Отлично! Ты выиграл крутой стикер 🔥'}
-                </p>
-            </div>
-
-            {!isNoLoot && (
-                <div className={cls.actions}>
-                    <button
-                        className={cls.sellButton}
-                        onClick={isWalletConnected ? handleSell : handleConnectWallet}
-                        disabled={isSelling || !winData.giftId}
-                    >
-                        <span>{isSelling ? 'Продаём...' : 'Продать за'}</span>
-                        {!isSelling && (
-                            <div className={cls.priceTag}>
-                                <TonIcon />
-                                <span>{sellPrice}</span>
-                            </div>
-                        )}
-                    </button>
-                    {sellError && <div className={cls.sellError}>{sellError}</div>}
-
-                    <button className={cls.claimButton} onClick={handleClaim}>
-                        <span>Забрать</span>
-                    </button>
-
-                    {isWalletConnected ? (
-                        <div className={cls.walletCard}>
-                            <span className={cls.walletCardLabel}>Привязанный кошелек:</span>
-                            <div className={cls.walletCardRow}>
-                                <span className={cls.walletCardAddress}>{walletDisplayAddress}</span>
-                                <button type="button" className={cls.walletCardDisconnect} onClick={handleDisconnectWallet}>
-                                    Отвязать
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        <div onClick={handleConnectWallet}>
-                            <Button customClass={cls.walletConnectButton} text="Подключить TON кошелёк" />
+                    {isNoLoot && (
+                        <div className={cls.actions}>
+                            <button className={cls.sellButton} onClick={handleClose}>
+                                Попробовать снова
+                            </button>
                         </div>
                     )}
                 </div>
-            )}
-
-            {isNoLoot && (
-                <div className={cls.actions}>
-                    <button className={cls.sellButton} onClick={handleClose}>
-                        Попробовать снова
-                    </button>
-                </div>
-            )}
+            </div>
         </div>
     );
 };

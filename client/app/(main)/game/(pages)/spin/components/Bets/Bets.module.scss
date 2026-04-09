@@ -24,6 +24,7 @@
     cursor: pointer;
     transition: all 0.2s ease;
     flex-shrink: 0;
+    overflow: visible!important;
 
     &:hover:not(:disabled) {
         background: rgba(255, 255, 255, 0.1);
