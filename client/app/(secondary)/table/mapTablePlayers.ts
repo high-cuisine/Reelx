@@ -47,11 +47,6 @@ export function bankTotal(table: TableState): number {
     return table.participants.length * table.betAmount;
 }
 
-function displayNameShort(username: string) {
-    const u = username.startsWith('@') ? username : `@${username}`;
-    return u.length > 14 ? `${u.slice(0, 12)}…` : u;
-}
-
 export function defaultTableGameClient(table: TableState): TableGameState {
     return (
         table.game ?? {
@@ -85,9 +80,7 @@ export function tableDrumCenterText(table: TableState, game: TableGameState): st
         return `Раунд ${game.round + 1}`;
     }
     if (game.phase === 'finished' && game.winnerUserId) {
-        const w = table.participants.find((p) => p.userId === game.winnerUserId);
-        const name = w ? displayNameShort(w.username) : 'Победитель';
-        return `Победил\n${name}`;
+        return 'Победил';
     }
     return '—';
 }

@@ -57,6 +57,7 @@ function isRemotePhoto(url: string | null): url is string {
 interface GameDrumProps {
     players: TablePlayer[];
     centerText: string;
+    centerWinner?: TablePlayer | null;
     /** Which sector is being eliminated (final highlight). null = spinning freely. */
     highlightSectorIndex?: number | null;
     /** True while the game phase is 'playing' — runs the roulette animation. */
@@ -67,6 +68,7 @@ interface GameDrumProps {
 export function GameDrum({
     players,
     centerText,
+    centerWinner = null,
     highlightSectorIndex = null,
     spinActive = false,
 }: GameDrumProps) {
@@ -364,6 +366,29 @@ export function GameDrum({
                         <span key={i} className={cls.centerLine}>{line}</span>
                     ))
                     : null}
+                {centerWinner && (
+                    <div
+                        className={cls.centerWinnerAvatar}
+                        style={
+                            isRemotePhoto(centerWinner.photoUrl)
+                                ? undefined
+                                : { background: centerWinner.color }
+                        }
+                    >
+                        {isRemotePhoto(centerWinner.photoUrl) ? (
+                            <img
+                                src={centerWinner.photoUrl!}
+                                alt=""
+                                className={cls.centerWinnerAvatarImg}
+                                referrerPolicy="no-referrer"
+                            />
+                        ) : (
+                            <span className={cls.centerWinnerAvatarInitial}>
+                                {centerWinner.initial}
+                            </span>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );

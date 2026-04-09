@@ -103,33 +103,19 @@ export const GiftImageOrLottie = ({
                 }
             }
 
-            // 2) 2-й и 3-й верхнеуровневые <g> после <defs>
-            const topGsAfterDefs: Element[] = [];
+            // 2) Находим первый <g> после <defs>, внутри него скрываем первые 2 дочерних <g>.
+            // Структура: <svg> → <defs/> → <g clip-path> → [<g фон1>, <g фон2>, <g контент>...]
+            let firstGAfterDefs: Element | null = null;
             let pastDefs = false;
             for (const child of Array.from(svg.children)) {
                 const tag = child.tagName.toLowerCase();
                 if (tag === 'defs') { pastDefs = true; continue; }
-                if (!pastDefs) continue;
-                if (tag === 'g') topGsAfterDefs.push(child);
+                if (pastDefs && tag === 'g') { firstGAfterDefs = child; break; }
             }
-
-            if (topGsAfterDefs.length >= 3) {
-                topGsAfterDefs.slice(1, 3).forEach((g) => {
-                    (g as unknown as SVGElement).style.display = 'none';
-                });
-                return true;
-            }
-
-            // 3) Fallback: wrapper <g> → его первые 2 дочерних <g>
-            let wrapperG: Element | null = null;
-            pastDefs = false;
-            for (const child of Array.from(svg.children)) {
-                const tag = child.tagName.toLowerCase();
-                if (tag === 'defs') { pastDefs = true; continue; }
-                if (pastDefs && tag === 'g') { wrapperG = child; break; }
-            }
-            if (wrapperG) {
-                const childGs = Array.from(wrapperG.children).filter((el) => el.tagName.toLowerCase() === 'g');
+            if (firstGAfterDefs) {
+                const childGs = Array.from(firstGAfterDefs.children).filter(
+                    (el) => el.tagName.toLowerCase() === 'g',
+                );
                 childGs.slice(0, 2).forEach((g) => {
                     (g as unknown as SVGElement).style.display = 'none';
                 });

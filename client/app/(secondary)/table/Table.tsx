@@ -19,9 +19,9 @@ import cls from './Table.module.scss';
 import {
     TableInfo,
     TablePageFallback,
-    TableVisual,
 } from './components';
 import { TablePrimaryAction } from './components/TablePrimaryAction';
+import { TableVisual } from './components/TableVisual';
 
 export default function TablePage() {
     const router = useRouter();
@@ -73,6 +73,10 @@ export default function TablePage() {
 
     const gamePhase = game?.phase ?? null;
     const showExitButton = gamePhase === 'lobby' || gamePhase === 'round_break';
+    const centerWinner =
+        game?.phase === 'finished' && game?.winnerUserId
+            ? (players.find((p) => p.id === game.winnerUserId) ?? null)
+            : null;
 
     const handleExit = async () => {
         if (exitPending) return;
@@ -113,6 +117,7 @@ export default function TablePage() {
                 seatPlayers={players}
                 drumPlayers={drumPlayers}
                 centerText={centerText}
+                centerWinner={centerWinner}
                 highlightSectorIndex={game.lastEliminatedSectorIndex}
                 spinActive={game.phase === 'playing'}
                 myUserId={myUserId}

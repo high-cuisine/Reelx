@@ -80,15 +80,16 @@
 
 /* ── Arena ── */
 .arenaWrapper {
-    position: relative;
     z-index: 1;
-    width: 240px;
-    height: 259px;
-    margin: 0 auto;
-    flex-shrink: 0;
-    /* layout + слой GPU без обрезки круга (без contain: paint) */
     contain: layout;
-    transform: translateZ(0);
+    flex-shrink: 0;
+    width: 239px;
+    height: 300px;
+    margin: 0 auto;
+    position: relative;
+    transform: translateZ(0) scale(1.1);
+    overflow: visible;
+    margin-top: 36px;
 }
 
 .glow {

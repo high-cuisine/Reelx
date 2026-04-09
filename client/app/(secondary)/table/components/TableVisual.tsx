@@ -28,6 +28,8 @@ interface TableVisualProps {
     eliminatedUserIds?: Set<string>;
     /** На 1.5 с после выбывания — центральный крестик и X под местом этого игрока. */
     eliminationFlashUserId?: string | null;
+    /** Winner shown in the center when game is finished. */
+    centerWinner?: TablePlayer | null;
 }
 
 export function TableVisual({
@@ -39,6 +41,7 @@ export function TableVisual({
     myUserId = null,
     eliminatedUserIds = new Set(),
     eliminationFlashUserId = null,
+    centerWinner = null,
 }: TableVisualProps) {
     return (
         <div className={cls.tableWrap}>
@@ -60,6 +63,7 @@ export function TableVisual({
                     <GameDrum
                         players={drumPlayers}
                         centerText={eliminationFlashUserId ? '' : centerText}
+                        centerWinner={eliminationFlashUserId ? null : centerWinner}
                         highlightSectorIndex={highlightSectorIndex}
                         spinActive={spinActive}
                     />

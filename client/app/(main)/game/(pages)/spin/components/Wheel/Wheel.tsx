@@ -1,5 +1,6 @@
 'use client'
 import Image from 'next/image';
+import { useEffect } from 'react';
 import cls from './Wheel.module.scss'
 import { generateConicGradient } from '../../helpers/generateConicGradient';
 import { GiftItem } from '@/entites/gifts/interfaces/giftItem.interface';
@@ -76,6 +77,26 @@ const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIn
 
     const totalItemsCount = items.length;
     const groups = buildWheelGroups(items);
+
+    useEffect(() => {
+        if (!isSpinning) return;
+
+        const triggerLightHaptic = () => {
+            try {
+                window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+            } catch {
+                // Ignore haptic errors to avoid affecting spin UX
+            }
+        };
+
+        // Start immediately and continue with a soft pulse while spinning.
+        triggerLightHaptic();
+        const intervalId = window.setInterval(triggerLightHaptic, 180);
+
+        return () => {
+            window.clearInterval(intervalId);
+        };
+    }, [isSpinning]);
 
     // Сектора с игрушками (type === 'gift') — разная ширина, вариация ±20%
     let conicGradient = 'none';
