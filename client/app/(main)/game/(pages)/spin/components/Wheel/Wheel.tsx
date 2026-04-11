@@ -159,7 +159,27 @@ const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIn
                     </defs>
                 </svg>
             </div>
-         
+            <div className={cls.wheelRing} aria-hidden>
+                <svg width="353" height="353" viewBox="0 0 353 353" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <g filter="url(#filter0_i_13_8716)">
+                        <path d="M176.5 0C273.978 0 353 79.0217 353 176.5C353 273.978 273.978 353 176.5 353C79.0217 353 0 273.978 0 176.5C0 79.0217 79.0217 0 176.5 0ZM176.5 12C85.6492 12 12 85.6492 12 176.5C12 267.351 85.6492 341 176.5 341C267.351 341 341 267.351 341 176.5C341 85.6492 267.351 12 176.5 12Z" fill="white" fillOpacity="0.03"/>
+                        <path d="M176.5 0C273.978 0 353 79.0217 353 176.5C353 273.978 273.978 353 176.5 353C79.0217 353 0 273.978 0 176.5C0 79.0217 79.0217 0 176.5 0ZM176.5 12C85.6492 12 12 85.6492 12 176.5C12 267.351 85.6492 341 176.5 341C267.351 341 341 267.351 341 176.5C341 85.6492 267.351 12 176.5 12Z" fill="#3A2F78"/>
+                        <path d="M176.5 0C273.978 0 353 79.0217 353 176.5C353 273.978 273.978 353 176.5 353C79.0217 353 0 273.978 0 176.5C0 79.0217 79.0217 0 176.5 0ZM176.5 12C85.6492 12 12 85.6492 12 176.5C12 267.351 85.6492 341 176.5 341C267.351 341 341 267.351 341 176.5C341 85.6492 267.351 12 176.5 12Z" fill="#1E1735" fillOpacity="0.2"/>
+                    </g>
+                    <defs>
+                        <filter id="filter0_i_13_8716" x="0" y="0" width="353" height="353" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
+                            <feFlood floodOpacity="0" result="BackgroundImageFix"/>
+                            <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+                            <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+                            <feOffset/>
+                            <feGaussianBlur stdDeviation="3"/>
+                            <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
+                            <feColorMatrix type="matrix" values="0 0 0 0 0.615686 0 0 0 0 0.541176 0 0 0 0 0.952941 0 0 0 0.6 0"/>
+                            <feBlend mode="normal" in2="shape" result="effect1_innerShadow_13_8716"/>
+                        </filter>
+                    </defs>
+                </svg>
+            </div>
 
             <div
                 ref={wheelRef}
