@@ -35,29 +35,24 @@ export const GiftImageOrLottie = ({
     height = 0,
     fillContainer = false,
     hideLottieBackground,
-    loop = false,
+    loop = true,
     className,
     imageClassName,
     placeholder,
 }: GiftImageOrLottieProps) => {
     const [lottieData, setLottieData] = useState<object | null>(null);
-    const [replayToken, setReplayToken] = useState(0);
     const lottieContainerRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         if (!lottieUrl) {
             setLottieData(null);
-            setReplayToken(0);
             return;
         }
         let cancelled = false;
         fetch(lottieUrl)
             .then((r) => r.json())
             .then((data) => {
-                if (!cancelled) {
-                    setLottieData(data);
-                    setReplayToken(0);
-                }
+                if (!cancelled) setLottieData(data);
             })
             .catch(() => {
                 if (!cancelled) setLottieData(null);
@@ -105,15 +100,11 @@ export const GiftImageOrLottie = ({
             return true;
         };
 
-        if (hideBgLayers()) return;
-
-        // При remount (повтор по клику) svg может появиться чуть позже.
-        // Делаем несколько попыток, чтобы фон гарантированно скрывался в барабане.
-        const timeouts = [50, 120, 220].map((ms) => setTimeout(hideBgLayers, ms));
-        return () => {
-            timeouts.forEach((t) => clearTimeout(t));
-        };
-    }, [lottieData, hideLottieBackground, replayToken]);
+        if (!hideBgLayers()) {
+            const t = setTimeout(hideBgLayers, 50);
+            return () => clearTimeout(t);
+        }
+    }, [lottieData, hideLottieBackground]);
 
     const sizeStyle = fillContainer
         ? { width: '100%', height: '100%' as const }
@@ -127,22 +118,12 @@ export const GiftImageOrLottie = ({
                 ref={lottieContainerRef}
                 className={`${cls.lottieWrap} ${fillContainer ? cls.fillContainer : ''} ${className ?? ''}`}
                 style={sizeStyle}
-                onClick={() => {
-                    if (!loop) {
-                        // Remount Lottie to replay once from start.
-                        setReplayToken((prev) => prev + 1);
-                    }
-                }}
             >
                 <Lottie
-                    key={`${lottieUrl ?? 'lottie'}-${replayToken}`}
                     animationData={lottieData}
                     loop={loop}
                     autoplay
-                    style={{
-                        ...sizeStyle,
-                        cursor: loop ? 'default' : 'pointer',
-                    }}
+                    style={sizeStyle}
                 />
             </div>
         );

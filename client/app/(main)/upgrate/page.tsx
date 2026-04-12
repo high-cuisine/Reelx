@@ -21,9 +21,6 @@ export default function UpgratePage() {
         selectedGifts,
         toggleMultiplier,
         toggleGiftSelection,
-        removeStakeGiftViaX,
-        removeWishViaX,
-        clearMultiplierViaX,
         inventoryGifts,
         isLoadingGifts,
         chance,
@@ -38,8 +35,6 @@ export default function UpgratePage() {
         startGame,
         gameResult,
         isPlaying,
-        showLoseToast,
-        clearLoseToast,
         handleAnimationComplete,
     } = useUpgratePage();
 
@@ -47,17 +42,6 @@ export default function UpgratePage() {
         <div className={cls.page}>
             <Header />
             <div className={cls.bgEllipse} />
-            {showLoseToast && (
-                <div
-                    className={`${cls.toast} ${cls.toastLose}`}
-                    role="status"
-                    aria-live="polite"
-                    onClick={clearLoseToast}
-                >
-                    <div className={cls.toastTitle}>Не повезло</div>
-                    <div className={cls.toastText}>Ставка сгорела, попробуйте ещё раз</div>
-                </div>
-            )}
 
             <UpgradeArena
                 chance={chance}
@@ -77,7 +61,6 @@ export default function UpgratePage() {
                 <MultipliersRow
                     selectedMultiplier={selectedMultiplier}
                     onToggle={toggleMultiplier}
-                    onClearViaX={clearMultiplierViaX}
                 />
 
                 <UpgradeButton
@@ -103,13 +86,11 @@ export default function UpgratePage() {
                         inventoryGifts={inventoryGifts}
                         selectedGifts={selectedGifts}
                         onToggleGift={toggleGiftSelection}
-                        onRemoveStakeViaX={removeStakeGiftViaX}
                         poolGifts={poolGifts}
                         isLoadingChance={isLoadingChance}
                         canSelectWish={canSelectWish}
                         selectedWishNames={selectedWishNames}
                         onSelectWish={onSelectWish}
-                        onRemoveWishViaX={removeWishViaX}
                     />
                 </div>
             </div>

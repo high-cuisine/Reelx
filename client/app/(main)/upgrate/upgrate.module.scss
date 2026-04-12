@@ -20,51 +20,6 @@
     z-index: 0;
 }
 
-.toast {
-    position: fixed;
-    left: 50%;
-    top: 18px;
-    transform: translateX(-50%);
-    z-index: 1000;
-    width: min(520px, calc(100vw - 24px));
-    padding: 12px 14px;
-    border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
-    cursor: pointer;
-    animation: toastIn 180ms ease-out;
-}
-
-.toastTitle {
-    font-size: 13px;
-    font-weight: 700;
-    opacity: 0.95;
-    margin-bottom: 4px;
-}
-
-.toastText {
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.toastLose {
-    background: linear-gradient(135deg, rgba(116, 86, 233, 0.92), rgba(65, 48, 131, 0.9));
-    color: #ffffff;
-    border-color: rgba(255, 255, 255, 0.2);
-}
-
-@keyframes toastIn {
-    from {
-        opacity: 0;
-        transform: translateX(-50%) translateY(-6px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(-50%) translateY(0);
-    }
-}
-
 /* ── Header ── */
 .header {
     position: relative;
@@ -285,14 +240,8 @@
     gap: 11px;
 }
 
-.multiplierCell {
-    flex: 1;
-    position: relative;
-    min-width: 0;
-}
-
 .multiplierBtn {
-    width: 100%;
+    flex: 1;
     padding: 10px;
     background: rgba(255, 255, 255, 0.08);
     border: none;
@@ -310,31 +259,6 @@
 .multiplierBtnActive {
     background: rgba(116, 86, 233, 0.3);
     color: #ffffff;
-}
-
-.multiplierRemoveX {
-    position: absolute;
-    top: -8px;
-    right: -6px;
-    z-index: 2;
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    border: none;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.55);
-    color: #ffffff;
-    font-size: 14px;
-    line-height: 1;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    -webkit-tap-highlight-color: transparent;
-
-    &:active {
-        transform: scale(0.92);
-    }
 }
 
 .upgradeButton {
@@ -406,36 +330,6 @@
     gap: 8px;
     margin-bottom: 20px;
     padding: 0 5px 5px;
-}
-
-.giftItemWrap {
-    position: relative;
-    border-radius: 12px;
-}
-
-.giftRemoveX {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    z-index: 4;
-    width: 22px;
-    height: 22px;
-    padding: 0;
-    border: none;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.55);
-    color: #ffffff;
-    font-size: 16px;
-    line-height: 1;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    -webkit-tap-highlight-color: transparent;
-
-    &:active {
-        transform: scale(0.92);
-    }
 }
 
 .giftItem {

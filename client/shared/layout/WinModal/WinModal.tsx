@@ -184,15 +184,15 @@ const WinModal = () => {
                                             key={playId}
                                             animationData={lottieData}
                                             loop={false}
-                                            style={{ width: '100%', height: '100%' }}
+                                            style={{ width: 167, height: 191 }}
                                         />
                                     </div>
                                 ) : selectedItem.image ? (
                                     <Image
                                         src={selectedItem.image}
                                         alt={selectedItem.name}
-                                        fill
-                                        sizes="80vw"
+                                        width={167}
+                                        height={191}
                                         className={cls.nftImage}
                                     />
                                 ) : (

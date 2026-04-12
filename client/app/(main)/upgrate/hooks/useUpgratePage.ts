@@ -13,7 +13,6 @@ export function useUpgratePage() {
     const [selectedGifts, setSelectedGifts] = useState<string[]>([]);
     const [gameResult, setGameResult] = useState<StartGameResponse | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
-    const [showLoseToast, setShowLoseToast] = useState(false);
     const [selectedWishNames, setSelectedWishNames] = useState<string[]>([]);
     const [chanceFromSetWish, setChanceFromSetWish] = useState<number | null>(null);
 
@@ -33,12 +32,6 @@ export function useUpgratePage() {
 
     const chance = chanceFromSetWish ?? chanceFromApi;
     const canSelectWish = selectedStakeTon >= WISH_SELECTION_MIN_BET_TON;
-
-    useEffect(() => {
-        if (!showLoseToast) return;
-        const timer = setTimeout(() => setShowLoseToast(false), 3500);
-        return () => clearTimeout(timer);
-    }, [showLoseToast]);
 
     const selectedWishPrice = useMemo(() => {
         if (selectedWishNames.length === 0 || poolGifts.length === 0) return null;
@@ -94,33 +87,8 @@ export function useUpgratePage() {
         setGameResult(null);
     };
 
-    /** Снять подарок со ставки по «×» — сразу переключаем на вкладку желаемых призов */
-    const removeStakeGiftViaX = (giftId: string) => {
-        setSelectedGifts((prev) => {
-            if (!prev.includes(giftId)) return prev;
-            return prev.filter((id) => id !== giftId);
-        });
-        setGameResult(null);
-        setActiveTab('wishlist');
-    };
-
-    /** Убрать желаемый приз по «×» */
-    const removeWishViaX = async (name: string) => {
-        if (!selectedWishNames.includes(name)) return;
-        setActiveTab('wishlist');
-        await onSelectWish(name);
-    };
-
-    /** Сбросить множитель по «×» */
-    const clearMultiplierViaX = () => {
-        setSelectedMultiplier(null);
-        setGameResult(null);
-        setActiveTab('wishlist');
-    };
-
     const startGame = async () => {
         setGameResult(null);
-        setShowLoseToast(false);
         setIsPlaying(true);
         try {
             const res = await upgrateService.startGame();
@@ -139,10 +107,6 @@ export function useUpgratePage() {
         if (!gameResult || gameResult.result !== outcome) {
             setGameResult(null);
             return;
-        }
-
-        if (outcome === 'lose') {
-            setShowLoseToast(true);
         }
 
         if (outcome === 'win' && gameResult.gifts.length > 0) {
@@ -187,9 +151,6 @@ export function useUpgratePage() {
         selectedGifts,
         toggleMultiplier,
         toggleGiftSelection,
-        removeStakeGiftViaX,
-        removeWishViaX,
-        clearMultiplierViaX,
         inventoryGifts,
         isLoadingGifts,
         loadGifts,
@@ -205,8 +166,6 @@ export function useUpgratePage() {
         startGame,
         gameResult,
         isPlaying,
-        showLoseToast,
-        clearLoseToast: () => setShowLoseToast(false),
         handleAnimationComplete,
     };
 }

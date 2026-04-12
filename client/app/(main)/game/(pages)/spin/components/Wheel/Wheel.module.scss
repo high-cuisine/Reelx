@@ -14,6 +14,7 @@
     height: 100%;
     border-radius: 50%;
     cursor: default;
+    border: 4px solid rgba(255, 255, 255, 0.2);
     box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
     will-change: transform;
     user-select: none;
@@ -22,6 +23,10 @@
     &.interactive {
         cursor: grab;
 
+        &:hover {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
         &:active {
             cursor: grabbing;
         }
@@ -29,20 +34,7 @@
 
     &.dragging {
         cursor: grabbing;
-    }
-}
-
-.wheelRing {
-    position: absolute;
-    inset: 0;
-    z-index: 10;
-    pointer-events: none;
-
-    svg {
-        width: 100%;
-        height: 100%;
-        display: block;
-        opacity: 0.7;
+        border-color: rgba(255, 255, 255, 0.4);
     }
 }
 
