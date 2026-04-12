@@ -94,6 +94,30 @@ export function useUpgratePage() {
         setGameResult(null);
     };
 
+    /** Снять подарок со ставки по «×» — сразу переключаем на вкладку желаемых призов */
+    const removeStakeGiftViaX = (giftId: string) => {
+        setSelectedGifts((prev) => {
+            if (!prev.includes(giftId)) return prev;
+            return prev.filter((id) => id !== giftId);
+        });
+        setGameResult(null);
+        setActiveTab('wishlist');
+    };
+
+    /** Убрать желаемый приз по «×» */
+    const removeWishViaX = async (name: string) => {
+        if (!selectedWishNames.includes(name)) return;
+        setActiveTab('wishlist');
+        await onSelectWish(name);
+    };
+
+    /** Сбросить множитель по «×» */
+    const clearMultiplierViaX = () => {
+        setSelectedMultiplier(null);
+        setGameResult(null);
+        setActiveTab('wishlist');
+    };
+
     const startGame = async () => {
         setGameResult(null);
         setShowLoseToast(false);
@@ -163,6 +187,9 @@ export function useUpgratePage() {
         selectedGifts,
         toggleMultiplier,
         toggleGiftSelection,
+        removeStakeGiftViaX,
+        removeWishViaX,
+        clearMultiplierViaX,
         inventoryGifts,
         isLoadingGifts,
         loadGifts,

@@ -13,11 +13,15 @@ interface GiftGridProps {
     inventoryGifts: UserGift[];
     selectedGifts: string[];
     onToggleGift: (giftId: string) => void;
+    /** Снять подарок со ставки по «×» и открыть вкладку желаемых */
+    onRemoveStakeViaX?: (giftId: string) => void;
     poolGifts: PoolGift[];
     isLoadingChance: boolean;
     canSelectWish?: boolean;
     selectedWishNames?: string[];
     onSelectWish?: (name: string) => void;
+    /** Убрать желаемый приз по «×» */
+    onRemoveWishViaX?: (name: string) => void;
 }
 
 const winPoolGifts = (gifts: PoolGift[]) => gifts.filter((g) => g.pool === 'win');
@@ -28,11 +32,13 @@ export function GiftGrid({
     inventoryGifts,
     selectedGifts,
     onToggleGift,
+    onRemoveStakeViaX,
     poolGifts,
     isLoadingChance,
     canSelectWish = false,
     selectedWishNames = [],
     onSelectWish,
+    onRemoveWishViaX,
 }: GiftGridProps) {
     if (activeTab === 'inventory') {
         if (isLoadingGifts) {
@@ -53,6 +59,11 @@ export function GiftGrid({
                         index={index}
                         isSelected={selectedGifts.includes(gift.id)}
                         onToggle={() => onToggleGift(gift.id)}
+                        onRemoveViaX={
+                            onRemoveStakeViaX
+                                ? () => onRemoveStakeViaX(gift.id)
+                                : undefined
+                        }
                     />
                 ))}
             </>
@@ -84,6 +95,11 @@ export function GiftGrid({
                     isSelectable={canSelectWish}
                     isSelected={g.name != null && selectedWishNames.includes(g.name)}
                     onSelect={() => onSelectWish?.(g.name)}
+                    onRemoveViaX={
+                        g.name != null && onRemoveWishViaX
+                            ? () => onRemoveWishViaX(g.name)
+                            : undefined
+                    }
                 />
             ))}
         </>

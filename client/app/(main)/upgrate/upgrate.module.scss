@@ -129,7 +129,7 @@
     contain: layout;
     flex-shrink: 0;
     width: 239px;
-    height: 300px;
+    height: 206px;
     margin: 0 auto;
     position: relative;
     transform: translateZ(0) scale(1.1);
@@ -285,8 +285,14 @@
     gap: 11px;
 }
 
-.multiplierBtn {
+.multiplierCell {
     flex: 1;
+    position: relative;
+    min-width: 0;
+}
+
+.multiplierBtn {
+    width: 100%;
     padding: 10px;
     background: rgba(255, 255, 255, 0.08);
     border: none;
@@ -304,6 +310,31 @@
 .multiplierBtnActive {
     background: rgba(116, 86, 233, 0.3);
     color: #ffffff;
+}
+
+.multiplierRemoveX {
+    position: absolute;
+    top: -8px;
+    right: -6px;
+    z-index: 2;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #ffffff;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+
+    &:active {
+        transform: scale(0.92);
+    }
 }
 
 .upgradeButton {
@@ -375,6 +406,36 @@
     gap: 8px;
     margin-bottom: 20px;
     padding: 0 5px 5px;
+}
+
+.giftItemWrap {
+    position: relative;
+    border-radius: 12px;
+}
+
+.giftRemoveX {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    z-index: 4;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #ffffff;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+
+    &:active {
+        transform: scale(0.92);
+    }
 }
 
 .giftItem {

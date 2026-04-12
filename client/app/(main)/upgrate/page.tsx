@@ -21,6 +21,9 @@ export default function UpgratePage() {
         selectedGifts,
         toggleMultiplier,
         toggleGiftSelection,
+        removeStakeGiftViaX,
+        removeWishViaX,
+        clearMultiplierViaX,
         inventoryGifts,
         isLoadingGifts,
         chance,
@@ -74,6 +77,7 @@ export default function UpgratePage() {
                 <MultipliersRow
                     selectedMultiplier={selectedMultiplier}
                     onToggle={toggleMultiplier}
+                    onClearViaX={clearMultiplierViaX}
                 />
 
                 <UpgradeButton
@@ -99,11 +103,13 @@ export default function UpgratePage() {
                         inventoryGifts={inventoryGifts}
                         selectedGifts={selectedGifts}
                         onToggleGift={toggleGiftSelection}
+                        onRemoveStakeViaX={removeStakeGiftViaX}
                         poolGifts={poolGifts}
                         isLoadingChance={isLoadingChance}
                         canSelectWish={canSelectWish}
                         selectedWishNames={selectedWishNames}
                         onSelectWish={onSelectWish}
+                        onRemoveWishViaX={removeWishViaX}
                     />
                 </div>
             </div>

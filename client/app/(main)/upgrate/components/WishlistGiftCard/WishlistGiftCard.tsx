@@ -12,6 +12,8 @@ interface WishlistGiftCardProps {
     isSelectable?: boolean;
     isSelected?: boolean;
     onSelect?: () => void;
+    /** «×» на выбранной карточке: убрать из желаемых (вкладка «Желаемые») */
+    onRemoveViaX?: () => void;
 }
 
 export function WishlistGiftCard({
@@ -20,6 +22,7 @@ export function WishlistGiftCard({
     isSelectable,
     isSelected,
     onSelect,
+    onRemoveViaX,
 }: WishlistGiftCardProps) {
     const content = (
         <>
@@ -48,19 +51,33 @@ export function WishlistGiftCard({
         </>
     );
 
-    const className = `${cls.giftItem} ${isSelected ? cls.giftItemSelected : ''}`.trim();
-
     if (isSelectable && onSelect) {
         return (
-            <button
-                type="button"
-                className={className}
-                onClick={onSelect}
+            <div
+                className={`${cls.giftItemWrap} ${isSelected ? cls.giftItemSelected : ''}`.trim()}
             >
-                {content}
-            </button>
+                <button type="button" className={cls.giftItem} onClick={onSelect}>
+                    {content}
+                </button>
+                {isSelected && onRemoveViaX && (
+                    <button
+                        type="button"
+                        className={cls.giftRemoveX}
+                        aria-label="Убрать из желаемых"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onRemoveViaX();
+                        }}
+                    >
+                        ×
+                    </button>
+                )}
+            </div>
         );
     }
+
+    const className = `${cls.giftItem} ${isSelected ? cls.giftItemSelected : ''}`.trim();
 
     return (
         <div className={className}>
