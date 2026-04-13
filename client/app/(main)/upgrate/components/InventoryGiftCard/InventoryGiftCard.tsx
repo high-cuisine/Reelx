@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import cls from '../../upgrate.module.scss';
 import tonIcon from '@/assets/ton.svg';
@@ -16,11 +17,18 @@ interface InventoryGiftCardProps {
 }
 
 export function InventoryGiftCard({ gift, index, isSelected, onToggle }: InventoryGiftCardProps) {
+    const [lottieReplayNonce, setLottieReplayNonce] = useState(0);
+
+    const handleClick = () => {
+        setLottieReplayNonce((n) => n + 1);
+        onToggle();
+    };
+
     return (
         <button
             type="button"
             className={`${cls.giftItem} ${isSelected ? cls.giftItemSelected : ''}`}
-            onClick={onToggle}
+            onClick={handleClick}
         >
             <div
                 className={cls.giftImageBox}
@@ -32,6 +40,7 @@ export function InventoryGiftCard({ gift, index, isSelected, onToggle }: Invento
                     alt={gift.giftName}
                     fillContainer
                     loop={false}
+                    replayNonce={lottieReplayNonce}
                     hideLottieBackground
                     className={cls.giftImageMedia}
                     imageClassName={cls.giftImageImg}

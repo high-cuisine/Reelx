@@ -19,6 +19,11 @@ interface GiftImageOrLottieProps {
     hideLottieBackground?: boolean;
     /** Зацикливать анимацию (по умолчанию да). */
     loop?: boolean;
+    /**
+     * Счётчик с родителя: при каждом изменении Lottie перемонтируется (один проход).
+     * Если передан — клик по компоненту не перехватывается (удобно для кнопки-карточки).
+     */
+    replayNonce?: number;
     className?: string;
     imageClassName?: string;
     placeholder?: React.ReactNode;
@@ -36,6 +41,7 @@ export const GiftImageOrLottie = ({
     fillContainer = false,
     hideLottieBackground,
     loop = true,
+    replayNonce,
     className,
     imageClassName,
     placeholder,
@@ -111,7 +117,7 @@ export const GiftImageOrLottie = ({
         return () => {
             timeouts.forEach((t) => clearTimeout(t));
         };
-    }, [lottieData, hideLottieBackground, replayToken]);
+    }, [lottieData, hideLottieBackground, replayToken, replayNonce]);
 
     const sizeStyle = fillContainer
         ? { width: '100%', height: '100%' as const }
@@ -120,7 +126,10 @@ export const GiftImageOrLottie = ({
           : { width: 56, height: 56 };
 
     if (lottieData) {
-        const replayOnClick = !loop;
+        const externalReplay = replayNonce !== undefined;
+        const replayOnClick = !loop && !externalReplay;
+        const lottiePlayKey = externalReplay ? replayNonce : replayToken;
+
         return (
             <div
                 ref={lottieContainerRef}
@@ -137,13 +146,13 @@ export const GiftImageOrLottie = ({
                     : {})}
             >
                 <Lottie
-                    key={`${lottieUrl ?? 'lottie'}-${replayToken}`}
+                    key={`${lottieUrl ?? 'lottie'}-${lottiePlayKey}`}
                     animationData={lottieData}
                     loop={loop}
                     autoplay
                     style={{
                         ...sizeStyle,
-                        ...(replayOnClick ? { cursor: 'pointer' } : {}),
+                        ...(replayOnClick || externalReplay ? { cursor: 'pointer' } : {}),
                     }}
                 />
             </div>
