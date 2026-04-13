@@ -18,6 +18,6 @@ body {
   background: var(--backgroud-blue);
   font-family: var(--font-montserrat);
   color: var(--white);
-  overflow-x: hidden;
+  overflow-x: hidden!important;
 }
 
