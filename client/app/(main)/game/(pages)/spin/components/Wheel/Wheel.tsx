@@ -249,13 +249,14 @@ const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIn
                                 <MoneyBadge item={item} />
                             ) : item.image || item.lottie ? (
                                 <div className={cls.segmentMedia}>
-                                    <GiftImageOrLottie
+                                                                       <GiftImageOrLottie
                                         image={item.image}
                                         lottieUrl={item.lottie}
                                         alt={item.name}
                                         width={18}
                                         height={18}
                                         hideLottieBackground
+                                        loop={false}
                                         className={cls.segmentLottie}
                                         imageClassName={cls.segmentImage}
                                     />

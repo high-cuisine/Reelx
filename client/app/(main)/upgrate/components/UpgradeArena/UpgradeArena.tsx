@@ -108,6 +108,28 @@ export function UpgradeArena({
         }
     });
 
+    /** Слабейшая вибрация Telegram в цикле, пока идёт анимация арены */
+    useEffect(() => {
+        if (!isPlaying) return;
+
+        const pulse = () => {
+            try {
+                const impact = window.Telegram?.WebApp?.HapticFeedback?.impactOccurred;
+                if (impact) {
+                    // «soft» — самый мягкий стиль в Telegram; в типах SDK часто только light|medium|heavy
+                    (impact as (s: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft') => void)('soft');
+                }
+            } catch {
+                // вне Telegram или без поддержки — тихо пропускаем
+            }
+        };
+
+        pulse();
+        const intervalId = window.setInterval(pulse, 220);
+
+        return () => window.clearInterval(intervalId);
+    }, [isPlaying]);
+
     useEffect(() => {
         if (!isPlaying) return;
 

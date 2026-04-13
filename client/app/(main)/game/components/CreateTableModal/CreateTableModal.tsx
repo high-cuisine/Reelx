@@ -75,7 +75,7 @@ const CreateTableModal = ({ isOpen, onClose, onCreateTable }: CreateTableModalPr
         if (!mounted) return;
         document.body.style.overflow = 'hidden';
         return () => {
-            document.body.style.overflow = 'unset';
+            document.body.style.overflow = 'hidden';
         };
     }, [mounted]);
 
