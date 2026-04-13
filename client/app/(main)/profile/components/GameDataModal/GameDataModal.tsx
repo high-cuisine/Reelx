@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import Image from 'next/image';
 import cls from './GameDataModal.module.scss';
 import tonIcon from '@/assets/ton.svg';
 import starsIcon from '@/assets/star.svg';
+import { GiftImageOrLottie } from '@/shared/ui/GiftImageOrLottie/GiftImageOrLottie';
+import type { GameWinNft } from '@/entites/user/interface/game.interface';
 
 export interface GamePlayer {
     id: string;
@@ -27,8 +29,9 @@ export interface GameDataModalProps {
     betCurrency: 'TON' | 'STARS';
     chance: string;
     winner: string;
-    winAmount?: number;
-    winTitle?: string;
+    /** Приз из истории — только в этом попапе (как в макете Figma) */
+    winNft?: GameWinNft | null;
+    onWinPrizeClick?: (win: GameWinNft) => void;
     players?: GamePlayer[];
     hash?: string;
 }
@@ -54,8 +57,8 @@ export const GameDataModal = ({
     betCurrency,
     chance,
     winner,
-    winAmount,
-    winTitle,
+    winNft,
+    onWinPrizeClick,
     players = [],
     hash,
 }: GameDataModalProps) => {
@@ -97,6 +100,45 @@ export const GameDataModal = ({
     const currencyIcon = betCurrency === 'TON' ? tonIcon : starsIcon;
     const { date: formattedDate, time: formattedTime } = formatDateTime(date, time);
 
+    let prizeCard: ReactNode = null;
+    if (winNft) {
+        const prizeInner = (
+            <>
+                <div className={cls.winImage}>
+                    <GiftImageOrLottie
+                        image={winNft.image || '/NFT.png'}
+                        lottieUrl={winNft.lottieUrl?.trim() || undefined}
+                        alt={winNft.giftName}
+                        fillContainer
+                        loop={false}
+                        hideLottieBackground
+                        className={cls.winImageMedia}
+                        imageClassName={cls.winImageImg}
+                    />
+                </div>
+                <div className={cls.winInfo}>
+                    <span className={cls.winLabel}>Выигрыш</span>
+                    <span className={cls.winTitle}>{winNft.giftName}</span>
+                    <div className={cls.winAmount}>
+                        <Image src={tonIcon} alt="TON" width={17} height={17} />
+                        <span>{(winNft.price ?? 0).toFixed(2)}</span>
+                    </div>
+                </div>
+            </>
+        );
+        prizeCard = onWinPrizeClick ? (
+            <button
+                type="button"
+                className={`${cls.winBlock} ${cls.winBlockClickable}`}
+                onClick={() => onWinPrizeClick(winNft)}
+            >
+                {prizeInner}
+            </button>
+        ) : (
+            <div className={cls.winBlock}>{prizeInner}</div>
+        );
+    }
+
     return (
         <>
             <div 
@@ -122,7 +164,9 @@ export const GameDataModal = ({
                         </div>
                         <div className={cls.dataItem}>
                             <span className={cls.dataLabel}>Дата</span>
-                            <span className={cls.dataValue}>{formattedDate} • {formattedTime}</span>
+                            <span className={cls.dataValue}>
+                                {formattedDate} · {formattedTime}
+                            </span>
                         </div>
                         <div className={cls.dataItem}>
                             <span className={cls.dataLabel}>Ставка</span>
@@ -138,24 +182,9 @@ export const GameDataModal = ({
                         </div>
                     </div>
 
-                    {/* Win Block */}
-                    {winAmount !== undefined && (
-                        <div className={cls.winBlock}>
-                            <div className={cls.winImage}>
-                                {/* Placeholder for gift image */}
-                            </div>
-                            <div className={cls.winInfo}>
-                                <span className={cls.winLabel}>Выигрыш</span>
-                                <span className={cls.winTitle}>{winTitle || 'Gift Name'}</span>
-                                <div className={cls.winAmount}>
-                                    <Image src={currencyIcon} alt={betCurrency} width={17} height={17} />
-                                    <span>{winAmount.toFixed(2)}</span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    {prizeCard}
 
-                    <div className={cls.divider} />
+                    {(players.length > 0 || hash) && <div className={cls.divider} />}
 
                     {/* Players List */}
                     {players.length > 0 && (

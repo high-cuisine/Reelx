@@ -60,12 +60,7 @@ export const Inventory = () => {
                         <div className={cls.emptyState}>История пуста</div>
                     ) : (
                         historyGames.map((game) => (
-                            <GameHistoryItem
-                                key={game.id}
-                                game={game}
-                                onClick={openGameModal}
-                                onWinNftClick={(winNft) => openNftModal(mapWinNftToUserGift(winNft))}
-                            />
+                            <GameHistoryItem key={game.id} game={game} onClick={openGameModal} />
                         ))
                     )}
                 </div>
@@ -101,6 +96,8 @@ export const Inventory = () => {
                     betCurrency={modalData.betCurrency}
                     chance={modalData.chance}
                     winner={modalData.winner}
+                    winNft={modalData.winNft}
+                    onWinPrizeClick={(w) => openNftModal(mapWinNftToUserGift(w))}
                 />
             )}
 

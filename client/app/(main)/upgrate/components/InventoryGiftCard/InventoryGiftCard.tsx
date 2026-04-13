@@ -31,6 +31,8 @@ export function InventoryGiftCard({ gift, index, isSelected, onToggle }: Invento
                     lottieUrl={gift.lottieUrl}
                     alt={gift.giftName}
                     fillContainer
+                    loop={false}
+                    hideLottieBackground
                     className={cls.giftImageMedia}
                     imageClassName={cls.giftImageImg}
                 />

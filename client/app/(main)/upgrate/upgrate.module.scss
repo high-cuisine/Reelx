@@ -378,6 +378,12 @@ button.giftItem {
     * {
         pointer-events: none;
     }
+
+    /* Play-once Lottie: клик по анимации перезапускает её; выбор в ставку — по названию/цене */
+    :global([data-lottie-replay='true']) {
+        pointer-events: auto !important;
+        cursor: pointer;
+    }
 }
 
 .giftImageMedia {

@@ -57,11 +57,13 @@ export interface GameModalData {
     betCurrency: GameCurrency;
     chance: string;
     winner: string;
+    /** Приз отображается только в попапе игры */
+    winNft?: Game['winNft'];
 }
 
 export const prepareGameModalData = (game: Game): GameModalData => {
     const { date, time } = formatGameDate(game.createdAt);
-    
+
     return {
         gameId: getGameIdShort(game.id),
         gameType: getGameTypeName(game.type),
@@ -69,7 +71,8 @@ export const prepareGameModalData = (game: Game): GameModalData => {
         time,
         bet: game.priceAmount,
         betCurrency: game.priceType,
-        chance: '100%', // Solo игра - 100% шанс
-        winner: 'Вы', // В solo игре победитель всегда "Вы"
+        chance: '100%', // Solo игра — при появлении реального шанса с бэка подставить сюда
+        winner: 'Вы',
+        winNft: game.winNft,
     };
 };

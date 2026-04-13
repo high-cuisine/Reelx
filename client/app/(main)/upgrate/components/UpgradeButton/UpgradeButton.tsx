@@ -4,7 +4,6 @@ import cls from '../../upgrate.module.scss';
 
 interface UpgradeButtonProps {
     selectedCount: number;
-    selectedMultiplier: string | null;
     isReadyToPlay: boolean;
     hasWishSelected: boolean;
     isPlaying: boolean;
@@ -13,15 +12,17 @@ interface UpgradeButtonProps {
 
 export function UpgradeButton({
     selectedCount,
-    selectedMultiplier,
     isReadyToPlay,
     hasWishSelected,
     isPlaying,
     onPlay,
 }: UpgradeButtonProps) {
-    const text = (() => {
+    const label = (() => {
+        if (isReadyToPlay) {
+            return isPlaying ? 'Играем...' : 'Играть';
+        }
         if (selectedCount === 0) {
-            return 'Выберите подарки для апгрейда';
+            return 'Играть';
         }
         if (!hasWishSelected) {
             return 'Выберите желаемый приз';
@@ -36,17 +37,7 @@ export function UpgradeButton({
             onClick={isReadyToPlay ? onPlay : undefined}
             disabled={!isReadyToPlay || isPlaying}
         >
-            <span>
-                {selectedCount === 0
-                    ? text
-                    : !hasWishSelected
-                        ? text
-                        : isReadyToPlay
-                            ? isPlaying
-                                ? 'Играем...'
-                                : 'Играть'
-                            : text}
-            </span>
+            <span>{label}</span>
         </button>
     );
 }
