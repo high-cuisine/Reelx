@@ -17,6 +17,7 @@ import { UsersService } from '../users/services/users.service';
 import { UserGamesType, GameCurrancy } from '@prisma/client';
 import { CurrancyService } from '../../libs/common/modules/Currancy/services/Currancy.service';
 import { GiftsRepository } from './repositorys/gifts.repository';
+import { WinsService } from '../wins/wins.service';
 
 @Injectable()
 export class GiftsService {
@@ -34,6 +35,7 @@ export class GiftsService {
     private usersService: UsersService,
     private giftsRepository: GiftsRepository,
     private currancyService: CurrancyService,
+    private winsService: WinsService,
   ) {
     this.nftBuyerUrl = this.configService.get<string>('NFT_BUYER_URL', 'http://localhost:3001');
     
@@ -150,9 +152,8 @@ export class GiftsService {
     let originalGifts: any[] = [];
 
     // Правила формирования слотов:
-    // 1) amount <= 5: больше подарков при мелкой ставке
-    //    (до 7 уникальных подарков и 60% gift-слотов / 40% no-loot)
-    // 2) 10 <= amount < 20: 10 игрушек по 10% (10 слотов, без no-loot)
+    // 1) amount <= 5: до 7 уникальных подарков + no-loot (20 слотов: 40% подарки / 60% no-loot)
+    // 2) 10 <= amount < 20: 9 слотов подарков без no-loot
     // 3) остальное — старая логика (getCountGifts)
 
     if (amount <= 5) {
@@ -168,9 +169,9 @@ export class GiftsService {
       );
 
       const totalSlots = 20;
-      const noLootShare = 0.4; // 40% слотов — no-loot
-      const noLootSlotsCount = Math.round(totalSlots * noLootShare); // 8 из 20
-      const giftSlotsToDistribute = Math.max(0, totalSlots - noLootSlotsCount); // 12 слотов под подарки
+      const noLootShare = 0.6; // 60% слотов — no-loot
+      const noLootSlotsCount = Math.round(totalSlots * noLootShare); // 12 из 20
+      const giftSlotsToDistribute = Math.max(0, totalSlots - noLootSlotsCount); // 8 слотов подарки (делятся между до 7 NFT)
 
       const slots: any[] = [];
 
@@ -203,7 +204,7 @@ export class GiftsService {
         }
       });
 
-      // Добавляем no-loot слоты (40% от барабана)
+      // Добавляем no-loot слоты (60% от барабана = 12 слотов)
       for (let i = 0; i < noLootSlotsCount; i++) {
         slots.push({
           type: 'no-loot',
@@ -550,6 +551,11 @@ export class GiftsService {
           `User ${userId} won gift: ${giftPrize.name}`,
         );
 
+        await this.winsService.recordWin({
+          image: createdGift.image,
+          name: createdGift.giftName,
+        });
+
         await this.giftsRepository.linkUserGameWinGift(userGame.id, createdGift.id);
 
         return {
@@ -614,6 +620,11 @@ export class GiftsService {
           this.logger.debug(
             `User ${userId} won secret gift: ${secretPrize.name}`,
           );
+
+          await this.winsService.recordWin({
+            image: createdGift.image,
+            name: createdGift.giftName,
+          });
 
           await this.giftsRepository.linkUserGameWinGift(userGame.id, createdGift.id);
 

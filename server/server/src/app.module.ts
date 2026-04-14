@@ -9,6 +9,7 @@ import { TelegramBotModule } from './telegram-bot/telegram-bot.module';
 import { CurrancyModule } from '../libs/common/modules/Currancy/Currancy.module';
 import { UpgrateModule } from './upgrate/Upgrate.module';
 import { MultiplayerModule } from './multiplayer/multiplayer.module';
+import { WinsModule } from './wins/wins.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { MultiplayerModule } from './multiplayer/multiplayer.module';
     CurrancyModule,
     UsersModule,
     GiftsModule,
+    WinsModule,
     UpgrateModule,
     PromocodeModule,
     MultiplayerModule,
