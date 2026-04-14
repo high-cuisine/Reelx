@@ -553,6 +553,7 @@ export class GiftsService {
 
         await this.winsService.recordWin({
           image: createdGift.image,
+          lottieUrl: createdGift.lottieUrl,
           name: createdGift.giftName,
         });
 
@@ -623,6 +624,7 @@ export class GiftsService {
 
           await this.winsService.recordWin({
             image: createdGift.image,
+            lottieUrl: createdGift.lottieUrl,
             name: createdGift.giftName,
           });
 

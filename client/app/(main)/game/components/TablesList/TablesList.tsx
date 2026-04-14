@@ -8,6 +8,16 @@ import { multiplayerService, type TableState } from '@/entites/multiplayer/api/a
 import { useUserStore } from '@/entites/user/model/user';
 import { TABLE_GLOW_COLORS, TABLE_GIFT_IMAGES, stablePick } from '../../constants/tableVisualPool';
 
+export type TablesCurrencyFilter = 'TON' | 'STARS' | 'ALL';
+export type TablesSortBy = 'bet' | 'win' | 'players';
+export type TablesSortDir = 'asc' | 'desc';
+
+export interface TablesListFilters {
+    currency: TablesCurrencyFilter;
+    sortBy: TablesSortBy;
+    sortDir: TablesSortDir;
+}
+
 function displayUsername(username: string) {
     return username.startsWith('@') ? username : `@${username}`;
 }
@@ -33,10 +43,21 @@ function mapServerTableToItemProps(table: TableState) {
             type: currencyType as 'ton' | 'star',
         },
         members,
+        server: table,
     };
 }
 
-const TablesList = () => {
+function getSortValue(table: TableState, sortBy: TablesSortBy): number {
+    if (sortBy === 'players') return table.participants?.length ?? 0;
+    if (sortBy === 'win') {
+        // "Выигрыш" = банк (ставка * макс игроков) для обеих валют.
+        return (table.betAmount ?? 0) * (table.maxPlayers ?? 0);
+    }
+    // bet
+    return table.betAmount ?? 0;
+}
+
+const TablesList = ({ filters }: { filters: TablesListFilters }) => {
     const router = useRouter();
     const updateBalance = useUserStore((s) => s.updateBalance);
 
@@ -130,10 +151,33 @@ const TablesList = () => {
         );
     }
 
+    const filtered = tables
+        .filter((t) => {
+            if (filters.currency === 'ALL') return true;
+            return t.server.currency === filters.currency;
+        })
+        .slice()
+        .sort((a, b) => {
+            const av = getSortValue(a.server, filters.sortBy);
+            const bv = getSortValue(b.server, filters.sortBy);
+            if (av === bv) return 0;
+            const dir = filters.sortDir === 'asc' ? 1 : -1;
+            return av < bv ? -1 * dir : 1 * dir;
+        });
+
+    if (filtered.length === 0) {
+        const curLabel = filters.currency === 'TON' ? 'TON' : 'STARS';
+        return (
+            <div className={cls.tablesList}>
+                <p className={cls.emptyState}>Нет столов для {curLabel}</p>
+            </div>
+        );
+    }
+
     return (
         <div className={cls.tablesList}>
             {joinError && <p className={cls.joinError}>{joinError}</p>}
-            {tables.map((table) => (
+            {filtered.map((table) => (
                 <div
                     key={table.id}
                     className={cls.tableWrapper}

@@ -49,12 +49,13 @@ export class WinsService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async recordWin(input: { image?: string | null; name?: string | null }) {
+  async recordWin(input: { image?: string | null; lottieUrl?: string | null; name?: string | null }) {
     const image = (input.image ?? '').trim();
     if (!image) return;
 
     const item: WinsItem = {
       image,
+      lottieUrl: input.lottieUrl ?? undefined,
       name: input.name ?? undefined,
       createdAt: Date.now(),
       source: 'win',
@@ -86,6 +87,7 @@ export class WinsService implements OnModuleInit, OnModuleDestroy {
 
     const item: WinsItem = {
       image: random.image,
+      lottieUrl: random.lottieUrl ?? undefined,
       name: random.name ?? undefined,
       createdAt: now,
       source: 'random',
@@ -111,7 +113,7 @@ export class WinsService implements OnModuleInit, OnModuleDestroy {
     return next;
   }
 
-  private async pickRandomFromDb(): Promise<{ image: string; name?: string | null } | null> {
+  private async pickRandomFromDb(): Promise<{ image: string; lottieUrl?: string | null; name?: string | null } | null> {
     const where = { image: { not: null } };
     const count = await this.prisma.userGifts.count({ where });
     if (count <= 0) return null;
@@ -119,11 +121,11 @@ export class WinsService implements OnModuleInit, OnModuleDestroy {
     const row = await this.prisma.userGifts.findFirst({
       where,
       skip,
-      select: { image: true, giftName: true },
+      select: { image: true, lottieUrl: true, giftName: true },
     });
     const image = (row?.image ?? '').trim();
     if (!image) return null;
-    return { image, name: row?.giftName ?? null };
+    return { image, lottieUrl: row?.lottieUrl ?? null, name: row?.giftName ?? null };
   }
 }
 

@@ -1,5 +1,6 @@
 export type WinsItem = {
   image: string;
+  lottieUrl?: string;
   name?: string;
   createdAt: number; // ms epoch
   source: 'win' | 'random';

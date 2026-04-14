@@ -4,9 +4,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import cls from './WinsStrip.module.scss';
 import { getSocketBaseUrl } from '@/entites/multiplayer/lib/socketBaseUrl';
+import { GiftImageOrLottie } from '@/shared/ui/GiftImageOrLottie/GiftImageOrLottie';
 
 type WinsItem = {
     image: string;
+    lottieUrl?: string;
     name?: string;
     createdAt: number;
     source: 'win' | 'random';
@@ -61,7 +63,15 @@ export function WinsStrip() {
             <div className={cls.list} role="list" aria-label="Recent wins">
                 {images.slice(0, 10).map((it, idx) => (
                     <div key={`${it.createdAt}-${idx}`} className={cls.item} role="listitem">
-                        <img src={it.image} alt={it.name ?? 'Gift'} className={cls.img} loading="lazy" />
+                        <GiftImageOrLottie
+                            image={it.image}
+                            lottieUrl={it.lottieUrl}
+                            alt={it.name ?? 'Gift'}
+                            fillContainer
+                            hideLottieBackground
+                            className={cls.media}
+                            imageClassName={cls.img}
+                        />
                     </div>
                 ))}
             </div>
