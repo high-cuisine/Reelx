@@ -63,27 +63,25 @@ export default function GamePage() {
             <div className={cls.downContainer}>
                 <div className={cls.pageHeader}>
                     <div className={cls.headerRow}>
-                        <div className={cls.currencyToggle}>
-                            <button
-                                type="button"
-                                className={`${cls.currencyPill} ${filters.currency === 'TON' ? cls.currencyPillActive : ''}`}
-                                onClick={() => setFilters((p) => ({ ...p, currency: 'TON' }))}
-                            >
-                                <Image src={tonIcon} alt="" width={13} height={13} />
-                                TON
-                            </button>
-                            <button
-                                type="button"
-                                className={`${cls.currencyPill} ${filters.currency === 'STARS' ? cls.currencyPillActive : ''}`}
-                                onClick={() => setFilters((p) => ({ ...p, currency: 'STARS' }))}
-                            >
-                                <Image src={starIcon} alt="" width={13} height={13} />
-                                STARS
-                            </button>
-                        </div>
-
                         <div className={cls.titleContainer}>
                             <h3 className={cls.title}>Столы</h3>
+                            <button
+                                type="button"
+                                className={cls.currencySwitch}
+                                onClick={() =>
+                                    setFilters((p) => ({ ...p, currency: p.currency === 'TON' ? 'STARS' : 'TON' }))
+                                }
+                                aria-label="Переключить валюту"
+                            >
+                                <Image
+                                    src={filters.currency === 'TON' ? tonIcon : starIcon}
+                                    alt=""
+                                    width={14}
+                                    height={14}
+                                    className={cls.currencyIcon}
+                                />
+                                <span className={cls.currencyText}>{filters.currency}</span>
+                            </button>
                         </div>
 
                         <div className={cls.filtersWrap} ref={menuRef}>

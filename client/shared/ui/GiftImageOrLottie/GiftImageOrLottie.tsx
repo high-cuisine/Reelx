@@ -7,6 +7,21 @@ import cls from './GiftImageOrLottie.module.scss';
 
 const Lottie = dynamic(() => import('lottie-react').then((m) => m.default), { ssr: false });
 
+function normalizeMediaUrl(url: string): string {
+    const trimmed = url.trim();
+    if (trimmed.startsWith('ipfs://')) {
+        const hash = trimmed.replace('ipfs://', '');
+        return `https://cloudflare-ipfs.com/ipfs/${hash}`;
+    }
+    if (trimmed.startsWith('//')) return `https:${trimmed}`;
+    if (trimmed.startsWith('http://')) return trimmed.replace(/^http:\/\//, 'https://');
+    return trimmed;
+}
+
+function isRemoteUrl(url: string): boolean {
+    return /^https?:\/\//i.test(url) || url.startsWith('ipfs://') || url.startsWith('//');
+}
+
 interface GiftImageOrLottieProps {
     image?: string | StaticImageData;
     lottieUrl?: string;
@@ -57,7 +72,7 @@ export const GiftImageOrLottie = ({
             return;
         }
         let cancelled = false;
-        fetch(lottieUrl)
+        fetch(normalizeMediaUrl(lottieUrl))
             .then((r) => r.json())
             .then((data) => {
                 if (!cancelled) {
@@ -160,19 +175,48 @@ export const GiftImageOrLottie = ({
     }
 
     if (image) {
+        const remoteSrc =
+            typeof image === 'string' && isRemoteUrl(image) ? normalizeMediaUrl(image) : null;
+
         if (fillContainer) {
             return (
                 <div className={`${cls.imageWrap} ${className ?? ''}`}>
-                    <Image
-                        src={image}
-                        alt={alt}
-                        fill
-                        sizes="(max-width: 480px) 33vw, 70px"
-                        className={imageClassName ?? cls.imageFill}
-                    />
+                    {remoteSrc ? (
+                        <img
+                            src={remoteSrc}
+                            alt={alt}
+                            className={imageClassName ?? cls.imageFill}
+                            loading="lazy"
+                            referrerPolicy="no-referrer"
+                        />
+                    ) : (
+                        <Image
+                            src={image}
+                            alt={alt}
+                            fill
+                            sizes="(max-width: 480px) 33vw, 70px"
+                            className={imageClassName ?? cls.imageFill}
+                        />
+                    )}
                 </div>
             );
         }
+
+        if (remoteSrc) {
+            return (
+                <img
+                    src={remoteSrc}
+                    alt={alt}
+                    width={56}
+                    height={56}
+                    style={{ width: 56, height: 56 }}
+                    className={imageClassName ?? cls.image}
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                />
+            );
+        }
+
         return (
             <Image
                 src={image}
