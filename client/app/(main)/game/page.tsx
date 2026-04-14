@@ -8,6 +8,7 @@ import { TableButton } from './components/TableButton/TableButton';
 import { CreateTableModal } from './components/CreateTableModal/CreateTableModal';
 import cls from './game.module.scss';
 import starIcon from '@/assets/icons/grey-star.svg';
+import { WinsStrip } from './components/WinsStrip/WinsStrip';
 
 export default function GamePage() {
     const router = useRouter();
@@ -15,6 +16,7 @@ export default function GamePage() {
 
     return (
         <div className={cls.gamePage}>
+            <WinsStrip />
             <div className={cls.downContainer}>
                 <div className={cls.pageHeader}>
                     <div className={cls.titleContainer}>
