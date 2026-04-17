@@ -11,9 +11,11 @@ const MAX_ROTATIONS = 2; // максимум 2 полных оборота
 
 export const useWheelSpin = (
     externalIsSpinning?: boolean,
-    onSpinComplete?: (rotation: number) => void,
+    onSpinComplete?: (rotation: number, lockedTargetIndex: number | null) => void,
     targetIndex?: number | null,
-    itemsCount?: number
+    itemsCount?: number,
+    /** Центр целевого слота в градусах (как Wheel / conic-gradient); иначе считаем равные сектора. */
+    targetSlotCenterDeg?: number | null,
 ): UseWheelSpinReturn => {
     const [rotation, setRotation] = useState(0);
     const [isSpinning, setIsSpinning] = useState(false);
@@ -36,12 +38,32 @@ export const useWheelSpin = (
 
             let additionalRotation = 0;
 
-            if (targetIndex !== null && targetIndex !== undefined && itemsCount && itemsCount > 0) {
+            const lockedIdx =
+                targetIndex !== null &&
+                targetIndex !== undefined &&
+                itemsCount &&
+                itemsCount > 0 &&
+                targetIndex >= 0 &&
+                targetIndex < itemsCount
+                    ? targetIndex
+                    : null;
+
+            if (
+                lockedIdx !== null &&
+                targetSlotCenterDeg != null &&
+                Number.isFinite(targetSlotCenterDeg)
+            ) {
+                const targetRotation = 360 - targetSlotCenterDeg;
+                additionalRotation = fullRotations * 360 + targetRotation;
+                console.log(
+                    `🎯 useWheelSpin: Целевой индекс: ${lockedIdx}, центр слота: ${targetSlotCenterDeg}°, оборотов: ${fullRotations}, доп. поворот: ${additionalRotation}°`,
+                );
+            } else if (lockedIdx !== null && itemsCount && itemsCount > 0) {
                 const segmentAngle = 360 / itemsCount;
-                const targetSegmentCenter = targetIndex * segmentAngle + segmentAngle / 2;
+                const targetSegmentCenter = lockedIdx * segmentAngle + segmentAngle / 2;
                 const targetRotation = 360 - targetSegmentCenter;
                 additionalRotation = fullRotations * 360 + targetRotation;
-                console.log(`🎯 useWheelSpin: Целевой индекс: ${targetIndex}, оборотов: ${fullRotations}, угол: ${additionalRotation}°`);
+                console.log(`🎯 useWheelSpin: Целевой индекс (равные сектора): ${lockedIdx}, оборотов: ${fullRotations}, угол: ${additionalRotation}°`);
             } else {
                 additionalRotation = fullRotations * 360 + Math.random() * 360;
                 console.log(`🎯 useWheelSpin: Случайный спин, оборотов: ${fullRotations}, угол: ${additionalRotation}°`);
@@ -68,8 +90,13 @@ export const useWheelSpin = (
                     console.log(`⏰ useWheelSpin: Вращение завершено через ${SPIN_DURATION}ms`);
                     setIsSpinning(false);
                     if (onSpinCompleteRef.current) {
-                        console.log('📞 useWheelSpin: Вызываем onSpinComplete callback с углом:', finalRotationRef.current);
-                        onSpinCompleteRef.current(finalRotationRef.current);
+                        console.log(
+                            '📞 useWheelSpin: onSpinComplete угол:',
+                            finalRotationRef.current,
+                            'lockedIdx:',
+                            lockedIdx,
+                        );
+                        onSpinCompleteRef.current(finalRotationRef.current, lockedIdx);
                     } else {
                         console.warn('⚠️ useWheelSpin: onSpinCompleteRef.current is undefined!');
                     }
@@ -81,7 +108,7 @@ export const useWheelSpin = (
             }
             animationFrameRef.current = requestAnimationFrame(animate);
         }
-    }, [externalIsSpinning, isSpinning, targetIndex, itemsCount, rotation]);
+    }, [externalIsSpinning, isSpinning, targetIndex, itemsCount, targetSlotCenterDeg, rotation]);
 
     // Отдельный эффект для очистки при размонтировании
     useEffect(() => {

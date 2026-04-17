@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useWheelSpin } from './useWheelSpin';
 import { useWheelDrag } from './useWheelDrag';
 import { calculateSelectedSegment } from '../helpers/calculateSelectedSegment';
+import { getFlatSlotCenterAngleDeg } from '../helpers/wheelGeometry';
 import { GiftItem } from '@/entites/gifts/interfaces/giftItem.interface';
 
 interface UseWheelLogicParams {
@@ -19,8 +20,28 @@ export function useWheelLogic({
 }: UseWheelLogicParams) {
   const [manualRotation, setManualRotation] = useState(0);
 
-  const handleSpinComplete = (rotation: number) => {
+  const targetSlotCenterDeg = useMemo(() => {
+    if (
+      targetIndex == null ||
+      targetIndex < 0 ||
+      targetIndex >= items.length ||
+      items.length === 0
+    ) {
+      return null;
+    }
+    return getFlatSlotCenterAngleDeg(items, targetIndex);
+  }, [items, targetIndex]);
+
+  const handleSpinComplete = (rotation: number, lockedTargetIndex: number | null) => {
     if (!onSpinComplete) return;
+    if (
+      lockedTargetIndex !== null &&
+      lockedTargetIndex >= 0 &&
+      lockedTargetIndex < items.length
+    ) {
+      onSpinComplete(items[lockedTargetIndex]);
+      return;
+    }
     const selectedIndex = calculateSelectedSegment(rotation, items.length);
     onSpinComplete(items[selectedIndex]);
   };
@@ -30,6 +51,7 @@ export function useWheelLogic({
     handleSpinComplete,
     targetIndex,
     items.length,
+    targetSlotCenterDeg,
   );
 
   const {

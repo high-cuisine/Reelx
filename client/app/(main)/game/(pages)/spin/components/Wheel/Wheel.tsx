@@ -3,6 +3,11 @@ import Image from 'next/image';
 import { useEffect } from 'react';
 import cls from './Wheel.module.scss'
 import { generateConicGradient } from '../../helpers/generateConicGradient';
+import {
+    buildWheelGroups,
+    computeGroupVisualSizes,
+    getGroupCenterAngleDeg,
+} from '../../helpers/wheelGeometry';
 import { GiftItem } from '@/entites/gifts/interfaces/giftItem.interface';
 import { GiftImageOrLottie } from '@/shared/ui/GiftImageOrLottie/GiftImageOrLottie';
 import { MoneyBadge } from './MoneyBadge';
@@ -16,51 +21,6 @@ interface WheelProps {
     targetIndex?: number | null;
     mode: 'normal' | 'mystery' | 'multy';
 }
-
-type WheelGroup = {
-    item: GiftItem;
-    count: number;
-    startIndex: number; // индекс первой записи этой группы в общем массиве
-};
-
-// Группируем элементы по типу+имени+цене и считаем,
-// сколько "записей" приходится на каждую визуальную ячейку колеса.
-const buildWheelGroups = (items: GiftItem[]): WheelGroup[] => {
-    const map = new Map<string, { item: GiftItem; count: number; firstIndex: number }>();
-
-    items.forEach((item, index) => {
-        const key = `${item.type}__${item.name}__${item.price}`;
-        const existing = map.get(key);
-
-        if (existing) {
-            existing.count += 1;
-        } else {
-            map.set(key, {
-                item,
-                count: 1,
-                firstIndex: index,
-            });
-        }
-    });
-
-    // Сортируем группы по первому появлению, чтобы порядок на колесе был предсказуем
-    const sorted = Array.from(map.values()).sort((a, b) => a.firstIndex - b.firstIndex);
-
-    // Проставляем startIndex для каждой группы (накопительная сумма count)
-    const groups: WheelGroup[] = [];
-    let currentStartIndex = 0;
-
-    sorted.forEach(({ item, count }) => {
-        groups.push({
-            item,
-            count,
-            startIndex: currentStartIndex,
-        });
-        currentStartIndex += count;
-    });
-
-    return groups;
-};
 
 const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIndex, mode }: WheelProps) => {
     const {
@@ -100,41 +60,14 @@ const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIn
 
     // Сектора с игрушками (type === 'gift') — разная ширина, вариация ±20%
     let conicGradient = 'none';
-    let groupVisualSizes: number[] = groups.map((g) => g.count);
+    const groupVisualSizes =
+        totalItemsCount > 0
+            ? computeGroupVisualSizes(groups, totalItemsCount)
+            : groups.map((g) => g.count);
 
     if (totalItemsCount > 0) {
-        const baseTotal = groups.reduce((sum, group) => sum + group.count, 0) || totalItemsCount;
-        const giftGroupCount = groups.filter((g) => g.item.type === 'gift').length;
-
-        let giftIndex = 0;
-        const rawWeights = groups.map((group) => {
-            if (group.item.type === 'gift') {
-                // Множитель в диапазоне [0.8, 1.2] для вариации ±20%
-                const t = giftGroupCount > 1 ? giftIndex / (giftGroupCount - 1) : 0.5;
-                const multiplier = 0.8 + 0.4 * t;
-                giftIndex += 1;
-                return group.count * multiplier;
-            }
-            return group.count;
-        });
-
-        const rawTotal = rawWeights.reduce((sum, w) => sum + w, 0);
-        const scale = rawTotal > 0 ? baseTotal / rawTotal : 1;
-        groupVisualSizes = rawWeights.map((w) => w * scale);
-
-        conicGradient = generateConicGradient(
-            totalItemsCount,
-            groupVisualSizes,
-        );
+        conicGradient = generateConicGradient(totalItemsCount, groupVisualSizes);
     }
-
-    // Центр сектора в градусах (0° = сверху) по визуальным размерам
-    const getSegmentCenterAngle = (groupIndex: number) => {
-        const unitAngle = 360 / totalItemsCount;
-        let sum = 0;
-        for (let i = 0; i < groupIndex; i++) sum += groupVisualSizes[i];
-        return (sum + groupVisualSizes[groupIndex] / 2) * unitAngle;
-    };
 
     return (
         <div className={cls.wheelContainer}>
@@ -231,7 +164,11 @@ const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIn
                 }}>
                 {groups.map((group, index) => {
                     // Позиция по центру сектора с учётом переменной ширины (±20% для игрушек)
-                    const centerAngleDeg = getSegmentCenterAngle(index);
+                    const centerAngleDeg = getGroupCenterAngleDeg(
+                        index,
+                        groupVisualSizes,
+                        totalItemsCount,
+                    );
                     const radian = (centerAngleDeg * Math.PI) / 180;
                     const radius = 35;
                     const x = 50 + radius * Math.cos(radian - Math.PI / 2);
