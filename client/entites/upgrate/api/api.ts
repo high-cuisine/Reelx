@@ -10,6 +10,7 @@ export interface ToyChance {
 export interface PoolGift {
     name: string;
     image?: string;
+    lottieUrl?: string;
     price?: number;
     pool: 'win' | 'lose';
 }

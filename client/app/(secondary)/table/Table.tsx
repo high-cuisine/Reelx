@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/entites/user/model/user';
+import { updateUserBalance } from '@/features/user/user';
 import { copyOwnerIdToClipboard, formatOwnerHashShort, formatTableGameId } from './helpers/ownerDisplay';
 import { useEliminationFlash } from './hooks/useEliminationFlash';
 import {
@@ -80,9 +81,21 @@ export default function TablePage() {
 
     const handleExit = async () => {
         if (exitPending) return;
+        const phaseBeforeLeave = game?.phase;
+        const bet = table?.betAmount;
+        const currency = table?.currency;
         try {
             setExitPending(true);
             await leaveTableNow();
+            // Сервер возвращает ставку при leave; клиент при join уменьшал баланс оптимистично — синхронизируем.
+            if (
+                typeof bet === 'number' &&
+                bet > 0 &&
+                currency &&
+                (phaseBeforeLeave === 'lobby' || phaseBeforeLeave === 'round_break')
+            ) {
+                updateUserBalance(bet, currency === 'TON' ? 'ton' : 'stars');
+            }
         } finally {
             setExitPending(false);
             router.push('/game');

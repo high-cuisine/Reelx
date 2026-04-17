@@ -4,6 +4,8 @@ import { ToyChanceRto } from './toy-chance.rto';
 export class PoolGiftRto {
   name?: string;
   image?: string;
+  /** URL JSON Lottie (как в инвентаре) */
+  lottieUrl?: string;
   price?: number;
   /** win | lose */
   pool: 'win' | 'lose';

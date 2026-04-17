@@ -52,6 +52,7 @@ export class MultiplayerController {
     );
     this.multiplayerGateway.trackUserAtTable(userId, userId);
     const table = await this.multiplayerService.enrichTable(raw);
+    this.multiplayerGateway.notifyLobbyTableCreated(table);
     return { success: true, table };
   }
 

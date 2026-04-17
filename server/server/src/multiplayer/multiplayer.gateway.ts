@@ -22,6 +22,9 @@ interface AuthenticatedSocket extends Socket {
   userId?: string;
 }
 
+/** Все авторизованные клиенты — рассылка новых/удалённых столов для списка лобби. */
+const TABLES_LOBBY_ROOM = 'tables-lobby';
+
 @WebSocketGateway({
   namespace: '/multiplayer',
   cors: {
@@ -65,6 +68,7 @@ export class MultiplayerGateway
 
       const payload = this.jwtService.validateToken(token);
       client.userId = payload.userId;
+      await client.join(TABLES_LOBBY_ROOM);
       this.logger.log(`Client connected: ${client.id} (userId=${client.userId})`);
     } catch {
       this.disconnect(client, 'Invalid token');
@@ -214,7 +218,13 @@ export class MultiplayerGateway
     const room = this.roomName(ownerId);
     this.server.to(room).emit('table-deleted', { ownerId });
     this.server.in(room).socketsLeave(room);
+    this.server.to(TABLES_LOBBY_ROOM).emit('tables:removed', { ownerId });
     this.logger.log(`Table ${room} deleted — all clients evicted`);
+  }
+
+  /** Новый стол в Redis — обновить список у всех в лобби. */
+  notifyLobbyTableCreated(table: TableStateView) {
+    this.server.to(TABLES_LOBBY_ROOM).emit('tables:created', { table });
   }
 
   /** Синхронизация состояния после HTTP leave (и др.). */

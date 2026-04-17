@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { GameCurrancy, UserGamesType } from '@prisma/client';
 import axios, { AxiosInstance } from 'axios';
 import { RedisService } from '../../libs/infrustructure/redis/redis.service';
 import { UserRepository } from '../users/repositorys/user.repository';
@@ -46,6 +47,22 @@ export class UpgrateService {
       timeout: 30000,
       headers: { 'Content-Type': 'application/json' },
     });
+  }
+
+  private async recordUpgrateUserGame(
+    userId: string,
+    betTon: number,
+    wonUserGiftId?: string | null,
+  ): Promise<void> {
+    const row = await this.usersService.createUserGame({
+      userId,
+      type: UserGamesType.upgrate,
+      priceAmount: betTon,
+      priceType: GameCurrancy.TON,
+    });
+    if (wonUserGiftId) {
+      await this.usersService.linkUserGameWinGift(row.id, wonUserGiftId);
+    }
   }
 
   async getChance(
@@ -408,6 +425,7 @@ export class UpgrateService {
         );
       }
       await this.redisService.del(key);
+      await this.recordUpgrateUserGame(userId, state.bet);
       return { result: 'lose', gifts: [] };
     }
 
@@ -434,6 +452,7 @@ export class UpgrateService {
 
     if (selected.length === 0) {
       await this.redisService.del(key);
+      await this.recordUpgrateUserGame(userId, state.bet);
       return { result: 'win', gifts: [] };
     }
 
@@ -449,6 +468,8 @@ export class UpgrateService {
     }));
 
     await this.redisService.del(key);
+    const firstGiftId = created[0]?.id;
+    await this.recordUpgrateUserGame(userId, state.bet, firstGiftId ?? null);
     return { result: 'win', gifts };
   }
 

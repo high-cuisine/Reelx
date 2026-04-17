@@ -14,10 +14,38 @@
   --gifts-backgound:#302C44;
 }
 
+html {
+  box-sizing: border-box;
+  min-height: 100%;
+  min-height: 100dvh;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
 body {
   background: var(--backgroud-blue);
   font-family: var(--font-montserrat);
   color: var(--white);
   overflow-x: hidden!important;
+  margin: 0;
+  min-height: 100%;
+  min-height: 100dvh;
+  /* Telegram: зона под системные кнопки / вырезы; в обычном браузере переменные = 0 */
+  padding-top: calc(
+    var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px)
+  );
+  padding-right: calc(
+    var(--tg-safe-area-inset-right, 0px) + var(--tg-content-safe-area-inset-right, 0px)
+  );
+  padding-bottom: calc(
+    var(--tg-safe-area-inset-bottom, 0px) + var(--tg-content-safe-area-inset-bottom, 0px)
+  );
+  padding-left: calc(
+    var(--tg-safe-area-inset-left, 0px) + var(--tg-content-safe-area-inset-left, 0px)
+  );
 }
 

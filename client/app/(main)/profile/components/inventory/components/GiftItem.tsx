@@ -22,6 +22,8 @@ export const GiftItem: React.FC<GiftItemProps> = ({ gift, onClick }) => {
                     lottieUrl={gift.lottieUrl}
                     alt={gift.giftName}
                     fillContainer
+                    loop={false}
+                    hideLottieBackground
                     className={cls.giftImageMedia}
                     imageClassName={cls.nftImage}
                 />

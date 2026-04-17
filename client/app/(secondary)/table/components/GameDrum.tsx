@@ -17,11 +17,18 @@ const AVATAR_R = 12;
 const SECTOR_BASE  = 'rgba(24, 16, 58, 0.88)'; // dark felt – same tone as table
 const SECTOR_LIT   = 'rgba(157, 138, 243, 0.40)'; // spotlight overlay colour
 
-// ── Roulette timing (ms per step) ────────────────────────────
-const SPIN_FAST = 100;   // fast cycling speed
-const SPIN_MAX  = 560;   // slowest step before stop
-/** Сглаживание стрелки к целевому углу за кадр (rAF), 0..1 */
-const POINTER_EASE = 0.42;
+// ── Roulette timing (как UpgradeArena: постоянная ω → quad ease-out) ──
+const FULL_DEG = 360;
+/** Постоянная скорость «ожидания» (градусов в секунду) — как SPIN_SPEED в upgrate */
+const SPIN_SPEED_DPS = 600;
+/** Quadratic ease-out: длительность из согласования скорости v₀ = 2·D/T = SPIN_SPEED_DPS */
+const MIN_EASE_MS = 1500;
+const MAX_EASE_MS = 5000;
+const EXTRA_TURNS = 3;
+
+function normDeg360(a: number): number {
+    return ((a % FULL_DEG) + FULL_DEG) % FULL_DEG;
+}
 
 function polarXY(r: number, deg: number): { x: number; y: number } {
     const rad = (deg * Math.PI) / 180;
@@ -76,89 +83,123 @@ export function GameDrum({
 
     // ── Roulette "lit" sector state ───────────────────────────
     const [litIndex, setLitIndex] = useState<number | null>(null);
-    /** Текущий угол стрелки (°), сглаженный rAF */
+    /** Угол стрелки (°), 0..360 — как визуальный rotate SVG */
     const [pointerDeg, setPointerDeg] = useState(0);
-    /** Последний «целевой» накопленный угол (для расчёта следующего шага без отката по кругу) */
-    const pointerCommittedRef = useRef(0);
-    const pointerTargetRef = useRef(0);
-    const pointerDisplayRef = useRef(0);
-    const spinPointerRafRef = useRef<number>(0);
-    const wasSpinningRef = useRef(false);
-    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const posRef   = useRef(0);
-    const stoppingRef = useRef(false);
+    const pointerDegRef = useRef(0);
+    pointerDegRef.current = pointerDeg;
 
-    // keep spinActive/highlight ref-current to avoid stale closures
+    const spinRafRef = useRef(0);
+    const lastTsRef = useRef<number | null>(null);
+    /** Накопленный угол (может >360) — для фазы ease и стыковки скорости */
+    const angleAccumRef = useRef(0);
+    const modeRef = useRef<'fast' | 'ease'>('fast');
+    const easeStartMsRef = useRef(0);
+    const easeDurMsRef = useRef(2500);
+    const easeStartAngRef = useRef(0);
+    const easeEndAngRef = useRef(0);
+    const wasSpinningRef = useRef(false);
+    /** Чтобы не запускать ease повторно на том же highlight, пока сервер не сбросит сектор */
+    const completedHighlightRef = useRef<number | null>(null);
+
     const highlightRef = useRef(highlightSectorIndex);
-    useLayoutEffect(() => { highlightRef.current = highlightSectorIndex; }, [highlightSectorIndex]);
+    useLayoutEffect(() => {
+        highlightRef.current = highlightSectorIndex;
+    }, [highlightSectorIndex]);
 
     useEffect(() => {
-        // Clear previous animation
-        if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current  = null;
-        stoppingRef.current = false;
-
-        if (n < 2 || !spinActive) {
-            // Static: show highlight (or nothing)
-            setLitIndex(highlightSectorIndex ?? null);
-            return;
+        if (highlightSectorIndex == null) {
+            completedHighlightRef.current = null;
         }
+    }, [highlightSectorIndex]);
 
-        if (highlightSectorIndex != null) {
-            // ── Stopping sequence ────────────────────────────────
-            stoppingRef.current = true;
-            const target = ((highlightSectorIndex % n) + n) % n;
-            // Run at least 2 full rounds then align to target
-            const extra = n * 2 + ((target - posRef.current + n) % n);
-            let step = 0;
-
-            const decelTick = () => {
-                if (!stoppingRef.current) return;
-                posRef.current = (posRef.current + 1) % n;
-                step++;
-                setLitIndex(posRef.current);
-
-                if (step < extra) {
-                    const t = step / extra; // 0 → 1
-                    // quadratic ease-in deceleration
-                    const delay = SPIN_FAST + t * t * (SPIN_MAX - SPIN_FAST);
-                    timerRef.current = setTimeout(decelTick, delay);
-                }
-                // done: litIndex == target (highlightSectorIndex)
-            };
-
-            timerRef.current = setTimeout(decelTick, SPIN_FAST);
-        } else {
-            // ── Continuous fast spin ─────────────────────────────
-            const spinTick = () => {
-                if (highlightRef.current != null) return; // hand off to stopping
-                posRef.current = (posRef.current + 1) % n;
-                setLitIndex(posRef.current);
-                timerRef.current = setTimeout(spinTick, SPIN_FAST);
-            };
-            timerRef.current = setTimeout(spinTick, SPIN_FAST);
-        }
-
-        return () => {
-            stoppingRef.current = false;
-            if (timerRef.current) clearTimeout(timerRef.current);
-        };
-    }, [spinActive, highlightSectorIndex, n]);
-
-    // Новый заход в фазу playing: база для накопленного угла — текущее положение стрелки
     useEffect(() => {
         if (spinActive && !wasSpinningRef.current) {
-            pointerCommittedRef.current = pointerDisplayRef.current;
+            lastTsRef.current = null;
+            modeRef.current = 'fast';
+            angleAccumRef.current = pointerDegRef.current;
         }
         wasSpinningRef.current = spinActive;
     }, [spinActive]);
 
+    useEffect(() => {
+        if (n < 2 || !spinActive) {
+            if (spinRafRef.current) {
+                cancelAnimationFrame(spinRafRef.current);
+                spinRafRef.current = 0;
+            }
+            lastTsRef.current = null;
+            modeRef.current = 'fast';
+            setLitIndex(highlightSectorIndex ?? null);
+            return;
+        }
+
+        const step = (ts: number) => {
+            const hi = highlightRef.current;
+            const sector = FULL_DEG / n;
+
+            if (lastTsRef.current == null) {
+                lastTsRef.current = ts;
+            }
+            const dt = Math.min(0.05, Math.max(0, (ts - lastTsRef.current) / 1000));
+            lastTsRef.current = ts;
+
+            if (hi != null && modeRef.current === 'fast' && completedHighlightRef.current !== hi) {
+                const currentNorm = normDeg360(angleAccumRef.current);
+                const targetMid = ((hi + 0.5) * sector) % FULL_DEG;
+                const delta = ((targetMid - currentNorm) + FULL_DEG) % FULL_DEG;
+                const D = EXTRA_TURNS * FULL_DEG + delta;
+                const rawEaseMs = (2 * D / SPIN_SPEED_DPS) * 1000;
+                easeDurMsRef.current = Math.max(MIN_EASE_MS, Math.min(MAX_EASE_MS, rawEaseMs));
+                easeStartAngRef.current = angleAccumRef.current;
+                easeEndAngRef.current = angleAccumRef.current + D;
+                easeStartMsRef.current = ts;
+                modeRef.current = 'ease';
+                setLitIndex(hi);
+            }
+
+            if (modeRef.current === 'ease') {
+                const progress = Math.min(1, (ts - easeStartMsRef.current) / easeDurMsRef.current);
+                const eased = 1 - (1 - progress) ** 2;
+                const ang =
+                    easeStartAngRef.current +
+                    (easeEndAngRef.current - easeStartAngRef.current) * eased;
+                angleAccumRef.current = ang;
+                setPointerDeg(normDeg360(ang));
+                if (hi != null) {
+                    setLitIndex(hi);
+                }
+
+                if (progress >= 1) {
+                    completedHighlightRef.current = highlightRef.current;
+                    modeRef.current = 'fast';
+                    lastTsRef.current = null;
+                }
+            } else {
+                angleAccumRef.current += SPIN_SPEED_DPS * dt;
+                const a = normDeg360(angleAccumRef.current);
+                const nextLit = Math.min(n - 1, Math.floor(a / sector));
+                setLitIndex(nextLit);
+                setPointerDeg(a);
+            }
+
+            spinRafRef.current = requestAnimationFrame(step);
+        };
+
+        spinRafRef.current = requestAnimationFrame(step);
+        return () => {
+            if (spinRafRef.current) {
+                cancelAnimationFrame(spinRafRef.current);
+                spinRafRef.current = 0;
+            }
+        };
+    }, [spinActive, n]);
+
     // Стрелка в статике — сразу на сектор, без анимации
     useEffect(() => {
         if (n < 2 || spinActive) return;
-        if (spinPointerRafRef.current) {
-            cancelAnimationFrame(spinPointerRafRef.current);
-            spinPointerRafRef.current = 0;
+        if (spinRafRef.current) {
+            cancelAnimationFrame(spinRafRef.current);
+            spinRafRef.current = 0;
         }
         const li = highlightSectorIndex ?? litIndex;
         const deg =
@@ -167,55 +208,9 @@ export function GameDrum({
                     ? 0
                     : (li + 0.5) * (360 / n)
                 : 0;
-        pointerCommittedRef.current = deg;
-        pointerTargetRef.current = deg;
-        pointerDisplayRef.current = deg;
+        angleAccumRef.current = deg;
         setPointerDeg(deg);
     }, [n, spinActive, highlightSectorIndex, litIndex]);
-
-    // Целевой угол стрелки следует за подсветкой сектора (накопление вперёд по кругу)
-    useEffect(() => {
-        if (n < 2 || !spinActive || litIndex == null) return;
-        const sector = 360 / n;
-        const ideal = ((litIndex + 0.5) * sector) % 360;
-        let next = ideal;
-        const base = pointerCommittedRef.current;
-        while (next <= base - 0.01) next += 360;
-        pointerCommittedRef.current = next;
-        pointerTargetRef.current = next;
-    }, [litIndex, spinActive, n]);
-
-    // Плавное вращение стрелки к цели каждый кадр
-    useEffect(() => {
-        if (n < 2 || !spinActive) {
-            if (spinPointerRafRef.current) {
-                cancelAnimationFrame(spinPointerRafRef.current);
-                spinPointerRafRef.current = 0;
-            }
-            return;
-        }
-
-        const tick = () => {
-            const target = pointerTargetRef.current;
-            let cur = pointerDisplayRef.current;
-            const d = target - cur;
-            if (Math.abs(d) < 0.06) {
-                cur = target;
-            } else {
-                cur += d * POINTER_EASE;
-            }
-            pointerDisplayRef.current = cur;
-            setPointerDeg(cur);
-            spinPointerRafRef.current = requestAnimationFrame(tick);
-        };
-        spinPointerRafRef.current = requestAnimationFrame(tick);
-        return () => {
-            if (spinPointerRafRef.current) {
-                cancelAnimationFrame(spinPointerRafRef.current);
-                spinPointerRafRef.current = 0;
-            }
-        };
-    }, [spinActive, n]);
 
     // ── Avatar positions ──────────────────────────────────────
     const avatarPos = players.map((_, i) => {
@@ -348,10 +343,10 @@ export function GameDrum({
                 <circle cx={CX} cy={CY} r={R_OUTER - 0.5} fill="none" stroke="rgba(116,86,233,0.45)" strokeWidth="1.2" />
                 <circle cx={CX} cy={CY} r={R_OUTER - 1.5} fill="none" stroke="rgba(255,255,255,0.06)"  strokeWidth="0.8" />
 
-                {/* ── Pointer — rotate вокруг центра барабана; угол сглаживается rAF (без телепорта) ─── */}
+                {/* ── Pointer — вершина к ободу (наружу), не к центру; rotate вокруг (CX,CY) ─── */}
                 <g transform={`rotate(${pointerDeg} ${CX} ${CY})`}>
-                    <polygon points="103,49 113,49 108,62" fill="#F2C4C4" opacity="0.95" />
-                    <polygon points="103,49 113,49 108,62" fill="rgba(255,255,255,0.35)" />
+                    <polygon points="108,40 103,53 113,53" fill="#F2C4C4" opacity="0.95" />
+                    <polygon points="108,40 103,53 113,53" fill="rgba(255,255,255,0.35)" />
                 </g>
 
                 {/* ── Centre circle (Табло) ──────────────────────────────── */}

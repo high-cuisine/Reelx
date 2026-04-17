@@ -6,6 +6,7 @@ import { AuthInit } from "@/features/auth/AuthInit";
 import { AuthGate } from "@/features/auth/AuthGate";
 import { TonConnectProvider } from "@/shared/providers/TonConnectProvider";
 import { WinModal } from "@/shared/layout/WinModal/WinModal";
+import { TelegramViewportInit } from "@/shared/lib/telegram/TelegramViewportInit";
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -34,7 +35,7 @@ declare global {
               HapticFeedback?: {
                   impactOccurred: (style: 'light' | 'medium' | 'heavy') => void;
               };
-              disableVerticalSwipes: () => void;
+              disableVerticalSwipes?: () => void;
               shareToStory: (options: {
                 media_url: string;
                 text: string;
@@ -45,8 +46,8 @@ declare global {
               }) => void;
               expand: () => void;
               isExpanded?: boolean;
-              onEvent: (event: string, callback: (data: Record<string, unknown>) => void) => void;
-              offEvent: (event: string) => void;
+              onEvent?: (event: string, callback: (data: Record<string, unknown>) => void) => void;
+              offEvent?: (event: string) => void;
           };
       };
       TelegramWebviewProxy?: {
@@ -74,6 +75,7 @@ export default function RootLayout({
           strategy="afterInteractive"
         />
         <TonConnectProvider manifestUrl={manifestUrl}>
+          <TelegramViewportInit />
           <AuthInit />
           <AuthGate>
             {children}

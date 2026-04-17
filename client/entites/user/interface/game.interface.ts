@@ -1,4 +1,4 @@
-export type GameType = 'solo';
+export type GameType = 'solo' | 'upgrate' | 'pvp';
 export type GameCurrency = 'TON' | 'STARS';
 
 export interface GameWinNft {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import cls from './TablesList.module.scss';
 import { TableItem } from '../TableItem/TableItem';
 import { multiplayerService, type TableState } from '@/entites/multiplayer/api/api';
+import { useTablesLobbySocket } from '@/entites/multiplayer/hooks/useTablesLobbySocket';
 import { useUserStore } from '@/entites/user/model/user';
 import { TABLE_GLOW_COLORS, TABLE_GIFT_IMAGES, stablePick } from '../../constants/tableVisualPool';
 
@@ -85,6 +86,29 @@ const TablesList = ({ filters }: { filters: TablesListFilters }) => {
     useEffect(() => {
         loadTables();
     }, [loadTables]);
+
+    const upsertTableFromSocket = useCallback((table: TableState) => {
+        setTables((prev) => {
+            const mapped = mapServerTableToItemProps(table);
+            const idx = prev.findIndex((t) => t.id === mapped.id);
+            if (idx >= 0) {
+                const next = [...prev];
+                next[idx] = mapped;
+                return next;
+            }
+            return [...prev, mapped];
+        });
+    }, []);
+
+    const removeTableFromSocket = useCallback((ownerId: string) => {
+        setTables((prev) => prev.filter((t) => t.id !== ownerId));
+    }, []);
+
+    useTablesLobbySocket({
+        enabled: fetchError === null,
+        onTableCreated: upsertTableFromSocket,
+        onTableRemoved: removeTableFromSocket,
+    });
 
     const handleDoubleClickJoin = async (
         e: React.MouseEvent,

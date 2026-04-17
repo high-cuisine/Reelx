@@ -137,14 +137,13 @@
 }
 
 .lottieWrap {
-    width: 167px;
-    height: 191px;
     border-radius: 16px;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
     justify-content: center;
-    transform: scale(1.2);
+    align-items: center;
+    width: 59vw;
+    height: 59vw;
+    display: flex;
+    overflow: hidden;
 
     > div {
         width: 100% !important;

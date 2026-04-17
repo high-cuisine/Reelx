@@ -107,6 +107,10 @@ export class UsersService {
         return await this.userRepository.createUserGame(data);
     }
 
+    async linkUserGameWinGift(userGameId: string, userGiftId: string) {
+        return await this.userRepository.linkUserGameWinGift(userGameId, userGiftId);
+    }
+
     async getUserGames(userId: string): Promise<UserGameRto[]> {
         const games = await this.userRepository.getUserGames(userId);
         return games.map((game) => {

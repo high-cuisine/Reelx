@@ -5,7 +5,7 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { GameCurrancy } from '@prisma/client';
+import { GameCurrancy, UserGamesType } from '@prisma/client';
 import { RedisService } from '../../libs/infrustructure/redis/redis.service';
 import { CurrancyService } from '../../libs/common/modules/Currancy/services/Currancy.service';
 import { UsersService } from '../users/services/users.service';
@@ -30,6 +30,10 @@ export interface TableGameState {
   winnerPrize?: TableWinnerPrize | null;
   /** Сумма банка в TON для UI (WinModal). */
   potTon?: number;
+  /** Участники на момент старта розыгрыша (ставка списана). */
+  stakedParticipantIds?: string[];
+  /** Вернулся баланс при выходе со стола — не пишем им историю финала. */
+  refundedUserIds?: string[];
 }
 
 export interface TableWinnerPrize {
@@ -284,6 +288,7 @@ export class MultiplayerService {
     }
 
     await this.refundUser(userId, table.currency, table.betAmount);
+    game.refundedUserIds = [...(game.refundedUserIds ?? []), userId];
 
     await this.dispatchTableWinnerPrize(table);
 
@@ -355,6 +360,7 @@ export class MultiplayerService {
       const allReady = table.participants.every((id) => game.readyUserIds.includes(id));
       if (allReady) {
         game.phase = 'playing';
+        game.stakedParticipantIds = [...table.participants];
         game.activeUserIds = this.shuffle([...table.participants]);
         game.readyUserIds = [];
         game.round = 0;
@@ -510,6 +516,32 @@ export class MultiplayerService {
         `Table winner prize failed: ${(err as Error).message}`,
       );
       game.winnerPrize = null;
+    }
+
+    const refunded = new Set(game.refundedUserIds ?? []);
+    const baseIds =
+      game.stakedParticipantIds && game.stakedParticipantIds.length > 0
+        ? game.stakedParticipantIds
+        : table.participants;
+    const historyUserIds = baseIds.filter((id) => !refunded.has(id));
+    const winnerGiftId = game.winnerPrize?.giftId ?? null;
+
+    for (const uid of historyUserIds) {
+      try {
+        const row = await this.usersService.createUserGame({
+          userId: uid,
+          type: UserGamesType.pvp,
+          priceAmount: table.betAmount,
+          priceType: table.currency,
+        });
+        if (uid === game.winnerUserId && winnerGiftId) {
+          await this.usersService.linkUserGameWinGift(row.id, winnerGiftId);
+        }
+      } catch (e: unknown) {
+        this.logger.warn(
+          `Table user_games row failed for ${uid}: ${(e as Error).message}`,
+        );
+      }
     }
   }
 

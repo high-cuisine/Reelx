@@ -1,9 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import cls from '../../upgrate.module.scss';
 import tonIcon from '@/assets/ton.svg';
 import { PoolGift } from '@/entites/upgrate/api/api';
+import { GiftImageOrLottie } from '@/shared/ui/GiftImageOrLottie/GiftImageOrLottie';
 import { FALLBACK_COLORS } from '../../helpers/constants';
 
 interface WishlistGiftCardProps {
@@ -21,24 +23,32 @@ export function WishlistGiftCard({
     isSelected,
     onSelect,
 }: WishlistGiftCardProps) {
+    const [lottieReplayNonce, setLottieReplayNonce] = useState(0);
+
+    const handleClick = () => {
+        setLottieReplayNonce((n) => n + 1);
+        if (isSelectable) {
+            onSelect?.();
+        }
+    };
+
     const content = (
         <>
             <div
                 className={cls.giftImageBox}
                 style={{ background: FALLBACK_COLORS[index % FALLBACK_COLORS.length] }}
             >
-                {gift.image ? (
-                    <div className={cls.giftImageMedia}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                            src={gift.image}
-                            alt={gift.name ?? ''}
-                            className={cls.giftImageImg}
-                        />
-                    </div>
-                ) : (
-                    <span className={cls.giftPlaceholder}>🎁</span>
-                )}
+                <GiftImageOrLottie
+                    image={gift.image || '/NFT.png'}
+                    lottieUrl={gift.lottieUrl}
+                    alt={gift.name ?? 'Gift'}
+                    fillContainer
+                    loop={false}
+                    replayNonce={lottieReplayNonce}
+                    hideLottieBackground
+                    className={cls.giftImageMedia}
+                    imageClassName={cls.giftImageImg}
+                />
             </div>
             <span className={cls.giftName}>{gift.name ?? 'Gift'}</span>
             <div className={cls.giftPrice}>
@@ -50,17 +60,15 @@ export function WishlistGiftCard({
 
     const className = `${cls.giftItem} ${isSelected ? cls.giftItemSelected : ''}`.trim();
 
-    if (isSelectable && onSelect) {
-        return (
-            <button type="button" className={className} onClick={onSelect}>
-                {content}
-            </button>
-        );
-    }
-
     return (
-        <div className={className}>
+        <button
+            type="button"
+            className={className}
+            onClick={handleClick}
+            aria-pressed={isSelectable ? !!isSelected : undefined}
+        >
             {content}
-        </div>
+        </button>
     );
 }
+

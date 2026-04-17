@@ -31,6 +31,8 @@ const GiftsModal = ({ gifts = [] }: GiftsModalProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [modalGifts, setModalGifts] = useState<GiftItem[]>(gifts);
     const [title, setTitle] = useState<string>('Призовой пул');
+    /** Для Lottie в призовом пуле: один проход при открытии, повтор по клику на карточку. */
+    const [lottieReplayByIndex, setLottieReplayByIndex] = useState<Record<number, number>>({});
 
     useEffect(() => {
         const handleOpenModal = (payload: GiftsModalPayload) => {
@@ -68,6 +70,11 @@ const GiftsModal = ({ gifts = [] }: GiftsModalProps) => {
             document.body.style.overflow = 'unset';
         };
     }, [isOpen]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        setLottieReplayByIndex({});
+    }, [isOpen, modalGifts]);
 
     const handleClose = () => {
         setIsOpen(false);
@@ -124,7 +131,28 @@ const GiftsModal = ({ gifts = [] }: GiftsModalProps) => {
                             return (
                                 <div 
                                     key={index} 
-                                    className={cls.giftCard}
+                                    className={`${cls.giftCard} ${gift.lottie ? cls.giftCardReplayable : ''}`}
+                                    role={gift.lottie ? 'button' : undefined}
+                                    tabIndex={gift.lottie ? 0 : undefined}
+                                    onClick={(e) => {
+                                        if (!gift.lottie) return;
+                                        e.stopPropagation();
+                                        setLottieReplayByIndex((prev) => ({
+                                            ...prev,
+                                            [index]: (prev[index] ?? 0) + 1,
+                                        }));
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (!gift.lottie) return;
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setLottieReplayByIndex((prev) => ({
+                                                ...prev,
+                                                [index]: (prev[index] ?? 0) + 1,
+                                            }));
+                                        }
+                                    }}
                                     style={{
                                         background: gift.color 
                                             ? `linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 100%), ${gift.color}`
@@ -138,6 +166,9 @@ const GiftsModal = ({ gifts = [] }: GiftsModalProps) => {
                                                 lottieUrl={gift.lottie}
                                                 alt={gift.name}
                                                 fillContainer
+                                                loop={gift.lottie ? false : true}
+                                                replayNonce={gift.lottie ? (lottieReplayByIndex[index] ?? 0) : undefined}
+                                                hideLottieBackground
                                                 imageClassName={imageClassName}
                                                 placeholder={<div className={cls.giftPlaceholder}>🎁</div>}
                                             />

@@ -10,12 +10,14 @@ export function buildPoolGiftsRto(
     ...winGifts.map((g) => ({
       name: g?.name ?? 'Gift',
       image: g?.image,
+      lottieUrl: g?.lottie,
       price: priceToTon(g?.price),
       pool: 'win' as const,
     })),
     ...loseGifts.map((g) => ({
       name: g?.name ?? 'Gift',
       image: g?.image,
+      lottieUrl: g?.lottie,
       price: priceToTon(g?.price),
       pool: 'lose' as const,
     })),

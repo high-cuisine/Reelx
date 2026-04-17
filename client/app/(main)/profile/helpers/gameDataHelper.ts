@@ -3,6 +3,8 @@ import { Game, GameType, GameCurrency } from '@/entites/user/interface/game.inte
 export const getGameTypeName = (type: GameType): string => {
     const typeNames: Record<GameType, string> = {
         solo: 'Соло игра',
+        upgrate: 'Апгрейд',
+        pvp: 'Стол',
     };
     return typeNames[type] || type;
 };
@@ -64,6 +66,17 @@ export interface GameModalData {
 export const prepareGameModalData = (game: Game): GameModalData => {
     const { date, time } = formatGameDate(game.createdAt);
 
+    let chance = '—';
+    let winner = '—';
+    if (game.type === 'solo') {
+        chance = '100%';
+        winner = 'Вы';
+    } else if (game.type === 'upgrate') {
+        winner = game.winNft ? 'Вы' : 'Проигрыш';
+    } else if (game.type === 'pvp') {
+        winner = game.winNft ? 'Победа' : 'Проигрыш';
+    }
+
     return {
         gameId: getGameIdShort(game.id),
         gameType: getGameTypeName(game.type),
@@ -71,8 +84,8 @@ export const prepareGameModalData = (game: Game): GameModalData => {
         time,
         bet: game.priceAmount,
         betCurrency: game.priceType,
-        chance: '100%', // Solo игра — при появлении реального шанса с бэка подставить сюда
-        winner: 'Вы',
+        chance,
+        winner,
         winNft: game.winNft,
     };
 };

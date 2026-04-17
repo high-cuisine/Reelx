@@ -134,6 +134,8 @@ model UserPromocodes {
 
 enum UserGamesType {
   solo
+  upgrate
+  pvp
 }
 
 enum GameStatus {

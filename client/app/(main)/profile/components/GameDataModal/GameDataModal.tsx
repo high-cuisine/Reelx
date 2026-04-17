@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import Image from 'next/image';
 import cls from './GameDataModal.module.scss';
 import tonIcon from '@/assets/ton.svg';
@@ -63,14 +63,35 @@ export const GameDataModal = ({
     hash,
 }: GameDataModalProps) => {
     const [isClosing, setIsClosing] = useState(false);
+    const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            setIsClosing(false);
+        }
+    }, [isOpen]);
 
     const handleClose = useCallback(() => {
+        if (closeTimerRef.current) {
+            clearTimeout(closeTimerRef.current);
+            closeTimerRef.current = null;
+        }
         setIsClosing(true);
-        setTimeout(() => {
+        closeTimerRef.current = setTimeout(() => {
+            closeTimerRef.current = null;
             setIsClosing(false);
             onClose();
         }, 300);
     }, [onClose]);
+
+    useEffect(() => {
+        return () => {
+            if (closeTimerRef.current) {
+                clearTimeout(closeTimerRef.current);
+                closeTimerRef.current = null;
+            }
+        };
+    }, []);
 
     const handleOverlayClick = (e: React.MouseEvent) => {
         if (e.target === e.currentTarget) {

@@ -128,6 +128,8 @@ export const NftModal = ({ isOpen, onClose, nft, onSell, onWithdraw }: NftModalP
                     width={167}
                     height={191}
                     fillContainer
+                    loop={false}
+                    hideLottieBackground
                     className={cls.nftCardMedia}
                     imageClassName={cls.nftImage}
                     placeholder={<div className={cls.nftPlaceholder}>🎁</div>}

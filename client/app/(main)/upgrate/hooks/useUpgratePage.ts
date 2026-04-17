@@ -84,6 +84,7 @@ export function useUpgratePage() {
 
     const toggleMultiplier = (value: string) => {
         setSelectedMultiplier((prev) => (prev === value ? null : value));
+        setActiveTab('wishlist');
         setGameResult(null);
     };
 
