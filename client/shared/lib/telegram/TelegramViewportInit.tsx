@@ -1,6 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
+import {
+    applyTelegramAppFullscreenToDom,
+    parseFullscreenChangedPayload,
+    readTelegramWebAppIsFullscreen,
+} from '@/shared/lib/telegram/telegramFullscreenDom';
 
 function isMobileUserAgent(): boolean {
   if (typeof navigator === 'undefined') {
@@ -46,7 +51,10 @@ export function TelegramViewportInit() {
       console.warn('Fullscreen request failed:', error);
     };
     const onFullscreenChanged = (data: Record<string, unknown>) => {
-      console.log('Fullscreen changed:', data);
+      const next = parseFullscreenChangedPayload(data);
+      if (next !== null) {
+        applyTelegramAppFullscreenToDom(next);
+      }
     };
 
     const attach = () => {
@@ -56,6 +64,11 @@ export function TelegramViewportInit() {
       }
 
       webApp.disableVerticalSwipes?.();
+
+      const initialFs = readTelegramWebAppIsFullscreen(webApp);
+      if (initialFs !== null) {
+        applyTelegramAppFullscreenToDom(initialFs);
+      }
 
       if (!webApp.isExpanded) {
         webApp.expand();
@@ -72,10 +85,21 @@ export function TelegramViewportInit() {
         }, 200);
       }
 
+      const recheckFsTimer = setTimeout(() => {
+        if (disposed) {
+          return;
+        }
+        const again = readTelegramWebAppIsFullscreen(webApp);
+        if (again !== null) {
+          applyTelegramAppFullscreenToDom(again);
+        }
+      }, 900);
+
       innerCleanup = () => {
         if (eventsTimer) {
           clearTimeout(eventsTimer);
         }
+        clearTimeout(recheckFsTimer);
         webApp.offEvent?.('fullscreen_failed');
         webApp.offEvent?.('fullscreen_changed');
       };
@@ -101,6 +125,7 @@ export function TelegramViewportInit() {
 
     return () => {
       disposed = true;
+      applyTelegramAppFullscreenToDom(false);
       if (interval) {
         clearInterval(interval);
       }

@@ -46,6 +46,8 @@ declare global {
               }) => void;
               expand: () => void;
               isExpanded?: boolean;
+              /** Нативный fullscreen WebApp (Bot API 7.10+), не путать с expand(). */
+              isFullscreen?: boolean;
               onEvent?: (event: string, callback: (data: Record<string, unknown>) => void) => void;
               offEvent?: (event: string) => void;
           };

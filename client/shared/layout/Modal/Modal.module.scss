@@ -109,3 +109,16 @@
     }
 }
 
+/* Telegram WebApp: нативный fullscreen — fixed поверх всего экрана, учитываем safe area */
+:global(html[data-tg-app-fullscreen='1']) {
+    .overlay {
+        top: var(--tg-modal-frame-top);
+        right: var(--tg-modal-frame-right);
+        bottom: var(--tg-modal-frame-bottom);
+        left: var(--tg-modal-frame-left);
+    }
+
+    .modal {
+        max-height: min(80vh, calc(100dvh - var(--tg-modal-frame-top) - var(--tg-modal-frame-bottom) - 40px));
+    }
+}

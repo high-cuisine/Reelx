@@ -374,3 +374,20 @@
 .hashValue {
     color: #FFFFFF;
 }
+
+/* Telegram WebApp: нативный fullscreen */
+:global(html[data-tg-app-fullscreen='1']) {
+    .overlay {
+        top: var(--tg-modal-frame-top);
+        right: var(--tg-modal-frame-right);
+        bottom: var(--tg-modal-frame-bottom);
+        left: var(--tg-modal-frame-left);
+    }
+
+    .modal {
+        left: var(--tg-modal-frame-left);
+        right: var(--tg-modal-frame-right);
+        bottom: var(--tg-modal-frame-bottom);
+        max-height: min(90vh, calc(100dvh - var(--tg-modal-frame-top) - var(--tg-modal-frame-bottom) - 12px));
+    }
+}

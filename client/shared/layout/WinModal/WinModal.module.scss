@@ -420,3 +420,13 @@
         height: calc(100% - 60px);
     }
 }
+
+/* Telegram WebApp: нативный fullscreen */
+:global(html[data-tg-app-fullscreen='1']) {
+    .bottomSheet {
+        top: var(--tg-modal-frame-top);
+        right: var(--tg-modal-frame-right);
+        bottom: var(--tg-modal-frame-bottom);
+        left: var(--tg-modal-frame-left);
+    }
+}
