@@ -23,7 +23,6 @@ export default function SpinPage() {
         onSpinComplete,
         targetIndex,
         mode,
-        isMinStakeLayout,
         moneyWinToast,
         clearMoneyWinToast,
     } = useSpinPage();
@@ -54,7 +53,6 @@ export default function SpinPage() {
                         onSpinComplete={onSpinComplete}
                         targetIndex={targetIndex}
                         mode={mode}
-                        uniformGiftSizing={isMinStakeLayout}
                     />
                     <Bets
                         rolls={rolls}
