@@ -32,7 +32,8 @@ function mapServerTableToItemProps(table: TableState) {
     const glowColor = stablePick(TABLE_GLOW_COLORS, table.ownerId);
     const giftImage = stablePick(TABLE_GIFT_IMAGES, `${table.ownerId}-gift`);
 
-    const members = table.participants.map((p) => ({
+    const parts = Array.isArray(table.participants) ? table.participants : [];
+    const members = parts.map((p) => ({
         id: p.userId,
         name: displayUsername(p.username),
         avatar: p.photoUrl,
@@ -80,7 +81,8 @@ const TablesList = ({ filters }: { filters: TablesListFilters }) => {
         setFetchError(null);
         try {
             const res = await multiplayerService.listTables();
-            setTables(res.tables.map(mapServerTableToItemProps));
+            const rows = Array.isArray(res.tables) ? res.tables : [];
+            setTables(rows.map(mapServerTableToItemProps));
         } catch {
             setFetchError('Не удалось загрузить столы');
             setTables([]);

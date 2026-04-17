@@ -81,14 +81,22 @@ export class MultiplayerGateway
     if (!client.userId) return;
 
     const ownerId = this.userTableMap.get(client.userId);
-    if (ownerId) {
-      try {
-        await this.removeUserFromTable(client, ownerId);
-      } catch (err: any) {
-        this.logger.error(
-          `Error removing user ${client.userId} from table on disconnect: ${err.message}`,
-        );
-      }
+    if (!ownerId) return;
+
+    // userTableMap заполняется и по HTTP create/join (до join-table). Сокет лобби
+    // только в tables-lobby — при его disconnect нельзя вызывать leaveTable, иначе
+    // стол мгновенно удаляется и в лобби мелькает tables:created → tables:removed.
+    const tableRoom = this.roomName(ownerId);
+    if (!client.rooms.has(tableRoom)) {
+      return;
+    }
+
+    try {
+      await this.removeUserFromTable(client, ownerId);
+    } catch (err: any) {
+      this.logger.error(
+        `Error removing user ${client.userId} from table on disconnect: ${err.message}`,
+      );
     }
   }
 

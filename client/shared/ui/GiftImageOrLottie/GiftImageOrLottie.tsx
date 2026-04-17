@@ -22,6 +22,16 @@ function isRemoteUrl(url: string): boolean {
     return /^https?:\/\//i.test(url) || url.startsWith('ipfs://') || url.startsWith('//');
 }
 
+/** bodymovin / lottie-web ожидает объект с массивом layers — иначе падает на .length внутри плеера */
+function isValidLottieAnimationData(data: unknown): boolean {
+    if (data == null || typeof data !== 'object' || Array.isArray(data)) {
+        return false;
+    }
+    const layers = (data as { layers?: unknown }).layers;
+    // Пустой layers тоже ломает lottie-web на completeAnimation
+    return Array.isArray(layers) && layers.length > 0;
+}
+
 interface GiftImageOrLottieProps {
     image?: string | StaticImageData;
     lottieUrl?: string;
@@ -73,11 +83,20 @@ export const GiftImageOrLottie = ({
         }
         let cancelled = false;
         fetch(normalizeMediaUrl(lottieUrl))
-            .then((r) => r.json())
+            .then(async (r) => {
+                if (!r.ok) {
+                    throw new Error(`Lottie HTTP ${r.status}`);
+                }
+                return r.json() as Promise<unknown>;
+            })
             .then((data) => {
                 if (!cancelled) {
-                    setLottieData(data);
-                    setReplayToken(0);
+                    if (isValidLottieAnimationData(data)) {
+                        setLottieData(data as object);
+                        setReplayToken(0);
+                    } else {
+                        setLottieData(null);
+                    }
                 }
             })
             .catch(() => {
