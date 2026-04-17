@@ -1,11 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import {
-    applyTelegramAppFullscreenToDom,
-    parseFullscreenChangedPayload,
-    readTelegramWebAppIsFullscreen,
-} from '@/shared/lib/telegram/telegramFullscreenDom';
+import { syncTelegramWebAppModalInsetsAttribute } from '@/shared/lib/telegram/telegramFullscreenDom';
 
 function isMobileUserAgent(): boolean {
   if (typeof navigator === 'undefined') {
@@ -38,7 +34,7 @@ function requestTelegramFullscreen(): void {
 
 /**
  * Разворачивает WebApp, отключает вертикальные свайпы, запрашивает полноэкранный режим (мобильные),
- * подписки на события fullscreen — по образцу SPA с Telegram.
+ * синхронизирует data-tg-webapp-modal-insets для модалок при isExpanded / isFullscreen.
  */
 export function TelegramViewportInit() {
   useEffect(() => {
@@ -50,11 +46,16 @@ export function TelegramViewportInit() {
     const onFullscreenFailed = (error: Record<string, unknown>) => {
       console.warn('Fullscreen request failed:', error);
     };
-    const onFullscreenChanged = (data: Record<string, unknown>) => {
-      const next = parseFullscreenChangedPayload(data);
-      if (next !== null) {
-        applyTelegramAppFullscreenToDom(next);
-      }
+    const onFullscreenChanged = (_data: Record<string, unknown>) => {
+      const webApp = window.Telegram?.WebApp;
+      if (!webApp || disposed) return;
+      syncTelegramWebAppModalInsetsAttribute(webApp);
+    };
+
+    const onViewportChanged = (_data: Record<string, unknown>) => {
+      const webApp = window.Telegram?.WebApp;
+      if (!webApp || disposed) return;
+      syncTelegramWebAppModalInsetsAttribute(webApp);
     };
 
     const attach = () => {
@@ -65,43 +66,48 @@ export function TelegramViewportInit() {
 
       webApp.disableVerticalSwipes?.();
 
-      const initialFs = readTelegramWebAppIsFullscreen(webApp);
-      if (initialFs !== null) {
-        applyTelegramAppFullscreenToDom(initialFs);
-      }
-
       if (!webApp.isExpanded) {
         webApp.expand();
       }
 
-      let eventsTimer: ReturnType<typeof setTimeout> | undefined;
-      if (isMobileUserAgent()) {
-        eventsTimer = setTimeout(() => {
-          if (disposed) {
-            return;
-          }
-          webApp.onEvent?.('fullscreen_failed', onFullscreenFailed);
-          webApp.onEvent?.('fullscreen_changed', onFullscreenChanged);
-        }, 200);
-      }
+      syncTelegramWebAppModalInsetsAttribute(webApp);
 
-      const recheckFsTimer = setTimeout(() => {
+      const bumpModalInsets = () => {
+        if (disposed) return;
+        syncTelegramWebAppModalInsetsAttribute(window.Telegram?.WebApp);
+      };
+
+      requestAnimationFrame(bumpModalInsets);
+
+      const onWinResize = () => bumpModalInsets();
+      window.addEventListener('resize', onWinResize);
+      window.visualViewport?.addEventListener('resize', onWinResize);
+
+      let eventsTimer: ReturnType<typeof setTimeout> | undefined;
+      eventsTimer = setTimeout(() => {
         if (disposed) {
           return;
         }
-        const again = readTelegramWebAppIsFullscreen(webApp);
-        if (again !== null) {
-          applyTelegramAppFullscreenToDom(again);
-        }
-      }, 900);
+        webApp.onEvent?.('fullscreen_failed', onFullscreenFailed);
+        webApp.onEvent?.('fullscreen_changed', onFullscreenChanged);
+        webApp.onEvent?.('viewport_changed', onViewportChanged);
+      }, 200);
+
+      const recheckDelays = [120, 400, 900] as const;
+      const recheckTimers = recheckDelays.map((ms) =>
+        setTimeout(bumpModalInsets, ms),
+      );
 
       innerCleanup = () => {
         if (eventsTimer) {
           clearTimeout(eventsTimer);
         }
-        clearTimeout(recheckFsTimer);
+        recheckTimers.forEach((t) => clearTimeout(t));
+        window.removeEventListener('resize', onWinResize);
+        window.visualViewport?.removeEventListener('resize', onWinResize);
         webApp.offEvent?.('fullscreen_failed');
         webApp.offEvent?.('fullscreen_changed');
+        webApp.offEvent?.('viewport_changed');
       };
     };
 
@@ -125,7 +131,7 @@ export function TelegramViewportInit() {
 
     return () => {
       disposed = true;
-      applyTelegramAppFullscreenToDom(false);
+      syncTelegramWebAppModalInsetsAttribute(undefined);
       if (interval) {
         clearInterval(interval);
       }

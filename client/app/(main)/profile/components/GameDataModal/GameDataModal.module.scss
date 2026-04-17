@@ -376,7 +376,7 @@
 }
 
 /* Telegram WebApp: нативный fullscreen */
-:global(html[data-tg-app-fullscreen='1']) {
+:global(html[data-tg-webapp-modal-insets='1']) {
     .overlay {
         top: var(--tg-modal-frame-top);
         right: var(--tg-modal-frame-right);

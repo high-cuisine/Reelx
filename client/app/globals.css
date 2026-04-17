@@ -50,21 +50,33 @@ body {
 }
 
 /*
- * Нативный fullscreen WebApp: fixed-модалки без body-padding — вписываемся в «безопасное» окно.
- * Флаг выставляет TelegramViewportInit (fullscreen_changed / isFullscreen).
+ * Развёрнутый / fullscreen WebApp: fixed-модалки без body-padding — вписываемся в safe area.
+ * Флаг: TelegramViewportInit (isExpanded, isFullscreen, viewport_changed, fullscreen_changed).
  */
-html[data-tg-app-fullscreen="1"] {
-  --tg-modal-frame-top: calc(
-    var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px)
+html[data-tg-webapp-modal-insets="1"] {
+  --tg-modal-frame-top: max(
+    env(safe-area-inset-top, 0px),
+    calc(
+      var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px)
+    )
   );
-  --tg-modal-frame-right: calc(
-    var(--tg-safe-area-inset-right, 0px) + var(--tg-content-safe-area-inset-right, 0px)
+  --tg-modal-frame-right: max(
+    env(safe-area-inset-right, 0px),
+    calc(
+      var(--tg-safe-area-inset-right, 0px) + var(--tg-content-safe-area-inset-right, 0px)
+    )
   );
-  --tg-modal-frame-bottom: calc(
-    var(--tg-safe-area-inset-bottom, 0px) + var(--tg-content-safe-area-inset-bottom, 0px)
+  --tg-modal-frame-bottom: max(
+    env(safe-area-inset-bottom, 0px),
+    calc(
+      var(--tg-safe-area-inset-bottom, 0px) + var(--tg-content-safe-area-inset-bottom, 0px)
+    )
   );
-  --tg-modal-frame-left: calc(
-    var(--tg-safe-area-inset-left, 0px) + var(--tg-content-safe-area-inset-left, 0px)
+  --tg-modal-frame-left: max(
+    env(safe-area-inset-left, 0px),
+    calc(
+      var(--tg-safe-area-inset-left, 0px) + var(--tg-content-safe-area-inset-left, 0px)
+    )
   );
 }
 

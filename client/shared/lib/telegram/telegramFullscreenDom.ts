@@ -1,26 +1,25 @@
+export type TelegramWebAppLike = NonNullable<NonNullable<Window['Telegram']>['WebApp']>;
+
 /**
- * Маркер на <html> для CSS модалок: только когда WebApp в нативном fullscreen
- * (событие fullscreen_changed / поле isFullscreen в свежих клиентах Telegram).
+ * Маркер `data-tg-webapp-modal-insets` на <html> для fixed-модалок.
+ * В Telegram `position: fixed` привязан к viewport и не учитывает padding у body,
+ * поэтому при развёрнутом мини-приложении (`isExpanded`) и/или нативном fullscreen
+ * подрезаем модалки по safe area (см. globals.css + *.module.scss).
  */
-export function applyTelegramAppFullscreenToDom(isFullscreen: boolean): void {
+export function syncTelegramWebAppModalInsetsAttribute(webApp: TelegramWebAppLike | undefined): void {
     if (typeof document === 'undefined') return;
     const root = document.documentElement;
-    if (isFullscreen) {
-        root.dataset.tgAppFullscreen = '1';
-    } else {
-        delete root.dataset.tgAppFullscreen;
+    if (!webApp) {
+        delete root.dataset.tgWebappModalInsets;
+        return;
     }
-}
-
-export function readTelegramWebAppIsFullscreen(
-    webApp: NonNullable<NonNullable<Window['Telegram']>['WebApp']>,
-): boolean | null {
-    const v = (webApp as { isFullscreen?: boolean }).isFullscreen;
-    return typeof v === 'boolean' ? v : null;
-}
-
-export function parseFullscreenChangedPayload(data: Record<string, unknown> | undefined): boolean | null {
-    const v = data?.is_fullscreen ?? data?.isFullscreen;
-    if (typeof v === 'boolean') return v;
-    return null;
+    const expRaw = (webApp as { isExpanded?: boolean }).isExpanded;
+    /** В старых клиентах поля нет — ведём себя как при развёрнутом WebApp, иначе fixed-модалки залезают под вырезы. */
+    const expanded = typeof expRaw === 'boolean' ? expRaw : true;
+    const fs = (webApp as { isFullscreen?: boolean }).isFullscreen === true;
+    if (expanded || fs) {
+        root.dataset.tgWebappModalInsets = '1';
+    } else {
+        delete root.dataset.tgWebappModalInsets;
+    }
 }
