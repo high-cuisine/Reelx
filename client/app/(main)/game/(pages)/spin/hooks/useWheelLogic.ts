@@ -10,6 +10,7 @@ interface UseWheelLogicParams {
   externalIsSpinning?: boolean;
   onSpinComplete?: (selectedItem: GiftItem) => void;
   targetIndex?: number | null;
+  uniformGiftSizing?: boolean;
 }
 
 export function useWheelLogic({

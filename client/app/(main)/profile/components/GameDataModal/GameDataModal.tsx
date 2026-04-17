@@ -108,11 +108,14 @@ export const GameDataModal = ({
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
+            document.body.dataset.gameHistoryModalOpen = '1';
         } else {
             document.body.style.overflow = '';
+            delete document.body.dataset.gameHistoryModalOpen;
         }
         return () => {
             document.body.style.overflow = '';
+            delete document.body.dataset.gameHistoryModalOpen;
         };
     }, [isOpen]);
 

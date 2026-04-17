@@ -24,3 +24,8 @@
         justify-content: center;
     }
 }
+
+/* Модалка истории игр (profile): временно убираем нижнее меню */
+:global(body[data-game-history-modal-open='1']) .navbar {
+    display: none;
+}

@@ -8,6 +8,7 @@ import { eventBus, MODAL_EVENTS } from '@/features/eventBus/eventBus';
 import { nftWithdrawService } from '@/features/nft/nft';
 import { updateUserBalance } from '@/features/user/user';
 import { Button } from '@/shared/ui/Button/Button';
+import { fetchSafeLottieAnimation, normalizeMediaUrl } from '@/shared/lib/lottie/safeLottie';
 import cls from './WinModal.module.scss';
 
 const Lottie = dynamic(() => import('lottie-react').then((m) => m.default), { ssr: false });
@@ -55,8 +56,7 @@ const WinModal = () => {
         }
         const url = winData.selectedItem.lottie;
         let cancelled = false;
-        fetch(url)
-            .then((r) => r.json())
+        fetchSafeLottieAnimation(url)
             .then((data) => {
                 if (!cancelled) setLottieData(data);
             })
@@ -189,7 +189,7 @@ const WinModal = () => {
                                     </div>
                                 ) : selectedItem.image ? (
                                     <Image
-                                        src={selectedItem.image}
+                                        src={normalizeMediaUrl(selectedItem.image)}
                                         alt={selectedItem.name}
                                         width={167}
                                         height={191}

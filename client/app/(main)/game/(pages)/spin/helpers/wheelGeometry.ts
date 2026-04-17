@@ -89,7 +89,10 @@ export function getGroupCenterAngleDeg(
  * Угол центра слота flatIndex (тот же ключ группы, что и в conic-gradient).
  * Совпадает с геометрией Wheel при той же схеме группировки.
  */
-export function getFlatSlotCenterAngleDeg(items: GiftItem[], flatIndex: number): number {
+export function getFlatSlotCenterAngleDeg(
+    items: GiftItem[],
+    flatIndex: number,
+): number {
     if (items.length === 0 || flatIndex < 0 || flatIndex >= items.length) {
         return 0;
     }

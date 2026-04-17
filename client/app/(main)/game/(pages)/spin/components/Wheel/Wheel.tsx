@@ -20,9 +20,18 @@ interface WheelProps {
     onSpinComplete?: (selectedItem: GiftItem) => void;
     targetIndex?: number | null;
     mode: 'normal' | 'mystery' | 'multy';
+    /** На мин. ставке — угол сектора = доля слотов (без ±20% для gift). */
+    uniformGiftSizing?: boolean;
 }
 
-const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIndex, mode }: WheelProps) => {
+const Wheel = ({
+    items,
+    isSpinning: externalIsSpinning,
+    onSpinComplete,
+    targetIndex,
+    mode,
+    uniformGiftSizing = false,
+}: WheelProps) => {
     const {
         wheelRef,
         isDragging,
@@ -33,6 +42,7 @@ const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIn
         externalIsSpinning,
         onSpinComplete,
         targetIndex,
+        uniformGiftSizing,
     });
 
     const totalItemsCount = items.length;
@@ -62,7 +72,9 @@ const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIn
     let conicGradient = 'none';
     const groupVisualSizes =
         totalItemsCount > 0
-            ? computeGroupVisualSizes(groups, totalItemsCount)
+            ? computeGroupVisualSizes(groups, totalItemsCount, {
+                  uniformGiftSizing,
+              })
             : groups.map((g) => g.count);
 
     if (totalItemsCount > 0) {

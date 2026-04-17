@@ -152,7 +152,7 @@ export class GiftsService {
     let originalGifts: any[] = [];
 
     // Правила формирования слотов:
-    // 1) amount <= 5: до 7 уникальных подарков + no-loot (20 слотов: 40% подарки / 60% no-loot)
+    // 1) amount <= 5: до 7 уникальных подарков + no-loot (20 слотов: 50% подарки / 50% no-loot)
     // 2) 10 <= amount < 20: 9 слотов подарков без no-loot
     // 3) остальное — старая логика (getCountGifts)
 
@@ -169,9 +169,9 @@ export class GiftsService {
       );
 
       const totalSlots = 20;
-      const noLootShare = 0.6; // 60% слотов — no-loot
-      const noLootSlotsCount = Math.round(totalSlots * noLootShare); // 12 из 20
-      const giftSlotsToDistribute = Math.max(0, totalSlots - noLootSlotsCount); // 8 слотов подарки (делятся между до 7 NFT)
+      const noLootShare = 0.5; // 50% слотов — no-loot (игрушки — другие 50%)
+      const noLootSlotsCount = Math.round(totalSlots * noLootShare); // 10 из 20
+      const giftSlotsToDistribute = Math.max(0, totalSlots - noLootSlotsCount); // 10 слотов подарки
 
       const slots: any[] = [];
 
@@ -204,7 +204,7 @@ export class GiftsService {
         }
       });
 
-      // Добавляем no-loot слоты (60% от барабана = 12 слотов)
+      // Добавляем no-loot слоты (50% от барабана = 10 слотов)
       for (let i = 0; i < noLootSlotsCount; i++) {
         slots.push({
           type: 'no-loot',

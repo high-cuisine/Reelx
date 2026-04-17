@@ -4,32 +4,12 @@ import { useState, useEffect, useRef } from 'react';
 import Image, { StaticImageData } from 'next/image';
 import dynamic from 'next/dynamic';
 import cls from './GiftImageOrLottie.module.scss';
+import { fetchSafeLottieAnimation, normalizeMediaUrl } from '@/shared/lib/lottie/safeLottie';
 
 const Lottie = dynamic(() => import('lottie-react').then((m) => m.default), { ssr: false });
 
-function normalizeMediaUrl(url: string): string {
-    const trimmed = url.trim();
-    if (trimmed.startsWith('ipfs://')) {
-        const hash = trimmed.replace('ipfs://', '');
-        return `https://cloudflare-ipfs.com/ipfs/${hash}`;
-    }
-    if (trimmed.startsWith('//')) return `https:${trimmed}`;
-    if (trimmed.startsWith('http://')) return trimmed.replace(/^http:\/\//, 'https://');
-    return trimmed;
-}
-
 function isRemoteUrl(url: string): boolean {
     return /^https?:\/\//i.test(url) || url.startsWith('ipfs://') || url.startsWith('//');
-}
-
-/** bodymovin / lottie-web ожидает объект с массивом layers — иначе падает на .length внутри плеера */
-function isValidLottieAnimationData(data: unknown): boolean {
-    if (data == null || typeof data !== 'object' || Array.isArray(data)) {
-        return false;
-    }
-    const layers = (data as { layers?: unknown }).layers;
-    // Пустой layers тоже ломает lottie-web на completeAnimation
-    return Array.isArray(layers) && layers.length > 0;
 }
 
 interface GiftImageOrLottieProps {
@@ -82,16 +62,10 @@ export const GiftImageOrLottie = ({
             return;
         }
         let cancelled = false;
-        fetch(normalizeMediaUrl(lottieUrl))
-            .then(async (r) => {
-                if (!r.ok) {
-                    throw new Error(`Lottie HTTP ${r.status}`);
-                }
-                return r.json() as Promise<unknown>;
-            })
+        fetchSafeLottieAnimation(lottieUrl)
             .then((data) => {
                 if (!cancelled) {
-                    if (isValidLottieAnimationData(data)) {
+                    if (data) {
                         setLottieData(data as object);
                         setReplayToken(0);
                     } else {
