@@ -16,7 +16,7 @@ const SHEET_CLOSE_MS = 420;
 type Currency = 'ton' | 'stars';
 
 const TON_STAKES = [3, 5, 10, 25, 50, 100, 250, 500, 1000] as const;
-const STAR_STAKE_CANDIDATES = [100, 200, 300, 500, 1000, 2500, 5000, 10000, 25000] as const;
+const STAR_STAKE_CANDIDATES = [100, 300, 500, 1000, 2500, 5000, 10000, 25000] as const;
 const PLAYERS = [2, 3, 4, 5, 6] as const;
 
 interface CreateTableModalProps {

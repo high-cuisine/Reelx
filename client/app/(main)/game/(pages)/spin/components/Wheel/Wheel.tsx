@@ -205,14 +205,13 @@ const Wheel = ({
                                 <MoneyBadge item={item} />
                             ) : item.image || item.lottie ? (
                                 <div className={cls.segmentMedia}>
-                                                                       <GiftImageOrLottie
+                                    <GiftImageOrLottie
                                         image={item.image}
-                                        lottieUrl={item.lottie}
+                                        // Lottie в колесе иногда приходит с битым JSON и валит lottie-web в проде.
+                                        // Для стабильности в spin показываем только превью-картинку.
                                         alt={item.name}
                                         width={18}
                                         height={18}
-                                        hideLottieBackground
-                                        loop={false}
                                         className={cls.segmentLottie}
                                         imageClassName={cls.segmentImage}
                                     />
