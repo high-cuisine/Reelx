@@ -8,10 +8,12 @@ interface MoneyBadgeProps {
 }
 
 export const MoneyBadge = ({ item }: MoneyBadgeProps) => {
-    const isTon = item.name === 'TON' || item.name?.toUpperCase() === 'TON';
-    const isStars = item.name === 'STARS' || item.name?.toUpperCase() === 'STARS';
+    const label = String(item.name ?? '');
+    const isTon = label === 'TON' || label.toUpperCase() === 'TON';
+    const isStars = label === 'STARS' || label.toUpperCase() === 'STARS';
     const rawPrice = item.price ?? 0;
-    const displayPrice = isTon ? rawPrice.toFixed(2) : Math.round(rawPrice).toString();
+    const safePrice = Number.isFinite(rawPrice) ? rawPrice : 0;
+    const displayPrice = isTon ? safePrice.toFixed(2) : Math.round(safePrice).toString();
     
     return (
         <div className={`${cls.moneyBadge} ${isStars ? cls.moneyBadgeStars : ''}`}>

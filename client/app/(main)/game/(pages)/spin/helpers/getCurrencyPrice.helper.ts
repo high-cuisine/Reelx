@@ -15,15 +15,17 @@ export const getTonPriceUsdt = async () => {
 
 export const getCurrancyPrice = async () => {
     try {
-        const tonPrice = await getTonPriceUsdt();
-        const starPrice = 1/50;
+        const rawTon = await getTonPriceUsdt();
+        const tonPrice =
+            typeof rawTon === 'number' && Number.isFinite(rawTon) && rawTon > 0 ? rawTon : 5;
+        const starPrice = 1 / 50;
 
         return {
             tonPrice,
-            starPrice
-        }
+            starPrice,
+        };
+    } catch (e) {
+        console.error('cant get currency price');
+        return { tonPrice: 5, starPrice: 1 / 50 };
     }
-    catch(e) {
-        console.error('cant get currency price')
-    }
-}
+};

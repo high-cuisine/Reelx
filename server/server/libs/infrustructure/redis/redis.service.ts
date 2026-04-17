@@ -83,7 +83,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         'COUNT',
         100,
       );
-      cursor = next;
+      // ioredis/Redis может вернуть cursor как number — иначе цикл никогда не завершится
+      cursor = String(next);
       keys.push(...batch);
     } while (cursor !== '0');
     return keys;

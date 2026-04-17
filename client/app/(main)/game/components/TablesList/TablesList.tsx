@@ -23,6 +23,11 @@ function displayUsername(username: string) {
     return username.startsWith('@') ? username : `@${username}`;
 }
 
+function normalizeTableCurrencyLabel(c: TableState['currency']): 'TON' | 'STARS' {
+    const s = String(c ?? 'TON').toUpperCase();
+    return s === 'STARS' || s === 'STAR' ? 'STARS' : 'TON';
+}
+
 function mapServerTableToItemProps(table: TableState) {
     const glowColor = stablePick(TABLE_GLOW_COLORS, table.ownerId);
     const giftImage = stablePick(TABLE_GIFT_IMAGES, `${table.ownerId}-gift`);
@@ -33,7 +38,8 @@ function mapServerTableToItemProps(table: TableState) {
         avatar: p.photoUrl,
     }));
 
-    const currencyType = table.currency === 'TON' ? 'ton' : 'star';
+    const cur = normalizeTableCurrencyLabel(table.currency);
+    const currencyType = cur === 'TON' ? 'ton' : 'star';
 
     return {
         id: table.ownerId,
@@ -44,7 +50,7 @@ function mapServerTableToItemProps(table: TableState) {
             type: currencyType as 'ton' | 'star',
         },
         members,
-        server: table,
+        server: { ...table, currency: cur },
     };
 }
 
@@ -105,7 +111,8 @@ const TablesList = ({ filters }: { filters: TablesListFilters }) => {
     }, []);
 
     useTablesLobbySocket({
-        enabled: fetchError === null,
+        // Не отключаем сокет из‑за единичной ошибки HTTP — иначе новые столы не прилетают в лобби
+        enabled: true,
         onTableCreated: upsertTableFromSocket,
         onTableRemoved: removeTableFromSocket,
     });

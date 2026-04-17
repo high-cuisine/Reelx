@@ -89,6 +89,19 @@ export class MultiplayerService {
     return `table-${ownerId}`;
   }
 
+  /** После JSON.parse из Redis значение валюты может быть в другом регистре — приводим к Prisma enum. */
+  private normalizeTableCurrency(raw: unknown): GameCurrancy {
+    const s = String(raw ?? '').toUpperCase();
+    if (s === 'STARS' || s === 'STAR') {
+      return GameCurrancy.STARS;
+    }
+    return GameCurrancy.TON;
+  }
+
+  private normalizeTableState(table: TableState): void {
+    table.currency = this.normalizeTableCurrency(table.currency);
+  }
+
   private defaultGame(participantIds: string[]): TableGameState {
     return {
       phase: 'lobby',
@@ -161,6 +174,7 @@ export class MultiplayerService {
       this.logger.warn(`Pruned stale empty table ${this.tableKey(ownerId)}`);
       return null;
     }
+    this.normalizeTableState(table);
     return table;
   }
 
@@ -196,6 +210,7 @@ export class MultiplayerService {
           if (!parsed.game) {
             parsed.game = this.defaultGame(parsed.participants);
           }
+          this.normalizeTableState(parsed);
           tables.push(parsed);
         }
       } catch {
@@ -463,16 +478,18 @@ export class MultiplayerService {
       return;
     }
     const rates = await this.currancyService.getCurrancyRates();
-    if (rates.ton <= 0 || rates.stars <= 0) {
-      const fallbackMinStars = 300;
-      if (betAmount < fallbackMinStars) {
-        throw new BadRequestException(
-          `Минимальная ставка ${fallbackMinStars} Stars (эквивалент ~${minTon} TON)`,
-        );
+    const ton = Number(rates?.ton);
+    const stars = Number(rates?.stars);
+    let minStars: number;
+    if (!Number.isFinite(ton) || ton <= 0 || !Number.isFinite(stars) || stars <= 0) {
+      // Согласовано с чипами создания стола (100+), когда котировок нет
+      minStars = 100;
+    } else {
+      minStars = Math.ceil((minTon * ton) / stars);
+      if (!Number.isFinite(minStars) || minStars < 1) {
+        minStars = 100;
       }
-      return;
     }
-    const minStars = Math.ceil((minTon * rates.ton) / rates.stars);
     if (betAmount < minStars) {
       throw new BadRequestException(
         `Минимальная ставка ${minStars} Stars (эквивалент ${minTon} TON)`,
@@ -526,13 +543,15 @@ export class MultiplayerService {
     const historyUserIds = baseIds.filter((id) => !refunded.has(id));
     const winnerGiftId = game.winnerPrize?.giftId ?? null;
 
+    const priceType = this.normalizeTableCurrency(table.currency);
+
     for (const uid of historyUserIds) {
       try {
         const row = await this.usersService.createUserGame({
           userId: uid,
           type: UserGamesType.pvp,
           priceAmount: table.betAmount,
-          priceType: table.currency,
+          priceType,
         });
         if (uid === game.winnerUserId && winnerGiftId) {
           await this.usersService.linkUserGameWinGift(row.id, winnerGiftId);

@@ -52,6 +52,15 @@ class GiftsService {
             const rawImage = (raw as any).image;
             const rawLottie = (raw as any).lottie;
 
+            const nameStr =
+                rawName === null || rawName === undefined
+                    ? ''
+                    : typeof rawName === 'string'
+                      ? rawName
+                      : typeof rawName === 'number' || typeof rawName === 'boolean'
+                        ? String(rawName)
+                        : '';
+
             const priceNumber =
                 typeof rawPrice === 'string'
                     ? Number(rawPrice) / 1_000_000_000
@@ -63,8 +72,9 @@ class GiftsService {
                 // Проверяем name, если он уже есть и это STARS или TON, используем его
                 // Иначе определяем по rawType или по умолчанию TON
                 let currencyLabel = 'TON';
-                if (rawName && (rawName.toUpperCase() === 'STARS' || rawName.toUpperCase() === 'TON')) {
-                    currencyLabel = rawName.toUpperCase();
+                const upper = nameStr.trim().toUpperCase();
+                if (upper === 'STARS' || upper === 'TON') {
+                    currencyLabel = upper;
                 } else if (rawType === 'star' || rawType === 'STARS') {
                     currencyLabel = 'STARS';
                 } else if (rawType === 'ton' || rawType === 'TON') {
@@ -84,7 +94,7 @@ class GiftsService {
                 type: rawType === 'secret' ? 'secret' : 'gift',
                 price: priceNumber,
                 image: rawImage || '',
-                name: rawName || 'Gift',
+                name: nameStr.trim() || 'Gift',
                 ...(rawLottie ? { lottie: rawLottie } : {}),
             };
         });

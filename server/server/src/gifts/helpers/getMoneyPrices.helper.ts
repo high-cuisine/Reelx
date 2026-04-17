@@ -25,6 +25,10 @@ export const getMoneyPrices = (
   tonToStarsRate: number,
   rtp: number = RTP_DEFAULT,
 ): MoneyPricesWithWeights => {
+  const safeAmount = Number.isFinite(amount) && amount >= 0 ? amount : 0;
+  const safeRate =
+    Number.isFinite(tonToStarsRate) && tonToStarsRate > 0 ? tonToStarsRate : 50;
+
   const jackpotTonW = 0.022 * rtp;
   const jackpotStarsW = 0.056 * rtp;
   const returnTonW = 0.111 * rtp;
@@ -40,14 +44,14 @@ export const getMoneyPrices = (
   const k4 = 0.1 + Math.random() * 0.1;
 
   const items: MoneyPrice[] = [
-    { type: 'ton', price: Number((amount * 5).toFixed(2)) },
-    { type: 'star', price: Number((amount * 3 * tonToStarsRate).toFixed(2)) },
-    { type: 'ton', price: Number(amount.toFixed(2)) },
-    { type: 'star', price: Number((amount * tonToStarsRate).toFixed(2)) },
-    { type: 'ton', price: Number((amount * (c / k1)).toFixed(2)) },
-    { type: 'star', price: Number((amount * (c / k2) * tonToStarsRate).toFixed(2)) },
-    { type: 'ton', price: Number((amount * (c / k3)).toFixed(2)) },
-    { type: 'star', price: Number((amount * (c / k4) * tonToStarsRate).toFixed(2)) },
+    { type: 'ton', price: Number((safeAmount * 5).toFixed(2)) },
+    { type: 'star', price: Number((safeAmount * 3 * safeRate).toFixed(2)) },
+    { type: 'ton', price: Number(safeAmount.toFixed(2)) },
+    { type: 'star', price: Number((safeAmount * safeRate).toFixed(2)) },
+    { type: 'ton', price: Number((safeAmount * (c / k1)).toFixed(2)) },
+    { type: 'star', price: Number((safeAmount * (c / k2) * safeRate).toFixed(2)) },
+    { type: 'ton', price: Number((safeAmount * (c / k3)).toFixed(2)) },
+    { type: 'star', price: Number((safeAmount * (c / k4) * safeRate).toFixed(2)) },
   ];
 
   const weights: number[] = [

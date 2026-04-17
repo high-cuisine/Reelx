@@ -174,6 +174,7 @@ const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIn
                     const x = 50 + radius * Math.cos(radian - Math.PI / 2);
                     const y = 50 + radius * Math.sin(radian - Math.PI / 2);
                     const item = group.item;
+                    const segmentLabel = String(item.name ?? '');
 
                     return (
                         <div
@@ -212,13 +213,13 @@ const Wheel = ({ items, isSpinning: externalIsSpinning, onSpinComplete, targetIn
                                 </div>
                             ) : (
                                 <span className={cls.segmentText}>
-                                    {item.name.includes('#') ? (
+                                    {segmentLabel.includes('#') ? (
                                         <>
-                                            <span className={cls.segmentTextTitle}>{item.name.split('#')[0]}</span>
-                                            <span className={cls.segmentTextSubtitle}>#{item.name.split('#')[1]}</span>
+                                            <span className={cls.segmentTextTitle}>{segmentLabel.split('#')[0]}</span>
+                                            <span className={cls.segmentTextSubtitle}>#{segmentLabel.split('#')[1]}</span>
                                         </>
                                     ) : (
-                                        <span className={cls.segmentTextTitle}>{item.name}</span>
+                                        <span className={cls.segmentTextTitle}>{segmentLabel}</span>
                                     )}
                                 </span>
                             )}

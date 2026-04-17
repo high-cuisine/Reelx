@@ -19,13 +19,20 @@ export const useMinPrice = () => {
                 }
 
                 const { tonPrice, starPrice } = rates;
+                const ton = Number(tonPrice);
+                const star = Number(starPrice);
 
                 const baseTonStake = 5;
                 const tonStep = 5;
 
-                const starsPerTon = tonPrice / starPrice;
+                const starsPerTon =
+                    Number.isFinite(ton) && ton > 0 && Number.isFinite(star) && star > 0
+                        ? ton / star
+                        : 50;
                 const baseStarsRaw = baseTonStake * starsPerTon;
-                const baseStars = Math.ceil(baseStarsRaw / 100) * 100 || 100;
+                const roundedStars = Math.ceil(baseStarsRaw / 100) * 100;
+                const baseStars =
+                    Number.isFinite(roundedStars) && roundedStars > 0 ? roundedStars : 100;
 
                 if (!cancelled) {
                     setMinStakeTon(baseTonStake);

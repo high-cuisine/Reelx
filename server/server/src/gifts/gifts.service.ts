@@ -251,7 +251,12 @@ export class GiftsService {
 
   private async getRawMoneyPrices(amount: number) {
     const rates = await this.currancyService.getCurrancyRates();
-    const tonToStarsRate = rates.ton / rates.stars;
+    const ton = Number(rates?.ton);
+    const stars = Number(rates?.stars);
+    const tonToStarsRate =
+      Number.isFinite(ton) && ton > 0 && Number.isFinite(stars) && stars > 0
+        ? ton / stars
+        : 50;
     return getMoneyPrices(amount, tonToStarsRate);
   }
 
@@ -741,11 +746,14 @@ export class GiftsService {
     } else {
       // amount приходит в STARS:
       // stars * (цена STARS в USD) / (цена TON в USD) = эквивалент в TON
+      const ton = Number(currancyRates?.ton);
+      const stars = Number(currancyRates?.stars);
       const tonAmount =
-        currancyRates.ton > 0
-          ? (amount * currancyRates.stars) / currancyRates.ton
+        Number.isFinite(ton) && ton > 0 && Number.isFinite(stars) && stars >= 0
+          ? (amount * stars) / ton
           : amount;
-      return Number(tonAmount.toFixed(2));
+      const rounded = Number(tonAmount.toFixed(2));
+      return Number.isFinite(rounded) ? rounded : 0;
     }
   }
 }
