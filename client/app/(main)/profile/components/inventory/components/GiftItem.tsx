@@ -23,7 +23,6 @@ export const GiftItem: React.FC<GiftItemProps> = ({ gift, onClick }) => {
                     alt={gift.giftName}
                     fillContainer
                     loop={false}
-                    hideLottieBackground
                     className={cls.giftImageMedia}
                     imageClassName={cls.nftImage}
                 />

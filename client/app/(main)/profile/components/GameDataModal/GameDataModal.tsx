@@ -132,7 +132,6 @@ export const GameDataModal = ({
                         alt={winNft.giftName}
                         fillContainer
                         loop={false}
-                        hideLottieBackground
                         className={cls.winImageMedia}
                         imageClassName={cls.winImageImg}
                     />

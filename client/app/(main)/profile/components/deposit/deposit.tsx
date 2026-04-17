@@ -25,10 +25,11 @@ const Deposit = ({ tonBalance, starsBalance }: DepositProps) => {
                         <span>{starsBalance.toFixed(2)}</span>
                         <Image src={starImage} alt="star" width={20} height={20} />
                     </div>
+                    <a href='/deposit' className={cls.rightContainer}>
+                        <Button text='Депозит' customClass={cls.depositButton}></Button>
+                    </a>
                 </div>
-                <a href='/deposit' className={cls.rightContainer}>
-                    <Button text='Депозит' customClass={cls.depositButton}></Button>
-                </a>
+                
             </div>
             
         </div>
