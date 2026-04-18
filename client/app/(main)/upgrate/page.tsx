@@ -36,6 +36,7 @@ export default function UpgratePage() {
         gameResult,
         isPlaying,
         handleAnimationComplete,
+        showLoseMessage,
     } = useUpgratePage();
 
     return (
@@ -94,6 +95,21 @@ export default function UpgratePage() {
                 </div>
             </div>
             <GiftsModal />
+
+            {showLoseMessage && (
+                <div className={cls.loseOverlay}>
+                    <div className={cls.loseCard}>
+                        <div className={cls.loseIconWrap}>
+                            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                                <circle cx="20" cy="20" r="20" fill="rgba(255,80,80,0.15)" />
+                                <path d="M14 14L26 26M26 14L14 26" stroke="#FF5C5C" strokeWidth="2.5" strokeLinecap="round" />
+                            </svg>
+                        </div>
+                        <span className={cls.loseTitle}>Не повезло</span>
+                        <span className={cls.loseSubtitle}>Попробуй ещё раз!</span>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

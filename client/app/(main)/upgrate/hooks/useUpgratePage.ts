@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { eventBus, MODAL_EVENTS } from '@/features/eventBus/eventBus';
 import { useInventoryGifts } from './useInventoryGifts';
 import { useChanceData } from './useChanceData';
@@ -13,6 +13,8 @@ export function useUpgratePage() {
     const [selectedGifts, setSelectedGifts] = useState<string[]>([]);
     const [gameResult, setGameResult] = useState<StartGameResponse | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [showLoseMessage, setShowLoseMessage] = useState(false);
+    const loseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [selectedWishNames, setSelectedWishNames] = useState<string[]>([]);
     const [chanceFromSetWish, setChanceFromSetWish] = useState<number | null>(null);
 
@@ -110,6 +112,15 @@ export function useUpgratePage() {
             return;
         }
 
+        if (outcome === 'lose') {
+            if (loseTimerRef.current) clearTimeout(loseTimerRef.current);
+            setShowLoseMessage(true);
+            loseTimerRef.current = setTimeout(() => {
+                setShowLoseMessage(false);
+                loseTimerRef.current = null;
+            }, 3000);
+        }
+
         if (outcome === 'win' && gameResult.gifts.length > 0) {
             if (gameResult.gifts.length === 1) {
                 const mainGift = gameResult.gifts[0];
@@ -145,6 +156,12 @@ export function useUpgratePage() {
         setGameResult(null);
     };
 
+    useEffect(() => {
+        return () => {
+            if (loseTimerRef.current) clearTimeout(loseTimerRef.current);
+        };
+    }, []);
+
     return {
         activeTab,
         setActiveTab,
@@ -168,5 +185,6 @@ export function useUpgratePage() {
         gameResult,
         isPlaying,
         handleAnimationComplete,
+        showLoseMessage,
     };
 }

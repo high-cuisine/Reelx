@@ -1,10 +1,14 @@
-.bottomSheet {
+/* ── Wrapper ── */
+.winModal {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    background: #000201;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease;
@@ -13,159 +17,66 @@
         opacity: 1;
         pointer-events: all;
     }
-
-    &.open .content {
-        transform: translateY(0);
-    }
 }
 
-.dimmer {
+/* ── Background gradient (clickable) ── */
+.background {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
+    inset: 0;
+    background: linear-gradient(180deg, rgba(12, 17, 52, 1) 0%, rgba(0, 0, 0, 1) 100%);
     z-index: 1;
 }
 
-.content {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    max-width: 100%;
-    height: calc(100% - 80px);
-    background-image: linear-gradient(to bottom, #0c1134, #190925, #190418, #12010b, #000000);
-    border-radius: 20px 20px 0 0;
-    z-index: 2;
-    transform: translateY(100%);
-    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
-.header {
-    position: relative;
-    padding: 16px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.headerTitle {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 600;
-    font-size: 16px;
-    color: #FFFFFF;
-    line-height: 1.22;
-    text-align: center;
-}
-
-.closeButton {
-    position: absolute;
-    right: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 20px;
-    height: 20px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: opacity 0.2s;
-
-    &:hover {
-        opacity: 0.8;
-    }
-
-    &:active {
-        opacity: 0.6;
-    }
-
-    svg {
-        width: 20px;
-        height: 20px;
-    }
-}
-
-.body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px 20px 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.prizeCard {
-    position: relative;
-    // width: 167px;
-    // height: 191px;
-    margin: 8px auto 0;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    animation: scaleIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-    margin-bottom: 100px;
-    transform: scale(1.4) translateY(26px);
-}
-
+/* ── Gift card ── */
 @keyframes scaleIn {
-    0% {
+    from {
         transform: scale(0.8);
         opacity: 0;
     }
-    100% {
+    to {
         transform: scale(1);
         opacity: 1;
     }
 }
 
-.nftImage {
+.giftCard {
+    position: relative;
+    width: 80vw;
+    height: 80vw;
+    margin: 90px auto 0;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    overflow: hidden;
+    animation: scaleIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    flex-shrink: 0;
+}
+
+.giftCardMedia {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.giftImage {
     width: 100%;
     height: 100%;
     object-fit: cover;
     border-radius: 16px;
 }
 
-.lottieWrap {
-    border-radius: 16px;
-    justify-content: center;
-    align-items: center;
-    width: 59vw;
-    height: 59vw;
-    display: flex;
-    overflow: hidden;
-
-    > div {
-        width: 100% !important;
-        height: 100% !important;
-    }
-
-    svg {
-        width: 100% !important;
-        height: 100% !important;
-        object-fit: cover;
-    }
-}
-
-.prizePlaceholder {
-    width: 100px;
-    height: 100px;
+.giftPlaceholder {
+    width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 48px;
+    font-size: 64px;
     background: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
+    border-radius: 16px;
 }
 
 .giftName {
@@ -176,7 +87,7 @@
     font-family: 'Montserrat', sans-serif;
     font-weight: 700;
     font-size: 14px;
-    color: #FFFFFF;
+    color: #ffffff;
     text-align: center;
     line-height: 1.22;
     display: flex;
@@ -186,29 +97,22 @@
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
     z-index: 1;
     padding: 0 8px;
-
-    .giftNameTitle {
-        display: block;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        max-width: 100%;
-    }
-
-    .giftNameSubtitle {
-        display: block;
-        opacity: 0.8;
-    }
 }
 
-.winText {
-    position: relative;
-    text-align: center;
-    margin: 16px auto 0;
-    max-width: 208px;
-    animation: slideUp 0.6s ease-out 0.2s both;
+.giftNameTitle {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
 }
 
+.giftNameSubtitle {
+    display: block;
+    opacity: 0.8;
+}
+
+/* ── Actions ── */
 @keyframes slideUp {
     from {
         transform: translateY(20px);
@@ -220,36 +124,20 @@
     }
 }
 
-.title {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 700;
-    font-size: 20px;
-    color: #FFFFFF;
-    line-height: 1.22;
-    margin-bottom: 8px;
-}
-
-.description {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 600;
-    font-size: 10px;
-    color: #FFFFFF;
-    line-height: 1.22;
-    opacity: 0.8;
-}
-
 .actions {
     position: relative;
+    z-index: 2;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    width: min(520px, 100%);
-    margin: 18px auto 0;
-    padding: 0 0 12px;
+    width: 95vw;
+    margin: auto auto 0;
+    padding: 0 0 5vh;
     box-sizing: border-box;
-    animation: slideUp 0.6s ease-out 0.4s both;
+    animation: slideUp 0.6s ease-out 0.3s both;
 }
 
+/* ── Sell button (gradient fill) ── */
 .sellButton {
     display: flex;
     align-items: center;
@@ -265,7 +153,7 @@
     font-family: 'Montserrat', sans-serif;
     font-weight: 700;
     font-size: 12px;
-    color: #1E1D2B;
+    color: #1e1d2b;
     line-height: 1.22;
 
     &:active:not(:disabled) {
@@ -278,11 +166,73 @@
     }
 }
 
+/* ── Price tag (inside sell button) ── */
+.priceTag {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+
+    svg,
+    img {
+        width: 13px;
+        height: 13px;
+    }
+
+    span {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700;
+        font-size: 12px;
+        line-height: 1.22;
+    }
+}
+
+/* ── Claim button (gradient border) ── */
 .claimButton {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.2s, opacity 0.2s;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    color: transparent;
+    background-clip: text;
+    -webkit-background-clip: text;
+    background-image: linear-gradient(180deg, rgba(157, 138, 243, 1) 0%, rgba(115, 81, 255, 1) 100%);
+    line-height: 1.22;
+
+    &::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 10px;
+        padding: 1px;
+        background: linear-gradient(180deg, rgba(157, 138, 243, 1) 0%, rgba(115, 81, 255, 1) 100%);
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        mask-composite: exclude;
+        pointer-events: none;
+    }
+
+    &:active {
+        transform: scale(0.98);
+    }
+}
+
+/* ── Back button ── */
+.backButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
     padding: 10px;
     background: transparent;
@@ -296,55 +246,14 @@
     color: rgba(255, 255, 255, 0.32);
     line-height: 1.22;
 
-    &:active:not(:disabled) {
+    &:active {
         transform: scale(0.98);
     }
-
-    &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
 }
 
-.priceTag {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-
-    svg, img {
-        width: 13px;
-        height: 13px;
-    }
-
-    span {
-        font-family: 'Montserrat', sans-serif;
-        font-weight: 700;
-        font-size: 12px;
-        line-height: 1.22;
-    }
-}
-
-.claimPriceTag {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-
-    svg, img {
-        width: 13px;
-        height: 13px;
-    }
-
-    span {
-        font-family: 'Montserrat', sans-serif;
-        font-weight: 600;
-        font-size: 12px;
-        line-height: 1.22;
-        color: rgba(255, 255, 255, 0.32);
-    }
-}
-
+/* ── Wallet ── */
 .walletConnectButton {
-    background: #5C46B5;
+    background: #5c46b5;
     color: #fff;
 }
 
@@ -375,7 +284,7 @@
     font-family: 'Montserrat', sans-serif;
     font-size: 12px;
     font-weight: 600;
-    color: #FFFFFF;
+    color: #ffffff;
     line-height: 1.22;
 }
 
@@ -394,7 +303,7 @@
     font-family: 'Montserrat', sans-serif;
     font-size: 10px;
     font-weight: 600;
-    color: #FFFFFF;
+    color: #ffffff;
     line-height: 1.22;
 
     &:active {
@@ -402,30 +311,26 @@
     }
 }
 
-.sellError {
+/* ── Error ── */
+.errorMessage {
     font-family: 'Montserrat', sans-serif;
     font-weight: 600;
     font-size: 10px;
     color: #ff4444;
     text-align: center;
-    margin-top: 4px;
     padding: 8px;
     background: rgba(255, 68, 68, 0.1);
     border-radius: 6px;
     border: 1px solid rgba(255, 68, 68, 0.3);
 }
 
-@media (max-width: 768px) {
-    .content {
-        height: calc(100% - 60px);
-    }
-}
-
-/* Telegram WebApp: нативный fullscreen.
-   Обёртка bottomSheet всегда inset: 0, чтобы перекрывать NavBar.
-   Safe-area учитывается только внутри .content. */
+/* ── Telegram WebApp: нативный fullscreen ── */
 :global(html[data-tg-webapp-modal-insets='1']) {
-    .content {
+    .giftCard {
+        margin-top: clamp(40px, 10vh, 88px);
+    }
+
+    .actions {
         padding-bottom: max(20px, var(--tg-modal-frame-bottom, env(safe-area-inset-bottom, 0px)));
     }
 }

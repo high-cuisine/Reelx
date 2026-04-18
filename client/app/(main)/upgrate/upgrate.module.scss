@@ -640,3 +640,70 @@ button.giftItem {
         background: rgba(255, 80, 80, 0.25);
     }
 }
+
+/* ── Lose toast ── */
+@keyframes loseIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.85);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+@keyframes loseFadeOut {
+    0%   { opacity: 1; }
+    70%  { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+.loseOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    pointer-events: none;
+}
+
+.loseCard {
+    position: absolute;
+    top: 42%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 28px 40px;
+    background: linear-gradient(135deg, rgba(30, 20, 55, 0.96) 0%, rgba(20, 10, 40, 0.98) 100%);
+    border: 1px solid rgba(255, 80, 80, 0.25);
+    border-radius: 20px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 80, 80, 0.1);
+    backdrop-filter: blur(12px);
+    animation: loseIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+               loseFadeOut 3s ease-in 0s forwards;
+}
+
+.loseIconWrap {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+}
+
+.loseTitle {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    font-size: 20px;
+    line-height: 1.2;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+}
+
+.loseSubtitle {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.5);
+}
