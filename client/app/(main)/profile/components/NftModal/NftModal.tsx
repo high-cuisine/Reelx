@@ -35,12 +35,15 @@ export const NftModal = ({ isOpen, onClose, nft, onSell, onWithdraw }: NftModalP
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
+            document.body.dataset.modalOpen = '1';
         } else {
             document.body.style.overflow = 'unset';
+            delete document.body.dataset.modalOpen;
         }
 
         return () => {
             document.body.style.overflow = 'unset';
+            delete document.body.dataset.modalOpen;
         };
     }, [isOpen]);
 
@@ -115,6 +118,7 @@ export const NftModal = ({ isOpen, onClose, nft, onSell, onWithdraw }: NftModalP
         : null;
 
     const sellPrice = nft.price ? (nft.price * 0.8).toFixed(2) : '0.00';
+    const withdrawFee = '0.05';
 
     return (
         <div className={`${cls.nftModal} ${isOpen ? cls.open : ''}`}>
@@ -168,7 +172,13 @@ export const NftModal = ({ isOpen, onClose, nft, onSell, onWithdraw }: NftModalP
                     onClick={isWalletConnected ? handleWithdraw : handleConnectWallet}
                     disabled={isWithdrawing}
                 >
-                    <span>{isWithdrawing ? 'Вывод...' : 'Забрать'}</span>
+                    <span>{isWithdrawing ? 'Вывод...' : 'Забрать за'}</span>
+                    {!isWithdrawing && (
+                        <div className={cls.withdrawPriceTag}>
+                            <TonIcon />
+                            <span>{withdrawFee}</span>
+                        </div>
+                    )}
                 </button>
                 {withdrawError && (
                     <div className={cls.errorMessage}>{withdrawError}</div>

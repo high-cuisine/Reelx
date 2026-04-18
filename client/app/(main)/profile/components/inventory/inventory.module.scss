@@ -183,6 +183,26 @@
     font-size: 12px;
     line-height: 1.2;
     color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pvpBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: linear-gradient(135deg, rgba(157, 138, 243, 0.3) 0%, rgba(115, 81, 255, 0.3) 100%);
+    border: 1px solid rgba(157, 138, 243, 0.5);
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    font-size: 9px;
+    line-height: 1.2;
+    color: rgba(178, 161, 255, 1);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    flex-shrink: 0;
 }
 
 .historyItemSubtitle {

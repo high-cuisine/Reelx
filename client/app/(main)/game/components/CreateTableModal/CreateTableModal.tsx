@@ -74,8 +74,10 @@ const CreateTableModal = ({ isOpen, onClose, onCreateTable }: CreateTableModalPr
     useEffect(() => {
         if (!mounted) return;
         document.body.style.overflow = 'hidden';
+        document.body.dataset.modalOpen = '1';
         return () => {
-            document.body.style.overflow = 'hidden';
+            document.body.style.overflow = 'unset';
+            delete document.body.dataset.modalOpen;
         };
     }, [mounted]);
 

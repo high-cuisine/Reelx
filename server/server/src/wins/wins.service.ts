@@ -12,6 +12,11 @@ export class WinsService implements OnModuleInit, OnModuleDestroy {
   private readonly CACHE_KEY = 'wins:latest10';
   private readonly LAST_ANY_PUSH_AT_KEY = 'wins:last_any_push_at';
 
+  /** Минимальный интервал между случайными игрушками (мс). */
+  private readonly TICK_MIN_MS = 10_000;
+  /** Максимальный интервал между случайными игрушками (мс). */
+  private readonly TICK_MAX_MS = 35_000;
+
   private tickTimer: NodeJS.Timeout | null = null;
   private broadcastFn: BroadcastFn | null = null;
 
@@ -31,10 +36,7 @@ export class WinsService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy() {
-    if (this.tickTimer) {
-      clearInterval(this.tickTimer);
-      this.tickTimer = null;
-    }
+    this.clearTimer();
   }
 
   async getCachedItems(): Promise<WinsItem[]> {
@@ -63,24 +65,45 @@ export class WinsService implements OnModuleInit, OnModuleDestroy {
 
     const items = await this.pushToCache(item);
     this.broadcastFn?.({ item, items });
+
+    // Сбрасываем таймер: после реального выигрыша делаем новую случайную паузу.
+    this.scheduleNextTick();
+  }
+
+  private randDelay(): number {
+    return this.TICK_MIN_MS + Math.floor(Math.random() * (this.TICK_MAX_MS - this.TICK_MIN_MS));
+  }
+
+  private clearTimer() {
+    if (this.tickTimer) {
+      clearTimeout(this.tickTimer);
+      this.tickTimer = null;
+    }
+  }
+
+  private scheduleNextTick() {
+    this.clearTimer();
+    const delay = this.randDelay();
+    this.logger.debug(`Next random gift in ${Math.round(delay / 1000)}s`);
+    this.tickTimer = setTimeout(() => {
+      this.tickTimer = null;
+      void this.tickOnce()
+        .catch((e: any) => this.logger.warn(`Tick failed: ${e?.message ?? e}`))
+        .finally(() => this.scheduleNextTick());
+    }, delay);
   }
 
   private startTicker() {
-    if (this.tickTimer) return;
-    this.tickTimer = setInterval(() => {
-      void this.tickOnce().catch((e: any) => {
-        this.logger.warn(`Tick failed: ${e?.message ?? e}`);
-      });
-    }, 15_000);
+    this.scheduleNextTick();
   }
 
   private async tickOnce() {
+    // Защита от дублирования (например при быстром перезапуске модуля).
     const lastAnyPushAtRaw = await this.redisService.get(this.LAST_ANY_PUSH_AT_KEY);
     const lastAnyPushAt = lastAnyPushAtRaw ? parseInt(lastAnyPushAtRaw, 10) : 0;
     const now = Date.now();
 
-    // If something (real win or random) was pushed recently, do nothing.
-    if (Number.isFinite(lastAnyPushAt) && now - lastAnyPushAt < 14_500) return;
+    if (Number.isFinite(lastAnyPushAt) && now - lastAnyPushAt < this.TICK_MIN_MS - 1_000) return;
 
     const random = await this.pickRandomFromDb();
     if (!random) return;

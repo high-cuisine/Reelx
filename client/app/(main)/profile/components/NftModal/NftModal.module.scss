@@ -213,6 +213,7 @@
 }
 
 .withdrawButton {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -220,15 +221,32 @@
     width: 100%;
     padding: 10px;
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    border: none;
     border-radius: 10px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: transform 0.2s, opacity 0.2s;
     font-family: 'Montserrat', sans-serif;
     font-weight: 600;
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.32);
+    color: transparent;
+    background-clip: text;
+    -webkit-background-clip: text;
+    background-image: linear-gradient(180deg, rgba(157, 138, 243, 1) 0%, rgba(115, 81, 255, 1) 100%);
     line-height: 1.22;
+
+    &::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 10px;
+        padding: 1px;
+        background: linear-gradient(180deg, rgba(157, 138, 243, 1) 0%, rgba(115, 81, 255, 1) 100%);
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        mask-composite: exclude;
+        pointer-events: none;
+    }
 
     &:active:not(:disabled) {
         transform: scale(0.98);
@@ -270,10 +288,13 @@
 
     span {
         font-family: 'Montserrat', sans-serif;
-        font-weight: 600;
+        font-weight: 700;
         font-size: 12px;
         line-height: 1.22;
-        color: rgba(255, 255, 255, 0.32);
+        color: transparent;
+        background-clip: text;
+        -webkit-background-clip: text;
+        background-image: linear-gradient(180deg, rgba(157, 138, 243, 1) 0%, rgba(115, 81, 255, 1) 100%);
     }
 }
 
@@ -377,16 +398,10 @@
     }
 }
 
-/* Telegram WebApp: нативный fullscreen */
+/* Telegram WebApp: нативный fullscreen.
+   nftModal всегда inset: 0, чтобы перекрывать NavBar.
+   Safe-area учитывается только у карточки/нижних кнопок. */
 :global(html[data-tg-webapp-modal-insets='1']) {
-    .nftModal {
-        top: var(--tg-modal-frame-top);
-        right: var(--tg-modal-frame-right);
-        bottom: var(--tg-modal-frame-bottom);
-        left: var(--tg-modal-frame-left);
-        min-height: 0;
-    }
-
     .nftCard {
         margin-top: clamp(40px, 10vh, 88px);
     }

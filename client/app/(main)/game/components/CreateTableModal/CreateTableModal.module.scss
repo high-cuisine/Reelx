@@ -309,12 +309,11 @@ $card-bg: #262244;
     }
 }
 
-/* Telegram WebApp: нативный fullscreen */
+/* Telegram WebApp: нативный fullscreen.
+   Обёртка bottomSheet всегда inset: 0, чтобы перекрывать NavBar.
+   Safe-area учитывается только в .footer. */
 :global(html[data-tg-webapp-modal-insets='1']) {
-    .bottomSheet {
-        top: var(--tg-modal-frame-top);
-        right: var(--tg-modal-frame-right);
-        bottom: var(--tg-modal-frame-bottom);
-        left: var(--tg-modal-frame-left);
+    .footer {
+        padding-bottom: max(20px, var(--tg-modal-frame-bottom, env(safe-area-inset-bottom, 0px)));
     }
 }

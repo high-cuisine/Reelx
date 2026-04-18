@@ -30,7 +30,12 @@ export const GameHistoryItem: React.FC<GameHistoryItemProps> = ({ game, onClick 
         >
             <div className={cls.historyItemMain}>
                 <div className={cls.historyItemInfo}>
-                    <div className={cls.historyItemTitle}>{getGameTypeName(game.type)}</div>
+                    <div className={cls.historyItemTitle}>
+                        {getGameTypeName(game.type)}
+                        {game.type === 'pvp' && (
+                            <span className={cls.pvpBadge}>PvP</span>
+                        )}
+                    </div>
                     <div className={cls.historyItemSubtitle}>{formatGameDateTime(game.createdAt)}</div>
                 </div>
 

@@ -109,16 +109,16 @@
     }
 }
 
-/* Telegram WebApp: нативный fullscreen — fixed поверх всего экрана, учитываем safe area */
+/* Telegram WebApp: нативный fullscreen.
+   overlay всегда inset: 0, чтобы перекрывать NavBar.
+   Safe-area применяется только к padding внутри overlay. */
 :global(html[data-tg-webapp-modal-insets='1']) {
     .overlay {
-        top: var(--tg-modal-frame-top);
-        right: var(--tg-modal-frame-right);
-        bottom: var(--tg-modal-frame-bottom);
-        left: var(--tg-modal-frame-left);
+        padding-top: max(20px, var(--tg-modal-frame-top, env(safe-area-inset-top, 0px)));
+        padding-bottom: max(20px, var(--tg-modal-frame-bottom, env(safe-area-inset-bottom, 0px)));
     }
 
     .modal {
-        max-height: min(80vh, calc(100dvh - var(--tg-modal-frame-top) - var(--tg-modal-frame-bottom) - 40px));
+        max-height: min(80vh, calc(100dvh - var(--tg-modal-frame-top) - 40px));
     }
 }

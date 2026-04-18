@@ -25,7 +25,8 @@
     }
 }
 
-/* Модалка истории игр (profile): временно убираем нижнее меню */
+/* Любая модалка: убираем нижнее меню */
+:global(body[data-modal-open='1']) .navbar,
 :global(body[data-game-history-modal-open='1']) .navbar {
     display: none;
 }

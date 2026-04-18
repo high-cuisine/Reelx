@@ -62,12 +62,15 @@ const GiftsModal = ({ gifts = [] }: GiftsModalProps) => {
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
+            document.body.dataset.modalOpen = '1';
         } else {
             document.body.style.overflow = 'unset';
+            delete document.body.dataset.modalOpen;
         }
 
         return () => {
             document.body.style.overflow = 'unset';
+            delete document.body.dataset.modalOpen;
         };
     }, [isOpen]);
 

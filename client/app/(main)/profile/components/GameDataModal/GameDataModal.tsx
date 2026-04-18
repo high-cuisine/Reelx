@@ -109,13 +109,16 @@ export const GameDataModal = ({
         if (isOpen) {
             document.body.style.overflow = 'hidden';
             document.body.dataset.gameHistoryModalOpen = '1';
+            document.body.dataset.modalOpen = '1';
         } else {
             document.body.style.overflow = '';
             delete document.body.dataset.gameHistoryModalOpen;
+            delete document.body.dataset.modalOpen;
         }
         return () => {
             document.body.style.overflow = '';
             delete document.body.dataset.gameHistoryModalOpen;
+            delete document.body.dataset.modalOpen;
         };
     }, [isOpen]);
 
