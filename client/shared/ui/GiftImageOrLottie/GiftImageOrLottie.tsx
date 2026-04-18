@@ -1,12 +1,39 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { Component, useState, useEffect, useRef } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 import Image, { StaticImageData } from 'next/image';
 import dynamic from 'next/dynamic';
 import cls from './GiftImageOrLottie.module.scss';
 import { fetchSafeLottieAnimation, normalizeMediaUrl } from '@/shared/lib/lottie/safeLottie';
 
 const Lottie = dynamic(() => import('lottie-react').then((m) => m.default), { ssr: false });
+
+// Перехватывает внутренние падения lottie-web (например, .length на undefined внутри completeData)
+// и сигнализирует родителю перейти на статичную картинку.
+interface LottieBoundaryProps {
+    children: ReactNode;
+    fallback: ReactNode;
+    onError: () => void;
+}
+
+class LottieErrorBoundary extends Component<LottieBoundaryProps, { hasError: boolean }> {
+    state = { hasError: false };
+
+    static getDerivedStateFromError(): { hasError: boolean } {
+        return { hasError: true };
+    }
+
+    componentDidCatch(error: Error, _info: ErrorInfo) {
+        console.warn('[Lottie] render error, falling back to image:', error.message);
+        this.props.onError();
+    }
+
+    render() {
+        if (this.state.hasError) return this.props.fallback;
+        return this.props.children;
+    }
+}
 
 function isRemoteUrl(url: string): boolean {
     return /^https?:\/\//i.test(url) || url.startsWith('ipfs://') || url.startsWith('//');
@@ -52,15 +79,19 @@ export const GiftImageOrLottie = ({
     placeholder,
 }: GiftImageOrLottieProps) => {
     const [lottieData, setLottieData] = useState<object | null>(null);
+    const [lottieRenderFailed, setLottieRenderFailed] = useState(false);
     const [replayToken, setReplayToken] = useState(0);
     const lottieContainerRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         if (!lottieUrl) {
             setLottieData(null);
+            setLottieRenderFailed(false);
             setReplayToken(0);
             return;
         }
+        // При смене URL сбрасываем флаг ошибки
+        setLottieRenderFailed(false);
         let cancelled = false;
         fetchSafeLottieAnimation(lottieUrl)
             .then((data) => {
@@ -133,37 +164,43 @@ export const GiftImageOrLottie = ({
           ? { width: '18vw', height: '18vw' as const }
           : { width: 56, height: 56 };
 
-    if (lottieData) {
+    if (lottieData && !lottieRenderFailed) {
         const externalReplay = replayNonce !== undefined;
         const replayOnClick = !loop && !externalReplay;
         const lottiePlayKey = externalReplay ? replayNonce : replayToken;
 
         return (
-            <div
-                ref={lottieContainerRef}
-                className={`${cls.lottieWrap} ${fillContainer ? cls.fillContainer : ''} ${className ?? ''}`}
-                style={sizeStyle}
-                {...(replayOnClick
-                    ? {
-                          'data-lottie-replay': 'true',
-                          onClick: (e: React.MouseEvent) => {
-                              e.stopPropagation();
-                              setReplayToken((v) => v + 1);
-                          },
-                      }
-                    : {})}
+            <LottieErrorBoundary
+                key={lottieUrl ?? 'lottie'}
+                onError={() => setLottieRenderFailed(true)}
+                fallback={null}
             >
-                <Lottie
-                    key={`${lottieUrl ?? 'lottie'}-${lottiePlayKey}`}
-                    animationData={lottieData}
-                    loop={loop}
-                    autoplay
-                    style={{
-                        ...sizeStyle,
-                        ...(replayOnClick || externalReplay ? { cursor: 'pointer' } : {}),
-                    }}
-                />
-            </div>
+                <div
+                    ref={lottieContainerRef}
+                    className={`${cls.lottieWrap} ${fillContainer ? cls.fillContainer : ''} ${className ?? ''}`}
+                    style={sizeStyle}
+                    {...(replayOnClick
+                        ? {
+                              'data-lottie-replay': 'true',
+                              onClick: (e: React.MouseEvent) => {
+                                  e.stopPropagation();
+                                  setReplayToken((v) => v + 1);
+                              },
+                          }
+                        : {})}
+                >
+                    <Lottie
+                        key={`${lottieUrl ?? 'lottie'}-${lottiePlayKey}`}
+                        animationData={lottieData}
+                        loop={loop}
+                        autoplay
+                        style={{
+                            ...sizeStyle,
+                            ...(replayOnClick || externalReplay ? { cursor: 'pointer' } : {}),
+                        }}
+                    />
+                </div>
+            </LottieErrorBoundary>
         );
     }
 

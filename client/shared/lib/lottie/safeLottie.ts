@@ -10,10 +10,34 @@ export function normalizeMediaUrl(url: string): string {
 }
 
 /**
- * bodymovin/lottie-web иногда падает внутри completeData на `.length`,
- * если пришёл нетипичный JSON (например, без массивов assets/chars/markers).
- * Нормализуем и отбрасываем неподходящие данные.
+ * bodymovin/lottie-web падает внутри completeData/setupAnimation на `.length`,
+ * если поля-массивы (assets, chars, markers, shapes, ef, masksProperties и т.д.) — undefined.
+ * Нормализуем: гарантируем что все обязательные поля — массивы, рекурсивно по layers/assets.
  */
+
+/** Нормализует один layer: обязательные массивы → [] если отсутствуют или не массив. */
+function normalizeLottieLayer(layer: unknown): unknown {
+    if (layer == null || typeof layer !== 'object' || Array.isArray(layer)) return layer;
+    const l = layer as Record<string, unknown>;
+    return {
+        ...l,
+        shapes: Array.isArray(l.shapes) ? l.shapes : [],
+        ef: Array.isArray(l.ef) ? l.ef : [],
+        masksProperties: Array.isArray(l.masksProperties) ? l.masksProperties : [],
+        tt: l.tt,
+    };
+}
+
+/** Нормализует один asset (может содержать layers для precomps). */
+function normalizeLottieAsset(asset: unknown): unknown {
+    if (asset == null || typeof asset !== 'object' || Array.isArray(asset)) return asset;
+    const a = asset as Record<string, unknown>;
+    if (Array.isArray(a.layers)) {
+        return { ...a, layers: a.layers.map(normalizeLottieLayer) };
+    }
+    return a;
+}
+
 export function sanitizeLottieAnimationData(data: unknown): Record<string, unknown> | null {
     if (data == null || typeof data !== 'object' || Array.isArray(data)) {
         return null;
@@ -25,19 +49,17 @@ export function sanitizeLottieAnimationData(data: unknown): Record<string, unkno
         return null;
     }
 
-    if (raw.assets !== undefined && !Array.isArray(raw.assets)) {
-        return null;
-    }
-    if (raw.chars !== undefined && !Array.isArray(raw.chars)) {
-        return null;
-    }
-    if (raw.markers !== undefined && !Array.isArray(raw.markers)) {
-        return null;
-    }
+    // Верхний уровень: assets/chars/markers должны быть массивами
+    if (raw.assets !== undefined && !Array.isArray(raw.assets)) return null;
+    if (raw.chars !== undefined && !Array.isArray(raw.chars)) return null;
+    if (raw.markers !== undefined && !Array.isArray(raw.markers)) return null;
 
     return {
         ...raw,
-        assets: Array.isArray(raw.assets) ? raw.assets : [],
+        // Нормализуем каждый layer
+        layers: layers.map(normalizeLottieLayer),
+        // Нормализуем assets (precomp-слои тоже могут содержать layers)
+        assets: Array.isArray(raw.assets) ? raw.assets.map(normalizeLottieAsset) : [],
         chars: Array.isArray(raw.chars) ? raw.chars : [],
         markers: Array.isArray(raw.markers) ? raw.markers : [],
     };
