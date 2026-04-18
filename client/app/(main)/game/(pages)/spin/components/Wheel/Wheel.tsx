@@ -207,11 +207,11 @@ const Wheel = ({
                                 <div className={cls.segmentMedia}>
                                     <GiftImageOrLottie
                                         image={item.image}
-                                        // Lottie в колесе иногда приходит с битым JSON и валит lottie-web в проде.
-                                        // Для стабильности в spin показываем только превью-картинку.
+                                        lottieUrl={item.lottie}
                                         alt={item.name}
-                                        width={18}
-                                        height={18}
+                                        fillContainer
+                                        hideLottieBackground
+                                        loop
                                         className={cls.segmentLottie}
                                         imageClassName={cls.segmentImage}
                                     />

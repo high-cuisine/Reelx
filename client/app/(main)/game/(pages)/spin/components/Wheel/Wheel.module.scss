@@ -88,6 +88,13 @@
 
 .segmentLottie {
     background: transparent !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+
+    // Отменяем масштаб из lottieWrap — на колесе нужен точный размер
+    > div {
+        transform: none !important;
+    }
 
     svg {
         background: transparent !important;
