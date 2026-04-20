@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../libs/infrustructure/prisma/prisma.service';
 import { RedisService } from '../../libs/infrustructure/redis/redis.service';
 import type { WinsItem } from './wins.types';
@@ -125,7 +126,11 @@ export class WinsService implements OnModuleInit, OnModuleDestroy {
     if (items.length > 0) return;
     // trigger a random item quickly after boot for "empty" state
     await this.redisService.set(this.LAST_ANY_PUSH_AT_KEY, '0');
-    setTimeout(() => void this.tickOnce(), 800);
+    setTimeout(() => {
+      void this.tickOnce().catch((e: unknown) =>
+        this.logger.warn(`ensureTickSoon tick failed: ${e instanceof Error ? e.message : String(e)}`),
+      );
+    }, 800);
   }
 
   private async pushToCache(item: WinsItem): Promise<WinsItem[]> {
@@ -138,17 +143,28 @@ export class WinsService implements OnModuleInit, OnModuleDestroy {
 
   private async pickRandomFromDb(): Promise<{ image: string; lottieUrl?: string | null; name?: string | null } | null> {
     const where = { image: { not: null } };
-    const count = await this.prisma.userGifts.count({ where });
-    if (count <= 0) return null;
-    const skip = Math.floor(Math.random() * count);
-    const row = await this.prisma.userGifts.findFirst({
-      where,
-      skip,
-      select: { image: true, lottieUrl: true, giftName: true },
-    });
-    const image = (row?.image ?? '').trim();
-    if (!image) return null;
-    return { image, lottieUrl: row?.lottieUrl ?? null, name: row?.giftName ?? null };
+    try {
+      const count = await this.prisma.userGifts.count({ where });
+      if (count <= 0) return null;
+      const skip = Math.floor(Math.random() * count);
+      const row = await this.prisma.userGifts.findFirst({
+        where,
+        skip,
+        select: { image: true, lottieUrl: true, giftName: true },
+      });
+      const image = (row?.image ?? '').trim();
+      if (!image) return null;
+      return { image, lottieUrl: row?.lottieUrl ?? null, name: row?.giftName ?? null };
+    } catch (e: unknown) {
+      // P2021 — таблицы нет (миграции / db push не применены к БД)
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2021') {
+        this.logger.warn(
+          `user_gifts недоступна (${e.meta?.table ?? 'unknown'}). Примените схему: prisma db push или migrate deploy с миграциями.`,
+        );
+        return null;
+      }
+      throw e;
+    }
   }
 }
 

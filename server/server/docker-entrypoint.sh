@@ -15,19 +15,27 @@ run_migrations() {
   echo "Waiting for database to be ready..."
   sleep 3
 
-  # Выполняем миграции
-  echo "Running database migrations..."
-  if npx prisma migrate deploy --schema=./libs/infrustructure/prisma/schema.prisma; then
-    echo "✓ Migrations applied successfully"
-    return 0
-  else
-    echo "✗ ERROR: Failed to apply migrations"
-    echo "This might happen if:"
-    echo "  - Database is not ready yet"
-    echo "  - Database connection failed"
-    echo "  - Migration files are corrupted"
+  SCHEMA=./libs/infrustructure/prisma/schema.prisma
+  MIGRATIONS_DIR=./libs/infrustructure/prisma/migrations
+
+  # migrate deploy применяет только SQL из migrations/ — без папки таблицы не появятся
+  if [ -d "$MIGRATIONS_DIR" ] && [ -n "$(ls -A "$MIGRATIONS_DIR" 2>/dev/null)" ]; then
+    echo "Running database migrations (prisma migrate deploy)..."
+    if npx prisma migrate deploy --schema="$SCHEMA"; then
+      echo "✓ Migrations applied successfully"
+      return 0
+    fi
+    echo "✗ migrate deploy failed"
     return 1
   fi
+
+  echo "No prisma/migrations in image — syncing schema with the database (prisma db push)..."
+  if npx prisma db push --schema="$SCHEMA" --skip-generate; then
+    echo "✓ Schema pushed successfully"
+    return 0
+  fi
+  echo "✗ ERROR: prisma db push failed"
+  return 1
 }
 
 # Если скрипт запущен с аргументами (из Docker), выполняем миграции и запускаем приложение
