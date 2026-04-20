@@ -263,6 +263,13 @@
    Обёртка bottomSheet всегда inset: 0, чтобы перекрывать NavBar.
    Safe-area — только у внутреннего скролла. */
 :global(html[data-tg-webapp-modal-insets='1']) {
+    .content {
+        /* miniapp fullscreen: отступ сверху 7vh */
+        height: calc(
+            100% - max(7vh, var(--tg-modal-frame-top, env(safe-area-inset-top, 0px)))
+        );
+    }
+
     .giftsGrid {
         padding-bottom: max(12px, var(--tg-modal-frame-bottom, env(safe-area-inset-bottom, 0px)));
     }

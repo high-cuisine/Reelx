@@ -56,10 +56,11 @@ const ProfilePage = () => {
         const insetTop = Math.max(cTop + sTop, jsContentTop + jsSafeTop);
         const insetLeft = Math.max(cLeft + sLeft, jsContentLeft + jsSafeLeft);
 
-        const baseTop = 12 + insetTop + (expanded ? 10 : 0);
+        const isFullscreen = Boolean((wa as { isFullscreen?: boolean } | undefined)?.isFullscreen);
+        const baseTop = (isFullscreen ? 35 : 0) + insetTop + (expanded ? 10 : 0);
         const baseLeft = 12 + insetLeft;
 
-        const topPx = Math.max(16, baseTop);
+        const topPx = Math.max(0, baseTop);
         const leftPx = Math.max(12, baseLeft);
 
         el.style.setProperty('--profile-support-top', `${topPx}px`);

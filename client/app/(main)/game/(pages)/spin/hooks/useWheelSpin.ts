@@ -9,6 +9,10 @@ const SPIN_DURATION = 5000; // 5 секунд
 const MIN_ROTATIONS = 1; // 1 полный оборот
 const MAX_ROTATIONS = 2; // максимум 2 полных оборота
 
+function normalizeDeg(deg: number): number {
+    return ((deg % 360) + 360) % 360;
+}
+
 export const useWheelSpin = (
     externalIsSpinning?: boolean,
     onSpinComplete?: (rotation: number, lockedTargetIndex: number | null) => void,
@@ -16,17 +20,25 @@ export const useWheelSpin = (
     itemsCount?: number,
     /** Центр целевого слота в градусах (как Wheel / conic-gradient); иначе считаем равные сектора. */
     targetSlotCenterDeg?: number | null,
+    /** Текущий визуальный угол колеса (manualRotation) в момент старта спина — обязателен для корректной остановки. */
+    visualBaseRotationDeg?: number,
 ): UseWheelSpinReturn => {
     const [rotation, setRotation] = useState(0);
     const [isSpinning, setIsSpinning] = useState(false);
     const animationFrameRef = useRef<number | null>(null);
     const onSpinCompleteRef = useRef(onSpinComplete);
     const finalRotationRef = useRef<number>(0);
+    /** Последний визуальный угол с родителя (manualRotation), обновляется каждый рендер без подписки эффекта на каждый кадр */
+    const visualBaseRef = useRef(0);
 
     // Обновляем ref при изменении callback
     useEffect(() => {
         onSpinCompleteRef.current = onSpinComplete;
     }, [onSpinComplete]);
+
+    if (typeof visualBaseRotationDeg === 'number' && Number.isFinite(visualBaseRotationDeg)) {
+        visualBaseRef.current = visualBaseRotationDeg;
+    }
 
     useEffect(() => {
         if (externalIsSpinning && !isSpinning) {
@@ -48,28 +60,35 @@ export const useWheelSpin = (
                     ? targetIndex
                     : null;
 
+            // Важно: между спинами колесо крутится через manualRotation, а внутренний rotation здесь может быть «устаревшим».
+            // Берём последний визуальный угол из ref; если его нет — rotation из этого хука.
+            const startRotation = normalizeDeg(
+                Number.isFinite(visualBaseRef.current) ? visualBaseRef.current : rotation,
+            );
+
             if (
                 lockedIdx !== null &&
                 targetSlotCenterDeg != null &&
                 Number.isFinite(targetSlotCenterDeg)
             ) {
-                const targetRotation = 360 - targetSlotCenterDeg;
-                additionalRotation = fullRotations * 360 + targetRotation;
+                const slotCenter = normalizeDeg(targetSlotCenterDeg);
+                // Нужно: slotCenter + (startRotation + additional) ≡ 0 (mod 360)  →  additional ≡ -slotCenter - start (mod 360)
+                const delta = normalizeDeg(360 - slotCenter - startRotation);
+                additionalRotation = fullRotations * 360 + delta;
                 console.log(
                     `🎯 useWheelSpin: Целевой индекс: ${lockedIdx}, центр слота: ${targetSlotCenterDeg}°, оборотов: ${fullRotations}, доп. поворот: ${additionalRotation}°`,
                 );
             } else if (lockedIdx !== null && itemsCount && itemsCount > 0) {
                 const segmentAngle = 360 / itemsCount;
-                const targetSegmentCenter = lockedIdx * segmentAngle + segmentAngle / 2;
-                const targetRotation = 360 - targetSegmentCenter;
-                additionalRotation = fullRotations * 360 + targetRotation;
+                const targetSegmentCenter = normalizeDeg(lockedIdx * segmentAngle + segmentAngle / 2);
+                const delta = normalizeDeg(360 - targetSegmentCenter - startRotation);
+                additionalRotation = fullRotations * 360 + delta;
                 console.log(`🎯 useWheelSpin: Целевой индекс (равные сектора): ${lockedIdx}, оборотов: ${fullRotations}, угол: ${additionalRotation}°`);
             } else {
                 additionalRotation = fullRotations * 360 + Math.random() * 360;
                 console.log(`🎯 useWheelSpin: Случайный спин, оборотов: ${fullRotations}, угол: ${additionalRotation}°`);
             }
 
-            const startRotation = rotation;
             const finalRotation = startRotation + additionalRotation;
             finalRotationRef.current = finalRotation;
 

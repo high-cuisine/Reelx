@@ -19,39 +19,71 @@ export function useWheelLogic({
   targetIndex,
 }: UseWheelLogicParams) {
   const [manualRotation, setManualRotation] = useState(0);
+  const [lockedItems, setLockedItems] = useState<GiftItem[] | null>(null);
+  const [lockedItemsCount, setLockedItemsCount] = useState<number | null>(null);
+
+  // Лочим список предметов на момент старта спина, чтобы при догрузке/смене gifts
+  // после первого прокрута не ломался расчёт targetIndex/сектора.
+  useEffect(() => {
+    if (externalIsSpinning) {
+      if (lockedItems === null) {
+        setLockedItems(items);
+        setLockedItemsCount(items.length);
+      } else if (lockedItemsCount !== null && items.length !== lockedItemsCount) {
+        // Список внезапно изменился во время спина — лучше сбросить лок и дать UI догрузить.
+        setLockedItems(null);
+        setLockedItemsCount(null);
+      }
+      return;
+    }
+
+    // После окончания спина — разблокируем.
+    if (lockedItems !== null) {
+      setLockedItems(null);
+      setLockedItemsCount(null);
+    }
+  }, [externalIsSpinning, items, items.length, lockedItems, lockedItemsCount]);
+
+  const effectiveItems = lockedItems ?? items;
 
   const targetSlotCenterDeg = useMemo(() => {
     if (
       targetIndex == null ||
       targetIndex < 0 ||
-      targetIndex >= items.length ||
-      items.length === 0
+      targetIndex >= effectiveItems.length ||
+      effectiveItems.length === 0
     ) {
       return null;
     }
-    return getFlatSlotCenterAngleDeg(items, targetIndex);
-  }, [items, targetIndex]);
+    return getFlatSlotCenterAngleDeg(effectiveItems, targetIndex);
+  }, [effectiveItems, targetIndex]);
 
   const handleSpinComplete = (rotation: number, lockedTargetIndex: number | null) => {
     if (!onSpinComplete) return;
     if (
       lockedTargetIndex !== null &&
       lockedTargetIndex >= 0 &&
-      lockedTargetIndex < items.length
+      lockedTargetIndex < effectiveItems.length
     ) {
-      onSpinComplete(items[lockedTargetIndex]);
+      onSpinComplete(effectiveItems[lockedTargetIndex]);
       return;
     }
-    const selectedIndex = calculateSelectedSegment(rotation, items.length);
-    onSpinComplete(items[selectedIndex]);
+    const selectedIndex = calculateSelectedSegment(rotation, effectiveItems.length);
+    const selected = effectiveItems[selectedIndex];
+    if (!selected) {
+      // Страховка на случай рассинхронизации длины массива
+      return;
+    }
+    onSpinComplete(selected);
   };
 
   const { rotation: spinRotation, isSpinning } = useWheelSpin(
     externalIsSpinning,
     handleSpinComplete,
     targetIndex,
-    items.length,
+    effectiveItems.length,
     targetSlotCenterDeg,
+    manualRotation,
   );
 
   const {

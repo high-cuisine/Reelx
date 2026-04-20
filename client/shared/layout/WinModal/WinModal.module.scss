@@ -1,5 +1,10 @@
 /* ── Wrapper ── */
 .winModal {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
     position: fixed;
     top: 0;
     left: 0;
@@ -327,7 +332,7 @@
 /* ── Telegram WebApp: нативный fullscreen ── */
 :global(html[data-tg-webapp-modal-insets='1']) {
     .giftCard {
-        margin-top: clamp(40px, 10vh, 88px);
+        margin-top: 0;
     }
 
     .actions {
