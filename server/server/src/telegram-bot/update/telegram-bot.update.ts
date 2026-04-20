@@ -19,9 +19,8 @@ export class TelegramBotUpdate {
       photoFileName,
     });
 
-    const link = process.env.APP_LINK || 'https://example.com';
-    const message = this.telegramBotService.sendStartMessage(link);
-    await ctx.reply(message.text, { reply_markup: message.reply_markup });
+    const message = this.telegramBotService.sendStartMessage(process.env.APP_LINK);
+    await ctx.reply(message.text, message.reply_markup ? { reply_markup: message.reply_markup } : {});
   }
 
   @On('pre_checkout_query')

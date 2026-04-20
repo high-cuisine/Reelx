@@ -101,7 +101,48 @@ export class TelegramBotService {
     });
   }
 
-  sendStartMessage(link: string) {
+  /**
+   * URL для Mini App: только https (кроме редких тестовых случаев), без пробелов.
+   * Иначе Telegram: 400 BUTTON_URL_INVALID.
+   */
+  private normalizeMiniAppUrl(raw: string | undefined): string | null {
+    if (raw == null || typeof raw !== 'string') return null;
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+
+    let candidate = trimmed;
+    if (!/^https?:\/\//i.test(candidate)) {
+      candidate = `https://${candidate}`;
+    }
+
+    try {
+      const u = new URL(candidate);
+      const host = u.hostname.toLowerCase();
+      // Заглушки и явный мусор — не отправляем в API
+      if (!host || host === 'example.com' || host === 'localhost') {
+        return null;
+      }
+      if (u.protocol !== 'https:') {
+        return null;
+      }
+      return u.toString();
+    } catch {
+      return null;
+    }
+  }
+
+  sendStartMessage(appLink: string | undefined) {
+    const url = this.normalizeMiniAppUrl(appLink);
+    if (!url) {
+      return {
+        text:
+          'Добро пожаловать!\n\n' +
+          'Кнопка мини-приложения недоступна: в окружении сервера задайте APP_LINK — полный HTTPS-URL вашего Web App ' +
+          '(тот же домен, что в @BotFather: Bot Settings → Menu Button / Domain).',
+        reply_markup: undefined,
+      };
+    }
+
     return {
       text: 'Добро пожаловать!',
       reply_markup: {
@@ -109,7 +150,7 @@ export class TelegramBotService {
           [
             {
               text: 'Открыть приложение',
-              web_app: { url: link },
+              web_app: { url },
             },
           ],
         ],
