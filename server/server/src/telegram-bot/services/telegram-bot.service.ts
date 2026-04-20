@@ -137,23 +137,35 @@ export class TelegramBotService {
       return {
         text:
           'Добро пожаловать!\n\n' +
-          'Кнопка мини-приложения недоступна: в окружении сервера задайте APP_LINK — полный HTTPS-URL вашего Web App ' +
-          '(тот же домен, что в @BotFather: Bot Settings → Menu Button / Domain).',
+          'Кнопка мини-приложения недоступна: в окружении сервера задайте APP_LINK — либо прямой HTTPS-URL Web App ' +
+          '(домен из @BotFather → Menu Button), либо ссылку вида https://t.me/YourBot/short_name.',
         reply_markup: undefined,
       };
     }
 
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return {
+        text: 'Добро пожаловать!\n\nНекорректный APP_LINK.',
+        reply_markup: undefined,
+      };
+    }
+
+    const host = parsed.hostname.toLowerCase();
+    // t.me/... — это не document URL для web_app; Telegram даёт BUTTON_URL_INVALID.
+    // Для таких ссылок используем обычную кнопку url.
+    const isTgDirectMiniAppLink = host === 't.me' || host === 'telegram.me';
+
+    const openButton = isTgDirectMiniAppLink
+      ? { text: 'Открыть приложение' as const, url }
+      : { text: 'Открыть приложение' as const, web_app: { url } };
+
     return {
       text: 'Добро пожаловать!',
       reply_markup: {
-        inline_keyboard: [
-          [
-            {
-              text: 'Открыть приложение',
-              web_app: { url },
-            },
-          ],
-        ],
+        inline_keyboard: [[openButton]],
       },
     };
   }
