@@ -1,6 +1,6 @@
 'use client'
 import Image from 'next/image';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import cls from './Wheel.module.scss'
 import { generateConicGradient } from '../../helpers/generateConicGradient';
 import {
@@ -29,6 +29,12 @@ const Wheel = ({
     targetIndex,
     mode,
 }: WheelProps) => {
+    const [lottieReplayByKey, setLottieReplayByKey] = useState<Record<string, number>>({});
+
+    useEffect(() => {
+        setLottieReplayByKey({});
+    }, [items]);
+
     const {
         wheelRef,
         isDragging,
@@ -181,10 +187,12 @@ const Wheel = ({
                     const y = 50 + radius * Math.sin(radian - Math.PI / 2);
                     const item = group.item;
                     const segmentLabel = String(item.name ?? '');
+                    const segmentKey = `${item.type}-${item.name}-${item.price}-${index}`;
+                    const hasLottie = Boolean(item.lottie);
 
                     return (
                         <div
-                            key={`${item.type}-${item.name}-${item.price}-${index}`}
+                            key={segmentKey}
                             className={cls.segmentContent}
                             style={{
                                 position: 'absolute',
@@ -204,14 +212,50 @@ const Wheel = ({
                             ) : item.type === 'money' ? (
                                 <MoneyBadge item={item} />
                             ) : item.image || item.lottie ? (
-                                <div className={cls.segmentMedia}>
+                                <div
+                                    className={`${cls.segmentMedia} ${hasLottie && !isSpinning ? cls.segmentMediaReplayable : ''}`}
+                                    role={hasLottie && !isSpinning ? 'button' : undefined}
+                                    tabIndex={hasLottie && !isSpinning ? 0 : undefined}
+                                    onPointerDown={
+                                        hasLottie && !isSpinning ? (e) => e.stopPropagation() : undefined
+                                    }
+                                    onTouchStart={
+                                        hasLottie && !isSpinning ? (e) => e.stopPropagation() : undefined
+                                    }
+                                    onClick={
+                                        hasLottie && !isSpinning
+                                            ? (e) => {
+                                                  e.stopPropagation();
+                                                  setLottieReplayByKey((prev) => ({
+                                                      ...prev,
+                                                      [segmentKey]: (prev[segmentKey] ?? 0) + 1,
+                                                  }));
+                                              }
+                                            : undefined
+                                    }
+                                    onKeyDown={
+                                        hasLottie && !isSpinning
+                                            ? (e) => {
+                                                  if (e.key === 'Enter' || e.key === ' ') {
+                                                      e.preventDefault();
+                                                      e.stopPropagation();
+                                                      setLottieReplayByKey((prev) => ({
+                                                          ...prev,
+                                                          [segmentKey]: (prev[segmentKey] ?? 0) + 1,
+                                                      }));
+                                                  }
+                                              }
+                                            : undefined
+                                    }
+                                >
                                     <GiftImageOrLottie
                                         image={item.image}
                                         lottieUrl={item.lottie}
                                         alt={item.name}
                                         fillContainer
                                         hideLottieBackground
-                                        loop
+                                        loop={false}
+                                        replayNonce={hasLottie ? (lottieReplayByKey[segmentKey] ?? 0) : undefined}
                                         className={cls.segmentLottie}
                                         imageClassName={cls.segmentImage}
                                     />

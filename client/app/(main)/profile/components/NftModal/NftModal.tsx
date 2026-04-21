@@ -216,7 +216,7 @@ export const NftModal = ({ isOpen, onClose, nft, onSell, onWithdraw }: NftModalP
                             onClick={isWalletConnected ? handleWithdraw : handleConnectWallet}
                             disabled={isWithdrawing}
                         >
-                            <span>{isWithdrawing ? 'Вывод...' : 'Забрать за'}</span>
+                            <span>{isWithdrawing ? 'Вывод...' : 'Вывод'}</span>
                             {!isWithdrawing && (
                                 <div className={cls.withdrawPriceTag}>
                                     <TonIcon />

@@ -72,17 +72,41 @@ const ProfilePage = () => {
     }, [games, setGames]);
 
     useEffect(() => {
-        syncSupportFabPosition();
-        const onChange = () => syncSupportFabPosition();
-        window.addEventListener('resize', onChange);
-        const wa = window.Telegram?.WebApp;
-        const waEvents = wa as typeof wa & {
-            offEvent?: (event: string, callback?: () => void) => void;
+        let disposed = false;
+        const bump = () => {
+            if (!disposed) syncSupportFabPosition();
         };
-        wa?.onEvent?.('viewportChanged', onChange);
+
+        bump();
+        let innerRaf = 0;
+        const outerRaf = requestAnimationFrame(() => {
+            innerRaf = requestAnimationFrame(bump);
+        });
+
+        const onChange = () => bump();
+        window.addEventListener('resize', onChange);
+        window.visualViewport?.addEventListener('resize', onChange);
+
+        /** Fullscreen / modal insets выставляет `TelegramViewportInit` без обязательного `viewportChanged`. */
+        const html = document.documentElement;
+        const mo = new MutationObserver(onChange);
+        mo.observe(html, {
+            attributes: true,
+            attributeFilter: ['data-tg-webapp-fullscreen', 'data-tg-webapp-modal-insets'],
+        });
+
+        /** Не подписываемся на `WebApp.onEvent` здесь: `offEvent` в SDK часто снимает все колбэки события и ломает `TelegramViewportInit`. */
+        const recheckDelays = [120, 400, 900] as const;
+        const recheckTimers = recheckDelays.map((ms) => setTimeout(onChange, ms));
+
         return () => {
+            disposed = true;
+            cancelAnimationFrame(outerRaf);
+            cancelAnimationFrame(innerRaf);
             window.removeEventListener('resize', onChange);
-            waEvents?.offEvent?.('viewportChanged', onChange);
+            window.visualViewport?.removeEventListener('resize', onChange);
+            mo.disconnect();
+            recheckTimers.forEach((t) => clearTimeout(t));
         };
     }, [syncSupportFabPosition]);
 
