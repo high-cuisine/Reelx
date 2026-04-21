@@ -168,23 +168,6 @@ export const NftModal = ({ isOpen, onClose, nft, onSell, onWithdraw }: NftModalP
                 )}
 
                 <button
-                    className={cls.withdrawButton}
-                    onClick={isWalletConnected ? handleWithdraw : handleConnectWallet}
-                    disabled={isWithdrawing}
-                >
-                    <span>{isWithdrawing ? 'Вывод...' : 'Забрать за'}</span>
-                    {!isWithdrawing && (
-                        <div className={cls.withdrawPriceTag}>
-                            <TonIcon />
-                            <span>{withdrawFee}</span>
-                        </div>
-                    )}
-                </button>
-                {withdrawError && (
-                    <div className={cls.errorMessage}>{withdrawError}</div>
-                )}
-
-                <button
                     type="button"
                     className={cls.backButton}
                     onClick={onClose}
