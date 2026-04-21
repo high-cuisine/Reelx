@@ -31,6 +31,12 @@ export const NftModal = ({ isOpen, onClose, nft, onSell, onWithdraw }: NftModalP
     const [withdrawError, setWithdrawError] = useState<string | null>(null);
     const [isSelling, setIsSelling] = useState(false);
     const [sellError, setSellError] = useState<string | null>(null);
+    const [lottieReplay, setLottieReplay] = useState(0);
+
+    useEffect(() => {
+        if (!isOpen || !nft) return;
+        setLottieReplay(0);
+    }, [isOpen, nft?.id]);
 
     useEffect(() => {
         if (isOpen) {
@@ -119,77 +125,132 @@ export const NftModal = ({ isOpen, onClose, nft, onSell, onWithdraw }: NftModalP
 
     const sellPrice = nft.price ? (nft.price * 0.8).toFixed(2) : '0.00';
     const withdrawFee = '0.05';
+    const headerTitle = nft.giftName.includes('#')
+        ? nft.giftName.split('#')[0].trim() || nft.giftName
+        : nft.giftName;
+    const lottieTrim = nft.lottieUrl?.trim();
 
     return (
-        <div className={`${cls.nftModal} ${isOpen ? cls.open : ''}`}>
-            <div className={cls.background} onClick={onClose} />
+        <div className={`${cls.bottomSheet} ${isOpen ? cls.open : ''}`}>
+            <div className={cls.dimmer} onClick={onClose} role="presentation" />
 
-            <div className={cls.nftCard}>
-                <GiftImageOrLottie
-                    image={nft.image}
-                    lottieUrl={nft.lottieUrl}
-                    alt={nft.giftName}
-                    width={167}
-                    height={191}
-                    fillContainer
-                    loop={false}
-                    className={cls.nftCardMedia}
-                    imageClassName={cls.nftImage}
-                    placeholder={<div className={cls.nftPlaceholder}>🎁</div>}
-                />
-                <div className={cls.nftName}>
-                    {nft.giftName.includes('#') ? (
-                        <>
-                            <span className={cls.nftNameTitle}>{nft.giftName.split('#')[0]}</span>
-                            <span className={cls.nftNameSubtitle}>#{nft.giftName.split('#')[1]}</span>
-                        </>
-                    ) : (
-                        <span className={cls.nftNameTitle}>{nft.giftName}</span>
-                    )}
+            <div className={cls.sheet}>
+                <div className={cls.header}>
+                    <h2 className={cls.title}>{headerTitle}</h2>
+                    <button type="button" className={cls.closeButton} onClick={onClose} aria-label="Закрыть">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="10" cy="10" r="10" fill="rgba(255, 255, 255, 0.08)" />
+                            <path d="M6 6L14 14M14 6L6 14" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                        </svg>
+                    </button>
                 </div>
-            </div>
 
-            <div className={cls.actions}>
-                <button
-                    className={cls.sellButton}
-                    onClick={isWalletConnected ? handleSell : handleConnectWallet}
-                    disabled={isSelling}
-                >
-                    <span>{isSelling ? 'Продаём...' : 'Продать за'}</span>
-                    {!isSelling && (
-                        <div className={cls.priceTag}>
-                            <TonIcon />
-                            <span>{sellPrice}</span>
+                <div className={cls.sheetBody}>
+                    <div className={cls.previewCard}>
+                        <div
+                            className={`${cls.previewMedia} ${lottieTrim ? cls.previewMediaReplayable : ''}`}
+                            role={lottieTrim ? 'button' : undefined}
+                            tabIndex={lottieTrim ? 0 : undefined}
+                            onClick={
+                                lottieTrim
+                                    ? (e) => {
+                                          e.stopPropagation();
+                                          setLottieReplay((n) => n + 1);
+                                      }
+                                    : undefined
+                            }
+                            onKeyDown={
+                                lottieTrim
+                                    ? (e) => {
+                                          if (e.key === 'Enter' || e.key === ' ') {
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                              setLottieReplay((n) => n + 1);
+                                          }
+                                      }
+                                    : undefined
+                            }
+                        >
+                            <GiftImageOrLottie
+                                image={nft.image}
+                                lottieUrl={lottieTrim || undefined}
+                                alt={nft.giftName}
+                                fillContainer
+                                loop={false}
+                                replayNonce={lottieTrim ? lottieReplay : undefined}
+                                className={cls.mediaRoot}
+                                imageClassName={cls.nftImage}
+                                placeholder={<div className={cls.nftPlaceholder}>🎁</div>}
+                            />
                         </div>
-                    )}
-                </button>
-                {sellError && (
-                    <div className={cls.errorMessage}>{sellError}</div>
-                )}
-
-                <button
-                    type="button"
-                    className={cls.backButton}
-                    onClick={onClose}
-                >
-                    Назад
-                </button>
-
-                {isWalletConnected ? (
-                    <div className={cls.walletCard}>
-                        <span className={cls.walletCardLabel}>Привязанный кошелек:</span>
-                        <div className={cls.walletCardRow}>
-                            <span className={cls.walletCardAddress}>{walletDisplayAddress}</span>
-                            <button type="button" className={cls.walletCardDisconnect} onClick={handleDisconnectWallet}>
-                                Отвязать
-                            </button>
+                        <div className={cls.nftName}>
+                            {nft.giftName.includes('#') ? (
+                                <>
+                                    <span className={cls.nftNameTitle}>{nft.giftName.split('#')[0]}</span>
+                                    <span className={cls.nftNameSubtitle}>#{nft.giftName.split('#')[1]}</span>
+                                </>
+                            ) : (
+                                <span className={cls.nftNameTitle}>{nft.giftName}</span>
+                            )}
                         </div>
                     </div>
-                ) : (
-                    <div onClick={handleConnectWallet}>
-                        <Button customClass={cls.walletConnectButton} text="Подключить TON кошелёк" />
+
+                    <div className={cls.actions}>
+                        <button
+                            className={cls.sellButton}
+                            onClick={isWalletConnected ? handleSell : handleConnectWallet}
+                            disabled={isSelling}
+                        >
+                            <span>{isSelling ? 'Продаём...' : 'Продать за'}</span>
+                            {!isSelling && (
+                                <div className={cls.priceTag}>
+                                    <TonIcon />
+                                    <span>{sellPrice}</span>
+                                </div>
+                            )}
+                        </button>
+                        {sellError && <div className={cls.errorMessage}>{sellError}</div>}
+
+                        <button
+                            className={cls.withdrawButton}
+                            onClick={isWalletConnected ? handleWithdraw : handleConnectWallet}
+                            disabled={isWithdrawing}
+                        >
+                            <span>{isWithdrawing ? 'Вывод...' : 'Забрать за'}</span>
+                            {!isWithdrawing && (
+                                <div className={cls.withdrawPriceTag}>
+                                    <TonIcon />
+                                    <span>{withdrawFee}</span>
+                                </div>
+                            )}
+                        </button>
+                        {withdrawError && <div className={cls.errorMessage}>{withdrawError}</div>}
+
+                        <button type="button" className={cls.backButton} onClick={onClose}>
+                            Назад
+                        </button>
+
+                        {isWalletConnected ? (
+                            <div className={cls.walletCard}>
+                                <span className={cls.walletCardLabel}>Привязанный кошелек:</span>
+                                <div className={cls.walletCardRow}>
+                                    <span className={cls.walletCardAddress}>{walletDisplayAddress}</span>
+                                    <button
+                                        type="button"
+                                        className={cls.walletCardDisconnect}
+                                        onClick={handleDisconnectWallet}
+                                    >
+                                        Отвязать
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div onClick={handleConnectWallet}>
+                                <Button customClass={cls.walletConnectButton} text="Подключить TON кошелёк" />
+                            </div>
+                        )}
                     </div>
-                )}
+                </div>
             </div>
         </div>
     );

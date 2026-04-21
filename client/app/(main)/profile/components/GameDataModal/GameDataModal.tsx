@@ -63,7 +63,13 @@ export const GameDataModal = ({
     hash,
 }: GameDataModalProps) => {
     const [isClosing, setIsClosing] = useState(false);
+    const [prizeLottieReplay, setPrizeLottieReplay] = useState(0);
     const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        setPrizeLottieReplay(0);
+    }, [isOpen, winNft?.id]);
 
     useEffect(() => {
         if (isOpen) {
@@ -93,10 +99,8 @@ export const GameDataModal = ({
         };
     }, []);
 
-    const handleOverlayClick = (e: React.MouseEvent) => {
-        if (e.target === e.currentTarget) {
-            handleClose();
-        }
+    const handleDimmerClick = () => {
+        handleClose();
     };
 
     const copyHash = () => {
@@ -129,15 +133,41 @@ export const GameDataModal = ({
 
     let prizeCard: ReactNode = null;
     if (winNft) {
+        const lottieTrim = winNft.lottieUrl?.trim();
         const prizeInner = (
             <>
-                <div className={cls.winImage}>
+                <div
+                    className={`${cls.winImage} ${lottieTrim ? cls.winImageReplayable : ''}`}
+                    data-profile-prize-lottie={lottieTrim ? '' : undefined}
+                    role={lottieTrim && !onWinPrizeClick ? 'button' : undefined}
+                    tabIndex={lottieTrim && !onWinPrizeClick ? 0 : undefined}
+                    onClick={
+                        lottieTrim && !onWinPrizeClick
+                            ? (ev) => {
+                                  ev.stopPropagation();
+                                  setPrizeLottieReplay((n) => n + 1);
+                              }
+                            : undefined
+                    }
+                    onKeyDown={
+                        lottieTrim && !onWinPrizeClick
+                            ? (ev) => {
+                                  if (ev.key === 'Enter' || ev.key === ' ') {
+                                      ev.preventDefault();
+                                      ev.stopPropagation();
+                                      setPrizeLottieReplay((n) => n + 1);
+                                  }
+                              }
+                            : undefined
+                    }
+                >
                     <GiftImageOrLottie
                         image={winNft.image || '/NFT.png'}
-                        lottieUrl={winNft.lottieUrl?.trim() || undefined}
+                        lottieUrl={lottieTrim || undefined}
                         alt={winNft.giftName}
                         fillContainer
                         loop={false}
+                        replayNonce={lottieTrim ? prizeLottieReplay : undefined}
                         className={cls.winImageMedia}
                         imageClassName={cls.winImageImg}
                     />
@@ -156,7 +186,12 @@ export const GameDataModal = ({
             <button
                 type="button"
                 className={`${cls.winBlock} ${cls.winBlockClickable}`}
-                onClick={() => onWinPrizeClick(winNft)}
+                onClick={(e) => {
+                    if (lottieTrim && (e.target as Element).closest('[data-profile-prize-lottie]')) {
+                        setPrizeLottieReplay((n) => n + 1);
+                    }
+                    onWinPrizeClick(winNft);
+                }}
             >
                 {prizeInner}
             </button>
@@ -166,15 +201,24 @@ export const GameDataModal = ({
     }
 
     return (
-        <>
-            <div 
-                className={`${cls.overlay} ${isClosing ? cls.closing : ''}`}
-                onClick={handleOverlayClick}
-            />
-            <div className={`${cls.modal} ${isClosing ? cls.closing : ''}`}>
+        <div
+            className={`${cls.wrap} ${isOpen && !isClosing ? cls.open : ''} ${isClosing ? cls.closing : ''}`}
+        >
+            <div className={cls.dimmer} onClick={handleDimmerClick} role="presentation" />
+            <div className={cls.sheet}>
                 <div className={cls.header}>
                     <span className={cls.title}>Игра #{gameId}</span>
-                    <button className={cls.closeButton} onClick={handleClose} />
+                    <button
+                        type="button"
+                        className={cls.closeButton}
+                        onClick={handleClose}
+                        aria-label="Закрыть"
+                    >
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="10" cy="10" r="10" fill="rgba(255, 255, 255, 0.08)" />
+                            <path d="M6 6L14 14M14 6L6 14" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                        </svg>
+                    </button>
                 </div>
 
                 <div className={cls.content}>
@@ -265,6 +309,6 @@ export const GameDataModal = ({
                     )}
                 </div>
             </div>
-        </>
+        </div>
     );
 };

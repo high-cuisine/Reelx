@@ -109,9 +109,16 @@
     display: flex;
     position: absolute;
     z-index: 2;
-    top: var(--profile-support-top);
-    left: var(--profile-support-left);
+    top: var(--profile-support-top, 0px);
+    left: var(--profile-support-left, 0px);
     transform: scale(1.5);
     transform-origin: top left;
+}
+
+/* Telegram WebApp: нативный fullscreen — фиксированный отступ сверху для кнопки ТП. */
+:global(html[data-tg-webapp-fullscreen='1']) {
+    .support {
+        top: 40px;
+    }
 }
 

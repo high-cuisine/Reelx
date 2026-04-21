@@ -1,77 +1,62 @@
-@keyframes slideUp {
-    from {
-        transform: translateY(100%);
-    }
-    to {
-        transform: translateY(0);
-    }
-}
+$sheet-ease: cubic-bezier(0.4, 0, 0.2, 1);
+$sheet-duration: 0.4s;
+$dimmer-duration: 0.3s;
 
-@keyframes slideDown {
-    from {
-        transform: translateY(0);
-    }
-    to {
-        transform: translateY(100%);
-    }
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes fadeOut {
-    from {
-        opacity: 1;
-    }
-    to {
-        opacity: 0;
-    }
-}
-
-.overlay {
+.wrap {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
+    inset: 0;
     z-index: 1000;
-    animation: fadeIn 0.3s ease-out;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity $dimmer-duration ease;
 
+    &.open,
     &.closing {
-        animation: fadeOut 0.3s ease-out forwards;
+        opacity: 1;
+        pointer-events: all;
+    }
+
+    &.open .sheet {
+        transform: translateY(0);
+    }
+
+    &.closing .sheet {
+        transform: translateY(100%);
     }
 }
 
-.modal {
-    position: fixed;
+.dimmer {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1;
+}
+
+.sheet {
+    position: absolute;
+    bottom: 0;
     left: 0;
     right: 0;
-    bottom: 0;
-    background: linear-gradient(180deg, #1E1D2B 0%, #0C1134 100%);
+    max-width: 100%;
+    height: calc(100% - 80px);
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
     border-radius: 20px 20px 0 0;
-    z-index: 1001;
-    max-height: 90vh;
-    overflow-y: auto;
-    animation: slideUp 0.3s ease-out;
-
-    &.closing {
-        animation: slideDown 0.3s ease-out forwards;
-    }
+    overflow: hidden;
+    background-image: linear-gradient(to bottom, #0c1134, #190925, #190418, #12010b, #000000);
+    transform: translateY(100%);
+    transition: transform $sheet-duration $sheet-ease;
+    will-change: transform;
 }
 
 .header {
+    position: relative;
+    padding: 16px 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 16px 20px;
-    position: relative;
+    flex-shrink: 0;
 }
 
 .title {
@@ -79,7 +64,7 @@
     font-weight: 600;
     font-size: 16px;
     line-height: 1.22;
-    color: #FFFFFF;
+    color: #ffffff;
     text-align: center;
 }
 
@@ -97,28 +82,52 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: opacity 0.2s;
 
-    &::before,
-    &::after {
-        content: '';
-        position: absolute;
-        width: 12px;
-        height: 2px;
-        background: rgba(255, 255, 255, 0.5);
-        border-radius: 1px;
+    &:hover {
+        opacity: 0.8;
     }
 
-    &::before {
-        transform: rotate(45deg);
+    &:active {
+        opacity: 0.6;
     }
 
-    &::after {
-        transform: rotate(-45deg);
+    svg {
+        width: 20px;
+        height: 20px;
+        display: block;
     }
 }
 
 .content {
-    padding: 0 20px 20px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 20px max(20px, env(safe-area-inset-bottom, 0px));
+
+    &::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 2px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 2px;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    }
+}
+
+@media (max-width: 768px) {
+    .sheet {
+        height: calc(100% - 60px);
+    }
 }
 
 .gameData {
@@ -153,14 +162,14 @@
 }
 
 .winBlock {
-    background: rgba(48, 44, 68, 0.95);
-    border-radius: 16px;
+    background: #302c44;
+    border-radius: clamp(8px, 2vw, 12px);
     padding: 12px 14px;
     display: flex;
     align-items: center;
     gap: 14px;
     margin-bottom: 20px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: 0px 4px 10.7px 0px rgba(31, 30, 42, 0.24);
 }
 
 .winBlockClickable {
@@ -198,6 +207,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.winImageReplayable {
+    cursor: pointer;
 }
 
 .winImageMedia {
@@ -375,12 +388,10 @@
     color: #FFFFFF;
 }
 
-/* Telegram WebApp: нативный fullscreen.
-   overlay всегда inset: 0, чтобы перекрывать NavBar.
-   Safe-area учитывается в .content через padding-bottom. */
+/* Telegram WebApp: нативный fullscreen — как GiftsModal (spin). */
 :global(html[data-tg-webapp-modal-insets='1']) {
-    .modal {
-        max-height: min(90vh, calc(100dvh - var(--tg-modal-frame-top) - 12px));
+    .sheet {
+        height: calc(100% - max(7vh, var(--tg-modal-frame-top, env(safe-area-inset-top, 0px))));
     }
 
     .content {
