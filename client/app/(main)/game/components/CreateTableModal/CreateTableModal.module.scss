@@ -317,3 +317,10 @@ $card-bg: #262244;
         padding-bottom: max(20px, var(--tg-modal-frame-bottom, env(safe-area-inset-bottom, 0px)));
     }
 }
+
+/* Telegram WebApp: нативный fullscreen — опускаем заголовок ниже. */
+:global(html[data-tg-webapp-fullscreen='1']) {
+    .header {
+        margin-top: 5vh;
+    }
+}

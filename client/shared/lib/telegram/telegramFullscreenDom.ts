@@ -11,12 +11,18 @@ export function syncTelegramWebAppModalInsetsAttribute(webApp: TelegramWebAppLik
     const root = document.documentElement;
     if (!webApp) {
         delete root.dataset.tgWebappModalInsets;
+        delete root.dataset.tgWebappFullscreen;
         return;
     }
     const expRaw = (webApp as { isExpanded?: boolean }).isExpanded;
     /** В старых клиентах поля нет — ведём себя как при развёрнутом WebApp, иначе fixed-модалки залезают под вырезы. */
     const expanded = typeof expRaw === 'boolean' ? expRaw : true;
     const fs = (webApp as { isFullscreen?: boolean }).isFullscreen === true;
+    if (fs) {
+        root.dataset.tgWebappFullscreen = '1';
+    } else {
+        delete root.dataset.tgWebappFullscreen;
+    }
     if (expanded || fs) {
         root.dataset.tgWebappModalInsets = '1';
     } else {
