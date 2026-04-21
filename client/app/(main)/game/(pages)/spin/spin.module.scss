@@ -65,9 +65,10 @@
     color: #ffffff;
 }
 
-/* Telegram WebApp: нативный fullscreen — тост о выигрыше TON ниже системной зоны. */
+/* Telegram WebApp: нативный fullscreen — плашка выигрыша TON/STARS ниже системной зоны. */
 :global(html[data-tg-webapp-fullscreen='1']) {
-    .toastTon {
+    .toastTon,
+    .toastStars {
         top: 5vh;
     }
 }
