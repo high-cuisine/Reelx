@@ -1,4 +1,5 @@
 .deposit {
+    position: relative;
     padding: 16px 20px;
 
     & .header {
@@ -129,5 +130,12 @@
         &:active {
             background: rgba(255, 255, 255, 0.14);
         }
+    }
+}
+
+/* Telegram WebApp: нативный fullscreen — отступ сверху для крестика (как кнопка ТП на профиле). */
+:global(html[data-tg-webapp-fullscreen='1']) {
+    .deposit .close {
+        top: 40px;
     }
 }
