@@ -109,7 +109,8 @@
     display: flex;
     position: absolute;
     z-index: 2;
-    top: var(--profile-support-top, 0px);
+    // top: var(--profile-support-top, 0px);
+    top: 0px;
     left: var(--profile-support-left, 0px);
     transform: scale(1.5);
     transform-origin: top left;
