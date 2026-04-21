@@ -65,10 +65,9 @@
     color: #ffffff;
 }
 
-/* Telegram WebApp: нативный fullscreen — плашка выигрыша TON/STARS ниже системной зоны. */
+/* Telegram WebApp: нативный fullscreen — отступ сверху 5vh (TON и STARS — один класс .toast). */
 :global(html[data-tg-webapp-fullscreen='1']) {
-    .toastTon,
-    .toastStars {
+    .toast {
         top: 5vh;
     }
 }
