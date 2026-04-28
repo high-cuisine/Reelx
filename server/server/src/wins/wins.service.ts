@@ -13,10 +13,12 @@ export class WinsService implements OnModuleInit, OnModuleDestroy {
   private readonly CACHE_KEY = 'wins:latest10';
   private readonly LAST_ANY_PUSH_AT_KEY = 'wins:last_any_push_at';
 
+  /** Во сколько раз ускоряем появление новых игрушек. */
+  private readonly TICK_SPEEDUP = 2.5;
   /** Минимальный интервал между случайными игрушками (мс). */
-  private readonly TICK_MIN_MS = 10_000;
+  private readonly TICK_MIN_MS = Math.round(10_000 / this.TICK_SPEEDUP);
   /** Максимальный интервал между случайными игрушками (мс). */
-  private readonly TICK_MAX_MS = 35_000;
+  private readonly TICK_MAX_MS = Math.round(35_000 / this.TICK_SPEEDUP);
 
   private tickTimer: NodeJS.Timeout | null = null;
   private broadcastFn: BroadcastFn | null = null;

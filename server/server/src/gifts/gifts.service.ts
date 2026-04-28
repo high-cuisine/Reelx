@@ -169,9 +169,11 @@ export class GiftsService {
       );
 
       const totalSlots = 20;
-      const noLootShare = 0.5; // 50% слотов — no-loot (игрушки — другие 50%)
-      const noLootSlotsCount = Math.round(totalSlots * noLootShare); // 10 из 20
-      const giftSlotsToDistribute = Math.max(0, totalSlots - noLootSlotsCount); // 10 слотов подарки
+      // Для минимальной ставки в solo уменьшаем шанс no-loot в 2 раза.
+      const isMinimalStake = amountTon <= minPriceTon + Number.EPSILON;
+      const noLootShare = isMinimalStake ? 0.25 : 0.5; // min stake: 25%, иначе 50%
+      const noLootSlotsCount = Math.round(totalSlots * noLootShare);
+      const giftSlotsToDistribute = Math.max(0, totalSlots - noLootSlotsCount);
 
       const slots: any[] = [];
 
@@ -204,7 +206,7 @@ export class GiftsService {
         }
       });
 
-      // Добавляем no-loot слоты (50% от барабана = 10 слотов)
+      // Добавляем no-loot слоты по рассчитанной доле.
       for (let i = 0; i < noLootSlotsCount; i++) {
         slots.push({
           type: 'no-loot',
