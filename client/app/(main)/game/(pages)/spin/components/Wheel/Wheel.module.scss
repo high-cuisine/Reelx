@@ -84,6 +84,11 @@
     overflow: hidden;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
     background: transparent;
+
+    @media (max-width: 700px) and (min-width: 400px) {
+        width: 13vw;
+        height: 13vw;
+    }
 }
 
 .segmentMediaReplayable {
@@ -111,6 +116,10 @@
     border-radius: 50%;
     object-fit: contain;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+    @media (max-width: 700px) and (min-width: 400px) {
+        width: 13vw;
+        height: 13vw;
+    }
 }
 
 .segmentText {
@@ -161,6 +170,6 @@
 
 @media (max-width: 700px) {
     .wheelContainer {
-        width: 50vh;
+        width: 70vh;
     }
 }
