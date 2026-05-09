@@ -5,13 +5,14 @@ import { useSpinGame } from './useSpinGame';
 import { useMinPrice } from './useMinPrice';
 import { useUserStore } from '@/entites/user/model/user';
 import { updateUserBalance } from '@/features/user/user';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { STAKE_TIERS_STARS, STAKE_TIERS_TON } from '../constants/stakeTiers';
 
 export const useSpinPage = () => {
     const { currency, toggleCurrency } = useCurrency();
     const { startGame, handleGameComplete } = useGameResult();
     const { user } = useUserStore();
-    const { minStakeTon, stepTon, minStakeStars, stepStars } = useMinPrice();
+    const { minStakeTon, minStakeStars } = useMinPrice();
     const [moneyWinToast, setMoneyWinToast] = useState<{
         currency: 'ton' | 'stars';
         amount: number;
@@ -24,12 +25,17 @@ export const useSpinPage = () => {
     }, [moneyWinToast]);
 
     const minStake = currency === 'ton' ? minStakeTon : minStakeStars;
-    const step = currency === 'ton' ? stepTon : stepStars;
+
+    const stakeTiers = useMemo(
+        () => (currency === 'ton' ? [...STAKE_TIERS_TON] : [...STAKE_TIERS_STARS]),
+        [currency],
+    );
 
     const {
         rolls,
         pricePerRoll,
         totalPrice,
+        maxStake,
         giftCount,
         isSpinning,
         canPlay,
@@ -40,8 +46,7 @@ export const useSpinPage = () => {
         targetIndex,
     } = useSpinGame(
         {
-            minStake,
-            step,
+            stakeTiers,
             giftCount: 1,
         },
         (result) => {
@@ -106,6 +111,7 @@ export const useSpinPage = () => {
         pricePerRoll,
         totalPrice,
         minStake,
+        maxStake,
         giftCount,
         isSpinning,
         canPlay,

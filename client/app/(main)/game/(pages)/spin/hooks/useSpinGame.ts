@@ -2,10 +2,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { GiftItem } from '@/entites/gifts/interfaces/giftItem.interface';
 
 interface SpinGameConfig {
-    /** Минимальная ставка (старт) */
-    minStake?: number;
-    /** Шаг изменения ставки при + / - */
-    step?: number;
+    /** Уровни ставки по возрастанию (кнопки + / − переключают между ними) */
+    stakeTiers?: number[];
     giftCount?: number;
     /** @deprecated используется minStake/step */
     defaultRolls?: number;
@@ -26,6 +24,7 @@ interface UseSpinGameReturn {
     rolls: number;
     pricePerRoll: number;
     totalPrice: number;
+    maxStake: number;
     giftCount: number;
     isSpinning: boolean;
     canPlay: boolean;
@@ -42,10 +41,15 @@ export const useSpinGame = (
     onGameComplete?: (result: SpinGameResult) => void
 ): UseSpinGameReturn => {
     const {
-        minStake = 1,
-        step = 1,
+        stakeTiers: stakeTiersProp,
         giftCount: initialGiftCount = 5,
     } = config;
+
+    const stakeTiers = stakeTiersProp?.length ? stakeTiersProp : [1, 5, 10, 15, 20];
+
+    const tiers = stakeTiers;
+    const minStake = tiers[0];
+    const maxStake = tiers[tiers.length - 1];
 
     const [stake, setStake] = useState(minStake);
     const [isSpinning, setIsSpinning] = useState(false);
@@ -58,18 +62,38 @@ export const useSpinGame = (
     const canPlay = !isSpinning && stake >= minStake;
 
     useEffect(() => {
-        setStake(minStake);
-    }, [minStake]);
+        const t = stakeTiers.length > 0 ? stakeTiers : [1];
+        const first = t[0];
+        setStake((prev: number) => {
+            if (t.includes(prev)) return prev;
+            let best = first;
+            for (const x of t) {
+                if (x <= prev) best = x;
+                else break;
+            }
+            return best;
+        });
+    }, [stakeTiers]);
 
     const handleIncreaseRolls = useCallback(() => {
         if (isSpinning) return;
-        setStake(prev => prev + step);
-    }, [isSpinning, step]);
+        setStake((prev: number) => {
+            const next = tiers.find((x) => x > prev);
+            return next ?? prev;
+        });
+    }, [isSpinning, tiers]);
 
     const handleDecreaseRolls = useCallback(() => {
         if (isSpinning) return;
-        setStake(prev => Math.max(minStake, prev - step));
-    }, [isSpinning, minStake, step]);
+        setStake((prev: number) => {
+            let best = tiers[0];
+            for (const x of tiers) {
+                if (x < prev) best = x;
+                else break;
+            }
+            return best;
+        });
+    }, [isSpinning, tiers]);
 
     const handlePlay = useCallback(async (
         wheelItems: GiftItem[],
@@ -114,6 +138,7 @@ export const useSpinGame = (
         rolls,
         pricePerRoll,
         totalPrice,
+        maxStake,
         giftCount,
         isSpinning,
         canPlay,

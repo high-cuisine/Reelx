@@ -15,6 +15,7 @@ export default function SpinPage() {
         pricePerRoll,
         totalPrice,
         minStake,
+        maxStake,
         giftCount,
         isSpinning,
         canPlay,
@@ -58,6 +59,7 @@ export default function SpinPage() {
                         pricePerRoll={pricePerRoll}
                         totalPrice={totalPrice}
                         minStake={minStake}
+                        maxStake={maxStake}
                         giftCount={giftCount}
                         isSpinning={isSpinning}
                         canPlay={canPlay}

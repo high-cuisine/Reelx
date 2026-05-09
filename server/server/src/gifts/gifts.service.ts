@@ -35,6 +35,8 @@ export class GiftsService {
   private readonly moneyMixMinTon: number;
   /** Шаг пробы мин. цены NFT (меньше — ниже возможный минимум на маркете). Env: GIFTS_MIN_PRICE_PROBE_STEP */
   private readonly minPriceProbeStep: number;
+  /** Задержка перед sendGift в Telegram (мс); ответ игры не ждёт — только фактическая отправка. Env: TELEGRAM_GIFT_SEND_DELAY_MS */
+  private readonly telegramGiftSendDelayMs: number;
 
   constructor(
     private configService: ConfigService,
@@ -60,6 +62,11 @@ export class GiftsService {
     const mixParsed = parseFloat(mixRaw);
     this.moneyMixMinTon =
       Number.isFinite(mixParsed) && mixParsed > 0 ? mixParsed : 20;
+
+    const delayRaw = this.configService.get<string>('TELEGRAM_GIFT_SEND_DELAY_MS', '5000');
+    const delayParsed = parseInt(delayRaw, 10);
+    this.telegramGiftSendDelayMs =
+      Number.isFinite(delayParsed) && delayParsed >= 0 ? delayParsed : 5000;
 
     this.axiosInstance = axios.create({
       timeout: 30000,
@@ -144,7 +151,7 @@ export class GiftsService {
 
     // Правила формирования слотов:
     // 1) amount <= 5: solo
-    //    — минимальная ставка: только дешёвые Telegram-подарки + один самый дешёвый NFT (несколько секторов)
+    //    — минимальная ставка: Telegram + 1–2 самых дешёвых NFT (несколько секторов на каждый)
     //    — иначе: до 7 NFT + Telegram из доли no-loot + no-loot
     // 2) 10 <= amount < 20: 9 слотов подарков без no-loot
     // 3) остальное — старая логика (getCountGifts)
@@ -164,11 +171,18 @@ export class GiftsService {
       const slots: any[] = [];
 
       if (isMinimalStake) {
-        // Один самый дешёвый NFT + только Telegram + немного no-loot
-        const CHEAPEST_NFT_SECTORS = 4;
+        // Два самых дешёвых NFT (если есть в выдаче) + Telegram + немного no-loot
         const MINIMAL_NO_LOOT_SHARE = 0.08;
+        const hasTwoCheapest = sortedRaw.length >= 2;
+        /** Секторов под NFT: один тип — 4; два типа — 5 (2+3) */
+        const cheapestNftSectorBudget = hasTwoCheapest ? 5 : 4;
 
-        originalGifts = sortedRaw.length > 0 ? [sortedRaw[0]] : [];
+        originalGifts =
+          sortedRaw.length >= 2
+            ? [sortedRaw[0], sortedRaw[1]]
+            : sortedRaw.length > 0
+              ? [sortedRaw[0]]
+              : [];
 
         if (onOriginalData) {
           onOriginalData(originalGifts);
@@ -184,7 +198,7 @@ export class GiftsService {
         const noLootSlotsCount = Math.max(1, Math.round(totalSlots * MINIMAL_NO_LOOT_SHARE));
         const telegramCountForNftCase = Math.max(
           0,
-          totalSlots - noLootSlotsCount - CHEAPEST_NFT_SECTORS,
+          totalSlots - noLootSlotsCount - cheapestNftSectorBudget,
         );
 
         const telegramSlices =
@@ -218,9 +232,20 @@ export class GiftsService {
           return slots;
         }
 
-        const oneNft = formattedCheapest[0];
-        for (let i = 0; i < CHEAPEST_NFT_SECTORS; i++) {
-          slots.push(oneNft);
+        if (hasTwoCheapest && formattedCheapest.length >= 2) {
+          const nftA = formattedCheapest[0];
+          const nftB = formattedCheapest[1];
+          for (let i = 0; i < 2; i++) {
+            slots.push(nftA);
+          }
+          for (let i = 0; i < 3; i++) {
+            slots.push(nftB);
+          }
+        } else {
+          const oneNft = formattedCheapest[0];
+          for (let i = 0; i < cheapestNftSectorBudget; i++) {
+            slots.push(oneNft);
+          }
         }
 
         for (const slice of telegramSlices) {
@@ -476,6 +501,36 @@ export class GiftsService {
     }
   }
 
+  /**
+   * Отправка подарка в Telegram не блокирует ответ startGame (колесо не ждёт паузу).
+   */
+  private scheduleTelegramGiftDelivery(
+    telegramUserId: string,
+    telegramGiftId: string,
+    userId: string,
+  ): void {
+    const ms = this.telegramGiftSendDelayMs;
+    const run = () => {
+      void this.telegramStarGiftsService
+        .sendGiftToUser(telegramUserId, telegramGiftId)
+        .then((sent) => {
+          if (!sent) {
+            this.logger.warn(
+              `Telegram sendGift failed for user ${userId}, gift ${telegramGiftId}`,
+            );
+          }
+        });
+    };
+    if (ms <= 0) {
+      run();
+      return;
+    }
+    this.logger.debug(
+      `Telegram gift ${telegramGiftId} for user ${userId}: sendGift через ${ms} мс`,
+    );
+    setTimeout(run, ms);
+  }
+
   async startGame(userId: string): Promise<StartGameResponseDto> {
     try {
       const key = `wheel:${userId}`;
@@ -669,21 +724,18 @@ export class GiftsService {
             HttpStatus.BAD_REQUEST,
           );
         }
-        const sent = await this.telegramStarGiftsService.sendGiftToUser(
-          user.telegramId,
-          tgPrize.telegramGiftId,
-        );
-        if (!sent) {
-          this.logger.warn(
-            `Telegram sendGift failed for user ${userId}, gift ${tgPrize.telegramGiftId}`,
-          );
-        }
 
         await this.winsService.recordWin({
           image: tgPrize.image ?? '',
           lottieUrl: '',
           name: tgPrize.name,
         });
+
+        this.scheduleTelegramGiftDelivery(
+          user.telegramId,
+          tgPrize.telegramGiftId,
+          userId,
+        );
 
         return {
           type: 'telegram-gift',

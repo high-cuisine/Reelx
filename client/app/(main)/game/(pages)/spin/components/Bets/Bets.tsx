@@ -17,6 +17,7 @@ export interface BetsProps {
     pricePerRoll: number;
     totalPrice: number;
     minStake?: number;
+    maxStake?: number;
     giftCount: number;
     isSpinning: boolean;
     canPlay: boolean;
@@ -34,6 +35,7 @@ const Bets: React.FC<BetsProps> = ({
     pricePerRoll,
     totalPrice,
     minStake = 1,
+    maxStake = Number.POSITIVE_INFINITY,
     giftCount,
     isSpinning,
     canPlay,
@@ -130,7 +132,11 @@ const Bets: React.FC<BetsProps> = ({
                     <button 
                         className={cls.controlButton}
                         onClick={onIncreaseRolls}
-                        disabled={isSpinning || isAwaitingServer}
+                        disabled={
+                            isSpinning ||
+                            isAwaitingServer ||
+                            totalPrice >= maxStake
+                        }
                     >
                         <span className={cls.plus}>+</span>
                     </button>

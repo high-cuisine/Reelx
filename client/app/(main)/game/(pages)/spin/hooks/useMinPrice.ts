@@ -1,18 +1,19 @@
-import { useState } from 'react';
+import {
+    STAKE_TIERS_STARS,
+    STAKE_TIERS_TON,
+} from '../constants/stakeTiers';
 
-/** Фиксированные минимумы: 1 TON и 90 STARS. */
+/** Совместимость: минимумы = первый уровень из таблицы шагов */
 export const useMinPrice = () => {
-    const [minStakeTon] = useState<number>(1);
-    const [stepTon] = useState<number>(1);
-    const [minStakeStars] = useState<number>(90);
-    const [stepStars] = useState<number>(90);
-    const [isLoading] = useState(false);
+    const minStakeTon = STAKE_TIERS_TON[0];
+    const minStakeStars = STAKE_TIERS_STARS[0];
+    const isLoading = false;
 
     return {
         isLoading,
         minStakeTon,
-        stepTon,
         minStakeStars,
-        stepStars,
+        stakeTiersTon: [...STAKE_TIERS_TON],
+        stakeTiersStars: [...STAKE_TIERS_STARS],
     };
 };
