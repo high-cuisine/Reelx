@@ -7,7 +7,9 @@ export type WheelGroup = {
 };
 
 const itemKey = (item: GiftItem): string =>
-    `${item.type}__${item.name}__${item.price}`;
+    item.type === 'telegram-gift' && item.telegramGiftId
+        ? `${item.type}__${item.telegramGiftId}__${item.price}`
+        : `${item.type}__${item.name}__${item.price}`;
 
 /** Как в Wheel.tsx — группы по типу+имени+цене, порядок по первому появлению. */
 export function buildWheelGroups(items: GiftItem[]): WheelGroup[] {
@@ -55,11 +57,13 @@ export function computeGroupVisualSizes(
     }
 
     const baseTotal = groups.reduce((sum, group) => sum + group.count, 0) || totalItemsCount;
-    const giftGroupCount = groups.filter((g) => g.item.type === 'gift').length;
+    const giftGroupCount = groups.filter(
+        (g) => g.item.type === 'gift' || g.item.type === 'telegram-gift',
+    ).length;
 
     let giftIndex = 0;
     const rawWeights = groups.map((group) => {
-        if (group.item.type === 'gift') {
+        if (group.item.type === 'gift' || group.item.type === 'telegram-gift') {
             const t = giftGroupCount > 1 ? giftIndex / (giftGroupCount - 1) : 0.5;
             const multiplier = 0.8 + 0.4 * t;
             giftIndex += 1;

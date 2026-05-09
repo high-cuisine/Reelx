@@ -45,4 +45,18 @@ export interface WheelNoLootItem {
   type: 'no-loot';
 }
 
-export type WheelItem = WheelGiftItem | WheelMoneyItem | WheelSecretItem | WheelNoLootItem;
+/** Подарок Telegram Stars из каталога Bot API (отправляется через sendGift на аккаунт). */
+export interface WheelTelegramGiftItem {
+  type: 'telegram-gift';
+  telegramGiftId: string;
+  starCount: number;
+  name: string;
+  image?: string;
+}
+
+export type WheelItem =
+  | WheelGiftItem
+  | WheelMoneyItem
+  | WheelSecretItem
+  | WheelNoLootItem
+  | WheelTelegramGiftItem;

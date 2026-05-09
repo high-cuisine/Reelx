@@ -23,11 +23,12 @@ type RawGift =
     | Record<string, unknown>;
 
 interface StartGameResponse {
-    type: 'gift' | 'money' | 'secret';
+    type: 'gift' | 'money' | 'secret' | 'telegram-gift';
     name: string;
     price: number;
     image?: string;
     giftId?: string;
+    telegramGiftId?: string;
     address?: string;
     collectionAddress?: string;
     amount?: number;
@@ -51,6 +52,7 @@ class GiftsService {
             const rawName = (raw as any).name;
             const rawImage = (raw as any).image;
             const rawLottie = (raw as any).lottie;
+            const rawTelegramGiftId = (raw as any).telegramGiftId as string | undefined;
 
             const nameStr =
                 rawName === null || rawName === undefined
@@ -67,6 +69,17 @@ class GiftsService {
                     : Number(rawPrice ?? 0);
 
             const isMoney = rawType === 'ton' || rawType === 'star' || rawType === 'money';
+
+            if (rawType === 'telegram-gift') {
+                return {
+                    type: 'telegram-gift',
+                    price: priceNumber,
+                    image: rawImage || '',
+                    name: nameStr.trim() || 'Gift',
+                    ...(rawTelegramGiftId ? { telegramGiftId: rawTelegramGiftId } : {}),
+                    ...(rawLottie ? { lottie: rawLottie } : {}),
+                };
+            }
 
             if (isMoney) {
                 // Проверяем name, если он уже есть и это STARS или TON, используем его

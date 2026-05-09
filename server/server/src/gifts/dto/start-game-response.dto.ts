@@ -1,8 +1,11 @@
 export class StartGameResponseDto {
-  type: 'gift' | 'money' | 'secret';
+  type: 'gift' | 'money' | 'secret' | 'telegram-gift';
   name: string;
   price: number;
   image?: string;
+
+  /** Id подарка в каталоге Telegram Bot API (sendGift) */
+  telegramGiftId?: string;
 
   /** Id записи UserGifts для продажи (только для gift и secret с realType='gift') */
   giftId?: string;

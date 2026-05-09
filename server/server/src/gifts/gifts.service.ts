@@ -10,7 +10,13 @@ import { formatSecrets } from './helpers/formatSecrets.helper';
 import { convertAmountToTon } from './helpers/convertAmountToTon.helper';
 import { RedisService } from '../../libs/infrustructure/redis/redis.service';
 import { formatWheelItem } from './helpers/formatWheelItem.helper';
-import { WheelItem, WheelGiftItem, WheelMoneyItem, WheelSecretItem } from './interfaces/wheel-item.interface';
+import {
+  WheelItem,
+  WheelGiftItem,
+  WheelMoneyItem,
+  WheelSecretItem,
+  WheelTelegramGiftItem,
+} from './interfaces/wheel-item.interface';
 import { formatMinimalPrize } from './helpers/formatMinimalPrize.helper';
 import { StartGameResponseDto } from './dto/start-game-response.dto';
 import { UsersService } from '../users/services/users.service';
@@ -18,6 +24,7 @@ import { UserGamesType, GameCurrancy } from '@prisma/client';
 import { CurrancyService } from '../../libs/common/modules/Currancy/services/Currancy.service';
 import { GiftsRepository } from './repositorys/gifts.repository';
 import { WinsService } from '../wins/wins.service';
+import { TelegramStarGiftsService } from './services/telegram-star-gifts.service';
 
 @Injectable()
 export class GiftsService {
@@ -36,6 +43,7 @@ export class GiftsService {
     private giftsRepository: GiftsRepository,
     private currancyService: CurrancyService,
     private winsService: WinsService,
+    private telegramStarGiftsService: TelegramStarGiftsService,
   ) {
     this.nftBuyerUrl = this.configService.get<string>('NFT_BUYER_URL', 'http://localhost:3001');
     
@@ -172,8 +180,13 @@ export class GiftsService {
       // Для минимальной ставки в solo уменьшаем шанс no-loot в 2 раза.
       const isMinimalStake = amountTon <= minPriceTon + Number.EPSILON;
       const noLootShare = isMinimalStake ? 0.25 : 0.5; // min stake: 25%, иначе 50%
-      const noLootSlotsCount = Math.round(totalSlots * noLootShare);
-      const giftSlotsToDistribute = Math.max(0, totalSlots - noLootSlotsCount);
+      const initialNoLootSlots = Math.round(totalSlots * noLootShare);
+      const telegramSlices = await this.telegramStarGiftsService.buildCheapestWheelSlices(
+        Math.min(initialNoLootSlots, 6),
+      );
+      const telegramSlotsCount = telegramSlices.length;
+      const noLootSlotsCount = Math.max(0, initialNoLootSlots - telegramSlotsCount);
+      const giftSlotsToDistribute = Math.max(0, totalSlots - initialNoLootSlots);
 
       const slots: any[] = [];
 
@@ -205,6 +218,18 @@ export class GiftsService {
           slots.push(gift);
         }
       });
+
+      // Дешёвые подарки Telegram (Stars): часть бывших no-loot слотов
+      for (const slice of telegramSlices) {
+        slots.push({
+          type: 'telegram-gift',
+          telegramGiftId: slice.telegramGiftId,
+          starCount: slice.starCount,
+          name: slice.name,
+          image: slice.image ?? '',
+          price: slice.starCount,
+        });
+      }
 
       // Добавляем no-loot слоты по рассчитанной доле.
       for (let i = 0; i < noLootSlotsCount; i++) {
@@ -317,7 +342,12 @@ export class GiftsService {
 
         // Для обычных подарков/денег без originalData пробуем маппить по модулю,
         // чтобы дубликаты слотов ссылались на реальные исходники
-        if (!original && originalData.length > 0 && item.type !== 'no-loot') {
+        if (
+          !original &&
+          originalData.length > 0 &&
+          item.type !== 'no-loot' &&
+          item.type !== 'telegram-gift'
+        ) {
           original = originalData[index % originalData.length];
         }
         
@@ -530,6 +560,44 @@ export class GiftsService {
         this.logger.debug(
           `User ${userId} won ${prizeAmount} ${prizeCurrencyType}`,
         );
+      } else if (selectedPrize.type === 'telegram-gift') {
+        const tgPrize = selectedPrize as WheelTelegramGiftItem;
+        if (!tgPrize.telegramGiftId) {
+          throw new HttpException(
+            'Некорректный слот подарка Telegram',
+            HttpStatus.INTERNAL_SERVER_ERROR,
+          );
+        }
+        const user = await this.usersService.findUserById(userId);
+        if (!user?.telegramId) {
+          throw new HttpException(
+            'Не найден Telegram-профиль для отправки подарка',
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+        const sent = await this.telegramStarGiftsService.sendGiftToUser(
+          user.telegramId,
+          tgPrize.telegramGiftId,
+        );
+        if (!sent) {
+          this.logger.warn(
+            `Telegram sendGift failed for user ${userId}, gift ${tgPrize.telegramGiftId}`,
+          );
+        }
+
+        await this.winsService.recordWin({
+          image: tgPrize.image ?? '',
+          lottieUrl: '',
+          name: tgPrize.name,
+        });
+
+        return {
+          type: 'telegram-gift',
+          name: tgPrize.name,
+          price: tgPrize.starCount,
+          image: tgPrize.image,
+          telegramGiftId: tgPrize.telegramGiftId,
+        };
       } else if (selectedPrize.type === 'gift') {
         const giftPrize = selectedPrize as WheelGiftItem;
 

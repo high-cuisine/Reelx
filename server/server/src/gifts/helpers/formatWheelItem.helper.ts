@@ -1,7 +1,14 @@
-import { WheelItem, WheelGiftItem, WheelMoneyItem, WheelSecretItem, WheelNoLootItem } from '../interfaces/wheel-item.interface';
+import {
+  WheelItem,
+  WheelGiftItem,
+  WheelMoneyItem,
+  WheelSecretItem,
+  WheelNoLootItem,
+  WheelTelegramGiftItem,
+} from '../interfaces/wheel-item.interface';
 
 interface GiftItemFormatted {
-  type: 'gift' | 'money' | 'secret' | 'no-loot';
+  type: 'gift' | 'money' | 'secret' | 'no-loot' | 'telegram-gift';
   price: number;
   image: string;
   name: string;
@@ -90,6 +97,26 @@ export const formatWheelItem = (
     return {
       type: 'no-loot',
     } as WheelNoLootItem;
+  }
+
+  if ('type' in item && item.type === 'telegram-gift') {
+    const t = item as GiftItemFormatted & {
+      telegramGiftId?: string;
+      starCount?: number;
+    };
+    const starCount =
+      typeof t.starCount === 'number'
+        ? t.starCount
+        : typeof (t as any).price === 'number'
+          ? (t as any).price
+          : 0;
+    return {
+      type: 'telegram-gift',
+      telegramGiftId: String(t.telegramGiftId ?? ''),
+      starCount,
+      name: t.name || 'Gift',
+      image: t.image || '',
+    } as WheelTelegramGiftItem;
   }
 
   // Если это gift элемент

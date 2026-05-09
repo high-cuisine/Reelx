@@ -50,6 +50,13 @@ export const useGameResult = () => {
                            item.name === currencyName && 
                            Math.abs(item.price - (result.amount || result.price)) < 0.0001;
                 }
+                if (result.type === 'telegram-gift') {
+                    return (
+                        item.type === 'telegram-gift' &&
+                        item.telegramGiftId === result.telegramGiftId &&
+                        Math.abs(item.price - result.price) < 0.0001
+                    );
+                }
                 if (result.type === 'secret') {
                     // Для secret сравниваем по типу и имени
                     // Если realType='money', то сравниваем по имени валюты
@@ -91,6 +98,7 @@ export const useGameResult = () => {
                 name: result.name,
                 price: result.price,
                 image: result.image || '',
+                ...(result.telegramGiftId ? { telegramGiftId: result.telegramGiftId } : {}),
                 ...(wheelItem?.lottie ? { lottie: wheelItem.lottie } : {}),
             };
 

@@ -7,11 +7,12 @@ import { WithdrawGiftsService } from './withdraw-gifts.service';
 import { PrismaModule } from '../../libs/infrustructure/prisma/prisma.module';
 import { GiftsRepository } from './repositorys/gifts.repository';
 import { WinsModule } from '../wins/wins.module';
+import { TelegramStarGiftsService } from './services/telegram-star-gifts.service';
 
 @Module({
   imports: [UsersModule, ConfigModule, PrismaModule, WinsModule],
   controllers: [GiftsController],
-  providers: [GiftsService, WithdrawGiftsService, GiftsRepository],
+  providers: [GiftsService, WithdrawGiftsService, GiftsRepository, TelegramStarGiftsService],
   exports: [GiftsService, WithdrawGiftsService],
 })
 export class GiftsModule {}

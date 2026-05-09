@@ -1,8 +1,25 @@
-import { WheelItem, WheelGiftItem, WheelMoneyItem, WheelSecretItem } from '../interfaces/wheel-item.interface';
+import {
+  WheelItem,
+  WheelGiftItem,
+  WheelMoneyItem,
+  WheelSecretItem,
+  WheelTelegramGiftItem,
+} from '../interfaces/wheel-item.interface';
 import { StartGameResponseDto } from '../dto/start-game-response.dto';
 
 // Форматирование приза в минимальный формат для ответа клиенту
 export const formatMinimalPrize = (item: WheelItem): StartGameResponseDto => {
+  if (item.type === 'telegram-gift') {
+    const tg = item as WheelTelegramGiftItem;
+    return {
+      type: 'telegram-gift',
+      name: tg.name,
+      price: tg.starCount,
+      image: tg.image,
+      telegramGiftId: tg.telegramGiftId,
+    };
+  }
+
   if (item.type === 'gift') {
     const gift = item as WheelGiftItem;
     return {
