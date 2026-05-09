@@ -91,6 +91,26 @@
     }
 }
 
+/* Telegram Stars подарки — крупнее превью на ободе */
+.segmentMediaTelegram {
+    width: clamp(72px, 28vw, 120px);
+    height: clamp(72px, 28vw, 120px);
+    max-width: min(120px, 32vw);
+    max-height: min(120px, 32vw);
+
+    @media (max-width: 700px) and (min-width: 400px) {
+        width: clamp(56px, 22vw, 96px);
+        height: clamp(56px, 22vw, 96px);
+    }
+}
+
+.segmentImageTelegram {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none;
+    max-height: none;
+}
+
 .segmentMediaReplayable {
     cursor: pointer;
 }
@@ -146,6 +166,20 @@
         font-size: 10px;
         opacity: 0.9;
     }
+}
+
+.segmentTelegramToy {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 56px;
+    min-height: 56px;
+}
+
+.segmentTelegramToyEmoji {
+    font-size: clamp(36px, 11vw, 56px);
+    line-height: 1;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.85));
 }
 
 .winningTriangle {

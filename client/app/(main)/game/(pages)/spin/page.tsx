@@ -22,7 +22,6 @@ export default function SpinPage() {
         handlePlay,
         onSpinComplete,
         targetIndex,
-        mode,
         moneyWinToast,
         clearMoneyWinToast,
     } = useSpinPage();
@@ -52,14 +51,12 @@ export default function SpinPage() {
                         isSpinning={isSpinning}
                         onSpinComplete={onSpinComplete}
                         targetIndex={targetIndex}
-                        mode={mode}
                     />
                     <Bets
                         rolls={rolls}
                         pricePerRoll={pricePerRoll}
                         totalPrice={totalPrice}
                         minStake={minStake}
-                        mode={mode}
                         giftCount={giftCount}
                         isSpinning={isSpinning}
                         canPlay={canPlay}

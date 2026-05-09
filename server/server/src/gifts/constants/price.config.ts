@@ -1,5 +1,4 @@
+/** Один режим барабана: NFT + опционально валюта при высокой ставке (см. gifts.service). */
 export const configPrices = {
     0: 'common',
-    20:'multi',
-    50:'secret'
-}
+} as const;

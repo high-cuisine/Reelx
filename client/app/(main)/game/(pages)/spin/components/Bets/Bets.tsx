@@ -19,7 +19,6 @@ export interface BetsProps {
     pricePerRoll: number;
     totalPrice: number;
     minStake?: number;
-    mode: 'normal' | 'multy' | 'mystery';
     giftCount: number;
     isSpinning: boolean;
     canPlay: boolean;
@@ -36,7 +35,6 @@ const Bets: React.FC<BetsProps> = ({
     pricePerRoll,
     totalPrice,
     minStake = 1,
-    mode,
     giftCount,
     isSpinning,
     canPlay,
@@ -112,17 +110,6 @@ const Bets: React.FC<BetsProps> = ({
                 </div>
 
                 <div className={cls.rollSelector}>
-                    
-                    {mode === 'multy' && (
-                        <div className={`${cls.currencyBadge} ${cls.multyBadge}`}>
-                            Multy
-                        </div>
-                    )}
-                    {mode === 'mystery' && (
-                        <div className={`${cls.currencyBadge} ${cls.mysteryBadge}`}>
-                            Mystery
-                        </div>
-                    )}
                     <button 
                         className={cls.controlButton}
                         onClick={onDecreaseRolls}

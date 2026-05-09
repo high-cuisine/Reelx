@@ -1,12 +1,9 @@
 import { BadRequestException, Injectable, Logger, HttpException, HttpStatus, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
-import { getCurrentType } from './helpers/getCurrectType.helper';
 import { getCountGifts } from './helpers/getCountGifts.helper';
 import { getMoneyPrices } from './helpers/getMoneyPrices.helper';
-import { combineGiftsAndMoney } from './helpers/combineGiftsAndMoney.helper';
-import { formatGiftItem, formatMoneyItems } from './helpers/formatGiftItem.helper';
-import { formatSecrets } from './helpers/formatSecrets.helper';
+import { formatGiftItem, formatMoneyItem } from './helpers/formatGiftItem.helper';
 import { convertAmountToTon } from './helpers/convertAmountToTon.helper';
 import { RedisService } from '../../libs/infrustructure/redis/redis.service';
 import { formatWheelItem } from './helpers/formatWheelItem.helper';
@@ -34,7 +31,10 @@ export class GiftsService {
   private readonly WHEEL_TTL_SECONDS = 10 * 60; // 10 минут
   private readonly MIN_PRICE_REDIS_KEY = 'gifts:min_price_ton';
   private readonly MIN_PRICE_TTL_SECONDS = 5 * 60; // 5 минут
-  private readonly MIN_PRICE_PROBE_STEP = 0.5; // шаг увеличения ставки при поиске мин. цены (TON)
+  /** Ниже этого эквивалента в TON только NFT (+ Telegram solo); выше — подмешиваются сектора валюты. Env: GIFTS_MONEY_MIX_MIN_TON */
+  private readonly moneyMixMinTon: number;
+  /** Шаг пробы мин. цены NFT (меньше — ниже возможный минимум на маркете). Env: GIFTS_MIN_PRICE_PROBE_STEP */
+  private readonly minPriceProbeStep: number;
 
   constructor(
     private configService: ConfigService,
@@ -50,6 +50,16 @@ export class GiftsService {
     if (!this.nftBuyerUrl) {
       this.logger.warn('NFT_BUYER_URL not found in environment variables');
     }
+
+    const stepRaw = this.configService.get<string>('GIFTS_MIN_PRICE_PROBE_STEP', '0.2');
+    const stepParsed = parseFloat(stepRaw);
+    this.minPriceProbeStep =
+      Number.isFinite(stepParsed) && stepParsed > 0 ? stepParsed : 0.2;
+
+    const mixRaw = this.configService.get<string>('GIFTS_MONEY_MIX_MIN_TON', '20');
+    const mixParsed = parseFloat(mixRaw);
+    this.moneyMixMinTon =
+      Number.isFinite(mixParsed) && mixParsed > 0 ? mixParsed : 20;
 
     this.axiosInstance = axios.create({
       timeout: 30000,
@@ -70,53 +80,27 @@ export class GiftsService {
       const tonAmount = await this.getTonAmount(amount, currencyType as 'ton' | 'stars');
 
       console.log('tonAmount', tonAmount);
-      
-      // Определяем тип подарков на основе amount
-      const giftType = getCurrentType(tonAmount);
-      
-      this.logger.debug(`Getting gifts by type: ${giftType} for amount: ${amount}, currency: ${currencyType || 'not specified'}`);
 
-      let result: any;
       let originalData: any[] = [];
-      let multiWeights: number[] | undefined;
+      let result = await this.getGiftsPrices(tonAmount, 'ton', (data) => {
+        originalData = data;
+      });
 
-      switch (giftType) {
-        case 'common':
-          const commonResult = await this.getGiftsPrices(tonAmount, 'ton', (data) => {
-            originalData = data;
-          });
-          result = commonResult;
-          break;
-        
-        case 'multi': {
-          const multiRaw = await this.getRawMoneyPrices(tonAmount);
-          result = formatMoneyItems(multiRaw.items);
-          originalData = result.map((item: any) => ({
-            type: item.name === 'TON' ? 'ton' : 'star',
-            price: item.price,
-          }));
-          multiWeights = multiRaw.weights;
-          break;
-        }
-        
-        case 'secret':
-          const secretResult = await this.getSecretsPrices(tonAmount, (data) => {
-            originalData = data;
-          });
-          result = secretResult;
-          break;
-        
-        default:
-          this.logger.warn(`Unknown type: ${giftType}, falling back to common`);
-          const defaultResult = await this.getGiftsPrices(amount, 'ton', (data) => {
-            originalData = data;
-          });
-          result = defaultResult;
+      if (
+        tonAmount > this.moneyMixMinTon &&
+        Array.isArray(result) &&
+        result.length > 0
+      ) {
+        result = await this.mergeMoneyIntoGiftWheel(result, tonAmount);
       }
+
+      this.logger.debug(
+        `Wheel for amount ${amount} ${currencyType || 'ton'} (ton≈${tonAmount}), moneyMix=${tonAmount > this.moneyMixMinTon}`,
+      );
 
       // Сохраняем барабан в Redis, если есть userId
       if (userId && result && Array.isArray(result)) {
-        await this.saveWheelToRedis(userId, result, originalData, amount, currencyType || 'ton', multiWeights);
+        await this.saveWheelToRedis(userId, result, originalData, amount, currencyType || 'ton');
       }
 
       return result;
@@ -153,33 +137,128 @@ export class GiftsService {
     );
 
     const response = await this.axiosInstance.post(url, { amount: amountTon });
-    const type = getCurrentType(Number(amount));
 
     const allRawGifts: any[] = response.data.gifts || [];
 
     let originalGifts: any[] = [];
 
     // Правила формирования слотов:
-    // 1) amount <= 5: до 7 уникальных подарков + no-loot (20 слотов: 50% подарки / 50% no-loot)
+    // 1) amount <= 5: solo
+    //    — минимальная ставка: только дешёвые Telegram-подарки + один самый дешёвый NFT (несколько секторов)
+    //    — иначе: до 7 NFT + Telegram из доли no-loot + no-loot
     // 2) 10 <= amount < 20: 9 слотов подарков без no-loot
     // 3) остальное — старая логика (getCountGifts)
 
     if (amount <= 5) {
-      const maxGifts = Math.min(7, allRawGifts.length);
-      originalGifts = allRawGifts.slice(0, maxGifts);
+      const totalSlots = 20;
+      const isMinimalStake = amountTon <= minPriceTon + Number.EPSILON;
+
+      const nanoPrice = (g: any) => {
+        const p = g?.price;
+        if (p == null) return Number.POSITIVE_INFINITY;
+        const n = typeof p === 'string' ? Number(p) : Number(p);
+        return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
+      };
+      const sortedRaw = [...allRawGifts].sort((a, b) => nanoPrice(a) - nanoPrice(b));
+
+      const slots: any[] = [];
+
+      if (isMinimalStake) {
+        // Один самый дешёвый NFT + только Telegram + немного no-loot
+        const CHEAPEST_NFT_SECTORS = 4;
+        const MINIMAL_NO_LOOT_SHARE = 0.08;
+
+        originalGifts = sortedRaw.length > 0 ? [sortedRaw[0]] : [];
+
+        if (onOriginalData) {
+          onOriginalData(originalGifts);
+        }
+
+        const formattedCheapest =
+          originalGifts.length > 0
+            ? originalGifts.map((g: any) =>
+                formatGiftItem(g, 'gift'),
+              )
+            : [];
+
+        const noLootSlotsCount = Math.max(1, Math.round(totalSlots * MINIMAL_NO_LOOT_SHARE));
+        const telegramCountForNftCase = Math.max(
+          0,
+          totalSlots - noLootSlotsCount - CHEAPEST_NFT_SECTORS,
+        );
+
+        const telegramSlices =
+          formattedCheapest.length === 0
+            ? await this.telegramStarGiftsService.buildCheapestWheelSlices(
+                Math.max(0, totalSlots - noLootSlotsCount),
+              )
+            : await this.telegramStarGiftsService.buildCheapestWheelSlices(
+                telegramCountForNftCase,
+              );
+
+        if (formattedCheapest.length === 0) {
+          for (const slice of telegramSlices) {
+            slots.push({
+              type: 'telegram-gift',
+              telegramGiftId: slice.telegramGiftId,
+              starCount: slice.starCount,
+              name: slice.name,
+              image: slice.image ?? '',
+              price: slice.starCount,
+            });
+          }
+          while (slots.length < totalSlots) {
+            slots.push({
+              type: 'no-loot',
+              price: 0,
+              image: '',
+              name: 'No loot',
+            });
+          }
+          return slots;
+        }
+
+        const oneNft = formattedCheapest[0];
+        for (let i = 0; i < CHEAPEST_NFT_SECTORS; i++) {
+          slots.push(oneNft);
+        }
+
+        for (const slice of telegramSlices) {
+          slots.push({
+            type: 'telegram-gift',
+            telegramGiftId: slice.telegramGiftId,
+            starCount: slice.starCount,
+            name: slice.name,
+            image: slice.image ?? '',
+            price: slice.starCount,
+          });
+        }
+
+        while (slots.length < totalSlots) {
+          slots.push({
+            type: 'no-loot',
+            price: 0,
+            image: '',
+            name: 'No loot',
+          });
+        }
+
+        return slots;
+      }
+
+      const maxGifts = Math.min(7, sortedRaw.length);
+      originalGifts = sortedRaw.slice(0, maxGifts);
 
       if (onOriginalData) {
         onOriginalData(originalGifts);
       }
 
       const formattedGifts = originalGifts.map((g: any) =>
-        formatGiftItem(g, type === 'secret' ? 'secret' : 'gift'),
+        formatGiftItem(g, 'gift'),
       );
 
-      const totalSlots = 20;
-      // Для минимальной ставки в solo уменьшаем шанс no-loot в 2 раза.
-      const isMinimalStake = amountTon <= minPriceTon + Number.EPSILON;
-      const noLootShare = isMinimalStake ? 0.25 : 0.5; // min stake: 25%, иначе 50%
+      // Для ставки выше минимума в solo — прежняя логика no-loot / Telegram из доли пустых слотов
+      const noLootShare = 0.5;
       const initialNoLootSlots = Math.round(totalSlots * noLootShare);
       const telegramSlices = await this.telegramStarGiftsService.buildCheapestWheelSlices(
         Math.min(initialNoLootSlots, 6),
@@ -187,8 +266,6 @@ export class GiftsService {
       const telegramSlotsCount = telegramSlices.length;
       const noLootSlotsCount = Math.max(0, initialNoLootSlots - telegramSlotsCount);
       const giftSlotsToDistribute = Math.max(0, totalSlots - initialNoLootSlots);
-
-      const slots: any[] = [];
 
       // Если подарков нет — весь барабан no-loot
       if (formattedGifts.length === 0) {
@@ -203,7 +280,6 @@ export class GiftsService {
         return slots;
       }
 
-      // Распределяем оставшиеся слоты равномерно между подарками
       const baseSlotsPerGift = Math.floor(giftSlotsToDistribute / formattedGifts.length);
       let extraSlots = giftSlotsToDistribute % formattedGifts.length;
 
@@ -219,7 +295,6 @@ export class GiftsService {
         }
       });
 
-      // Дешёвые подарки Telegram (Stars): часть бывших no-loot слотов
       for (const slice of telegramSlices) {
         slots.push({
           type: 'telegram-gift',
@@ -231,7 +306,6 @@ export class GiftsService {
         });
       }
 
-      // Добавляем no-loot слоты по рассчитанной доле.
       for (let i = 0; i < noLootSlotsCount; i++) {
         slots.push({
           type: 'no-loot',
@@ -260,7 +334,7 @@ export class GiftsService {
       }
 
       return originalGifts.map((g: any) =>
-        formatGiftItem(g, type === 'secret' ? 'secret' : 'gift'),
+        formatGiftItem(g, 'gift'),
       );
     }
 
@@ -272,7 +346,7 @@ export class GiftsService {
     }
 
     return originalGifts.map((g: any) =>
-      formatGiftItem(g, type === 'secret' ? 'secret' : 'gift'),
+      formatGiftItem(g, 'gift'),
     );
   }
 
@@ -287,30 +361,50 @@ export class GiftsService {
     return getMoneyPrices(amount, tonToStarsRate);
   }
 
-  private async getMoneyPrices(amount: number) {
-    const raw = await this.getRawMoneyPrices(amount);
-    return formatMoneyItems(raw.items);
-  }
-
-  private async getSecretsPrices(
-    amount: number,
-    onOriginalData?: (data: any[]) => void,
-  ) {
-    let originalGiftsData: any[] = [];
-    
-    const gifts = await this.getGiftsPrices(amount, undefined, (data) => {
-      originalGiftsData = data;
-    });
-    
-    const moneyRaw = await this.getRawMoneyPrices(amount);
-    const secrets = combineGiftsAndMoney(originalGiftsData, moneyRaw.items, 8);
-    
-    // Сохраняем комбинированные оригинальные данные
-    if (onOriginalData) {
-      onOriginalData(secrets);
+  /**
+   * Заменяет часть секторов типа gift на TON/STARS (~18% барабана), без отдельного режима «multi».
+   */
+  private async mergeMoneyIntoGiftWheel(baseSlots: any[], tonAmount: number): Promise<any[]> {
+    const moneyRaw = await this.getRawMoneyPrices(tonAmount);
+    const { items, weights } = moneyRaw;
+    const sumW = weights.reduce((a, b) => a + b, 0);
+    if (sumW <= 0 || items.length === 0) {
+      return baseSlots;
     }
-    
-    return formatSecrets(secrets);
+
+    const pickVariant = () => {
+      let r = Math.random() * sumW;
+      for (let i = 0; i < items.length; i++) {
+        r -= weights[i];
+        if (r <= 0) {
+          return items[i];
+        }
+      }
+      return items[items.length - 1];
+    };
+
+    const n = baseSlots.length;
+    const moneySlotTarget = Math.max(1, Math.round(n * 0.18));
+    const giftIndices = baseSlots
+      .map((s, i) => (s.type === 'gift' ? i : -1))
+      .filter((i) => i >= 0);
+    if (giftIndices.length === 0) {
+      return baseSlots;
+    }
+
+    const m = Math.min(moneySlotTarget, giftIndices.length);
+    const shuffled = [...giftIndices];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    const out = [...baseSlots];
+    for (let k = 0; k < m; k++) {
+      const idx = shuffled[k];
+      out[idx] = formatMoneyItem(pickVariant());
+    }
+    return out;
   }
 
   private async saveWheelToRedis(
@@ -760,7 +854,7 @@ export class GiftsService {
     }
 
     const url = `${this.nftBuyerUrl}/api/nft/gifts/by-price`;
-    let amountTon = this.MIN_PRICE_PROBE_STEP;
+    let amountTon = this.minPriceProbeStep;
 
     while (amountTon <= 100) {
       try {
@@ -778,7 +872,7 @@ export class GiftsService {
       } catch (err) {
         this.logger.warn(`Probe min price at ${amountTon} TON failed: ${(err as Error).message}`);
       }
-      amountTon += this.MIN_PRICE_PROBE_STEP;
+      amountTon += this.minPriceProbeStep;
     }
 
     const fallback = 1;
@@ -794,7 +888,15 @@ export class GiftsService {
    * Возвращает минимальную ставку в TON и в STARS для клиента (с учётом курса).
    */
   async getMinPrice(): Promise<{ ton: number; stars: number }> {
-    const minPriceTon = await this.getMinPriceTon();
+    let minPriceTon = await this.getMinPriceTon();
+    /** Опционально: не показывать минимум выше этого TON (например 1.25). Env: GIFTS_MIN_PRICE_DISPLAY_CAP_TON */
+    const capRaw = this.configService.get<string>('GIFTS_MIN_PRICE_DISPLAY_CAP_TON');
+    if (capRaw != null && String(capRaw).trim() !== '') {
+      const cap = parseFloat(capRaw);
+      if (Number.isFinite(cap) && cap > 0) {
+        minPriceTon = Math.min(minPriceTon, cap);
+      }
+    }
     const rates = await this.currancyService.getCurrancyRates();
     // minPriceTon TON = minPriceTon * rates.ton USD; в STARS это (minPriceTon * rates.ton) / rates.stars
     const minPriceStarsRaw =

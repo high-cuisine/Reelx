@@ -1,5 +1,4 @@
 'use client'
-import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import cls from './Wheel.module.scss'
 import { generateConicGradient } from '../../helpers/generateConicGradient';
@@ -11,7 +10,6 @@ import {
 import { GiftItem } from '@/entites/gifts/interfaces/giftItem.interface';
 import { GiftImageOrLottie } from '@/shared/ui/GiftImageOrLottie/GiftImageOrLottie';
 import { MoneyBadge } from './MoneyBadge';
-import secretIcon from '@/assets/icons/secret.svg';
 import { useWheelLogic } from '../../hooks/useWheelLogic';
 
 interface WheelProps {
@@ -19,7 +17,6 @@ interface WheelProps {
     isSpinning?: boolean;
     onSpinComplete?: (selectedItem: GiftItem) => void;
     targetIndex?: number | null;
-    mode: 'normal' | 'mystery' | 'multy';
 }
 
 const Wheel = ({
@@ -27,7 +24,6 @@ const Wheel = ({
     isSpinning: externalIsSpinning,
     onSpinComplete,
     targetIndex,
-    mode,
 }: WheelProps) => {
     const [lottieReplayByKey, setLottieReplayByKey] = useState<Record<string, number>>({});
 
@@ -187,7 +183,10 @@ const Wheel = ({
                     const y = 50 + radius * Math.sin(radian - Math.PI / 2);
                     const item = group.item;
                     const segmentLabel = String(item.name ?? '');
-                    const segmentKey = `${item.type}-${item.name}-${item.price}-${index}`;
+                    const segmentKey =
+                        item.type === 'telegram-gift' && item.telegramGiftId
+                            ? `tg-${item.telegramGiftId}-${item.price}-${index}`
+                            : `${item.type}-${item.name}-${item.price}-${index}`;
                     const hasLottie = Boolean(item.lottie);
 
                     return (
@@ -201,16 +200,51 @@ const Wheel = ({
                                 transform: `translate(-50%, -50%) rotate(${-rotation}deg)`,
                             }}
                         >
-                            {mode === 'mystery' ? (
-                                <Image 
-                                    src={secretIcon} 
-                                    alt="Secret" 
-                                    width={50} 
-                                    height={50}
-                                    className={cls.segmentImage}
-                                />
-                            ) : item.type === 'money' ? (
+                            {item.type === 'money' ? (
                                 <MoneyBadge item={item} />
+                            ) : item.type === 'telegram-gift' ? (
+                                item.image || item.lottie ? (
+                                    <div
+                                        className={`${cls.segmentMedia} ${cls.segmentMediaTelegram} ${hasLottie && !isSpinning ? cls.segmentMediaReplayable : ''}`}
+                                        role={hasLottie && !isSpinning ? 'button' : undefined}
+                                        tabIndex={hasLottie && !isSpinning ? 0 : undefined}
+                                        onPointerDown={
+                                            hasLottie && !isSpinning ? (e) => e.stopPropagation() : undefined
+                                        }
+                                        onTouchStart={
+                                            hasLottie && !isSpinning ? (e) => e.stopPropagation() : undefined
+                                        }
+                                        onClick={
+                                            hasLottie && !isSpinning
+                                                ? (e) => {
+                                                      e.stopPropagation();
+                                                      setLottieReplayByKey((prev) => ({
+                                                          ...prev,
+                                                          [segmentKey]: (prev[segmentKey] ?? 0) + 1,
+                                                      }));
+                                                  }
+                                                : undefined
+                                        }
+                                    >
+                                        <GiftImageOrLottie
+                                            image={item.image}
+                                            lottieUrl={item.lottie}
+                                            alt={item.name}
+                                            fillContainer
+                                            hideLottieBackground
+                                            loop={false}
+                                            replayNonce={
+                                                hasLottie ? (lottieReplayByKey[segmentKey] ?? 0) : undefined
+                                            }
+                                            className={cls.segmentLottie}
+                                            imageClassName={`${cls.segmentImage} ${cls.segmentImageTelegram}`}
+                                        />
+                                    </div>
+                                ) : (
+                                    <span className={`${cls.segmentText} ${cls.segmentTelegramToy}`}>
+                                        <span className={cls.segmentTelegramToyEmoji}>{segmentLabel}</span>
+                                    </span>
+                                )
                             ) : item.image || item.lottie ? (
                                 <div
                                     className={`${cls.segmentMedia} ${hasLottie && !isSpinning ? cls.segmentMediaReplayable : ''}`}

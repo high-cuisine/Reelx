@@ -3,7 +3,6 @@ import { useGifts } from './useGifts';
 import { useGameResult } from './useGameResult';
 import { useSpinGame } from './useSpinGame';
 import { useMinPrice } from './useMinPrice';
-import { getModeByTon } from '../helpers/getMode.helper';
 import { useUserStore } from '@/entites/user/model/user';
 import { updateUserBalance } from '@/features/user/user';
 import { useEffect, useState } from 'react';
@@ -60,18 +59,6 @@ export const useSpinPage = () => {
 
     const { wheelItems, isLoadingGifts } = useGifts(currency, totalPrice);
 
-    // Пересчитываем totalPrice в TON, чтобы режимы normal/multy/mystery
-    // зависели от диапазонов 0–20 / 20–50 / 50+ TON. От 1600 STARS — режим multy (монеты на колесе).
-    const tonEquivalent =
-        currency === 'ton'
-            ? totalPrice
-            : (minStakeStars > 0 ? (totalPrice * minStakeTon) / minStakeStars : 0);
-
-    const mode =
-        currency === 'stars' && totalPrice >= 1600
-            ? 'multy'
-            : getModeByTon(tonEquivalent);
-
     // Обертка для handlePlay с проверкой баланса, запуском игры и обновлением баланса в сторе
     const handlePlay = () => {
         // Проверяем баланс перед началом игры
@@ -122,7 +109,6 @@ export const useSpinPage = () => {
         handlePlay,
         onSpinComplete,
         targetIndex,
-        mode,
         moneyWinToast,
         clearMoneyWinToast: () => setMoneyWinToast(null),
     };
