@@ -42,8 +42,8 @@ export const useSpinGame = (
     onGameComplete?: (result: SpinGameResult) => void
 ): UseSpinGameReturn => {
     const {
-        minStake = 5,
-        step = 15,
+        minStake = 1,
+        step = 1,
         giftCount: initialGiftCount = 5,
     } = config;
 

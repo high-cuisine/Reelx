@@ -885,28 +885,12 @@ export class GiftsService {
   }
 
   /**
-   * Возвращает минимальную ставку в TON и в STARS для клиента (с учётом курса).
+   * Минимальная ставка для UI и клиента (фиксированные значения продукта).
    */
   async getMinPrice(): Promise<{ ton: number; stars: number }> {
-    let minPriceTon = await this.getMinPriceTon();
-    /** Опционально: не показывать минимум выше этого TON (например 1.25). Env: GIFTS_MIN_PRICE_DISPLAY_CAP_TON */
-    const capRaw = this.configService.get<string>('GIFTS_MIN_PRICE_DISPLAY_CAP_TON');
-    if (capRaw != null && String(capRaw).trim() !== '') {
-      const cap = parseFloat(capRaw);
-      if (Number.isFinite(cap) && cap > 0) {
-        minPriceTon = Math.min(minPriceTon, cap);
-      }
-    }
-    const rates = await this.currancyService.getCurrancyRates();
-    // minPriceTon TON = minPriceTon * rates.ton USD; в STARS это (minPriceTon * rates.ton) / rates.stars
-    const minPriceStarsRaw =
-      rates.stars > 0
-        ? (minPriceTon * rates.ton) / rates.stars
-        : minPriceTon * 10;
-    const minPriceStars = Math.ceil(minPriceStarsRaw / 100) * 100;
     return {
-      ton: Number(minPriceTon.toFixed(2)),
-      stars: minPriceStars,
+      ton: 1,
+      stars: 90,
     };
   }
 

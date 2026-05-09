@@ -81,6 +81,11 @@ export const useSpinPage = () => {
             return;
         }
 
+        if (isLoadingGifts || wheelItems.length === 0) {
+            alert('Подождите, колесо ещё загружается');
+            return;
+        }
+
         const p = handlePlayInternal(wheelItems, startGame);
 
         // Локально уменьшаем баланс пользователя, чтобы Header сразу обновился

@@ -1,8 +1,6 @@
 'use client'
 import { useRef, useEffect, useState } from 'react';
-import Image from 'next/image';
 import cls from './Bets.module.scss';
-import starIcon from '@/assets/star.svg';
 import { Button } from '@/shared/ui/Button/Button';
 import { eventBus, MODAL_EVENTS } from '@/features/eventBus/eventBus';
 import type { CurrencyType } from '../../hooks/useCurrency';
@@ -22,6 +20,7 @@ export interface BetsProps {
     giftCount: number;
     isSpinning: boolean;
     canPlay: boolean;
+    isLoadingGifts?: boolean;
     wheelItems?: WheelItem[];
     currency: CurrencyType;
     onToggleCurrency: () => void;
@@ -38,6 +37,7 @@ const Bets: React.FC<BetsProps> = ({
     giftCount,
     isSpinning,
     canPlay,
+    isLoadingGifts = false,
     wheelItems = [],
     currency,
     onToggleCurrency,
@@ -52,8 +52,15 @@ const Bets: React.FC<BetsProps> = ({
         if (!isSpinning && !isAwaitingServer) playLockRef.current = false;
     }, [isSpinning, isAwaitingServer]);
 
+    const playBlocked =
+        isSpinning ||
+        isAwaitingServer ||
+        !canPlay ||
+        isLoadingGifts ||
+        wheelItems.length === 0;
+
     const handlePlay = async () => {
-        if (isSpinning || isAwaitingServer || !canPlay || playLockRef.current) return;
+        if (playBlocked || playLockRef.current) return;
         playLockRef.current = true;
         try {
             setIsAwaitingServer(true);
@@ -153,15 +160,16 @@ const Bets: React.FC<BetsProps> = ({
                 </button>
             </div>
 
-            <div
-                onClick={handlePlay}
-                style={(isSpinning || isAwaitingServer) ? { pointerEvents: 'none', cursor: 'not-allowed' } : undefined}
-            >
-                <Button
-                    text={isSpinning ? 'Крутится...' : (isAwaitingServer ? 'Ожидайте' : 'Играть')}
-                    customClass={!canPlay || isSpinning || isAwaitingServer ? cls.disabled : ''}
-                />
-            </div>
+            <Button
+                type="button"
+                text={
+                    isSpinning ? 'Крутится...' : isAwaitingServer ? 'Ожидайте' : 'Играть'
+                }
+                loading={isLoadingGifts && !isSpinning && !isAwaitingServer}
+                loadingText="Загрузка..."
+                disabled={playBlocked}
+                onClick={() => void handlePlay()}
+            />
         </div>
     );
 };

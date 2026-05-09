@@ -205,7 +205,7 @@ const Wheel = ({
                             ) : item.type === 'telegram-gift' ? (
                                 item.image || item.lottie ? (
                                     <div
-                                        className={`${cls.segmentMedia} ${cls.segmentMediaTelegram} ${hasLottie && !isSpinning ? cls.segmentMediaReplayable : ''}`}
+                                        className={`${cls.segmentMedia} ${hasLottie && !isSpinning ? cls.segmentMediaReplayable : ''}`}
                                         role={hasLottie && !isSpinning ? 'button' : undefined}
                                         tabIndex={hasLottie && !isSpinning ? 0 : undefined}
                                         onPointerDown={
@@ -237,13 +237,13 @@ const Wheel = ({
                                                 hasLottie ? (lottieReplayByKey[segmentKey] ?? 0) : undefined
                                             }
                                             className={cls.segmentLottie}
-                                            imageClassName={`${cls.segmentImage} ${cls.segmentImageTelegram}`}
+                                            imageClassName={cls.segmentImage}
                                         />
                                     </div>
                                 ) : (
-                                    <span className={`${cls.segmentText} ${cls.segmentTelegramToy}`}>
-                                        <span className={cls.segmentTelegramToyEmoji}>{segmentLabel}</span>
-                                    </span>
+                                    <div className={cls.segmentMedia}>
+                                        <span className={cls.segmentEmojiGift}>{segmentLabel}</span>
+                                    </div>
                                 )
                             ) : item.image || item.lottie ? (
                                 <div

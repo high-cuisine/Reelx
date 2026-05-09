@@ -10,6 +10,7 @@ export default function SpinPage() {
         currency,
         toggleCurrency,
         wheelItems,
+        isLoadingGifts,
         rolls,
         pricePerRoll,
         totalPrice,
@@ -60,6 +61,7 @@ export default function SpinPage() {
                         giftCount={giftCount}
                         isSpinning={isSpinning}
                         canPlay={canPlay}
+                        isLoadingGifts={isLoadingGifts}
                         wheelItems={wheelItems}
                         currency={currency}
                         onToggleCurrency={toggleCurrency}
