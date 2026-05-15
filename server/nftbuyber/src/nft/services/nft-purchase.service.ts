@@ -50,8 +50,8 @@ export class NftPurchaseService implements OnModuleInit {
       const mnemonicString = this.configService.get<string>('WALLET_MNEMONIC');
       if (mnemonicString) {
         this.mnemonic = mnemonicString.split(' ').filter(word => word.trim().length > 0);
-        if (this.mnemonic.length !== 24) {
-          this.logger.error(`Invalid mnemonic: expected 24 words, got ${this.mnemonic.length}`);
+        if (this.mnemonic.length !== 12) {
+          this.logger.error(`Invalid mnemonic: expected 12 words, got ${this.mnemonic.length}`);
           this.mnemonic = [];
         } else {
           this.logger.debug('Wallet mnemonic loaded successfully');
@@ -314,7 +314,7 @@ export class NftPurchaseService implements OnModuleInit {
       }
 
       // Проверяем наличие mnemonic
-      if (!this.mnemonic || this.mnemonic.length !== 24) {
+      if (!this.mnemonic || this.mnemonic.length !== 12) {
         return {
           success: false,
           error: 'Wallet mnemonic not configured. Set WALLET_MNEMONIC in environment variables.',
@@ -439,7 +439,7 @@ export class NftPurchaseService implements OnModuleInit {
         };
       }
   
-      if (!this.mnemonic || this.mnemonic.length !== 24) {
+      if (!this.mnemonic || this.mnemonic.length !== 12) {
         return { success: false, error: 'Wallet mnemonic not configured' };
       }
   

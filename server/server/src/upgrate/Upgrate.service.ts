@@ -22,7 +22,7 @@ const MIN_PRICE_REDIS_KEY = 'gifts:min_price_ton';
 const MIN_PRICE_TTL_SECONDS = 5 * 60;
 const MIN_PRICE_PROBE_STEP = 0.5;
 const MAX_ITERATIONS = 10;
-const POOL_SIZE = 10;
+const DEFAULT_POOL_SIZE = 20;
 const UPGRATE_STATE_REDIS_KEY_PREFIX = 'upgrate:state';
 const NFT_PURCHASE_FEE_NANO = 300_000_000n; // ~0.3 TON
 
@@ -31,6 +31,7 @@ export class UpgrateService {
   private readonly logger = new Logger(UpgrateService.name);
   private readonly axiosInstance: AxiosInstance;
   private readonly nftBuyerUrl: string;
+  private readonly poolSize: number;
 
   constructor(
     private readonly configService: ConfigService,
@@ -43,6 +44,15 @@ export class UpgrateService {
       'NFT_BUYER_URL',
       'http://localhost:3001',
     );
+    const poolSizeRaw = this.configService.get<string>(
+      'UPGRATE_POOL_SIZE',
+      String(DEFAULT_POOL_SIZE),
+    );
+    const poolSizeParsed = parseInt(poolSizeRaw, 10);
+    this.poolSize =
+      Number.isFinite(poolSizeParsed) && poolSizeParsed > 0
+        ? poolSizeParsed
+        : DEFAULT_POOL_SIZE;
     this.axiosInstance = axios.create({
       timeout: 30000,
       headers: { 'Content-Type': 'application/json' },
@@ -182,7 +192,7 @@ export class UpgrateService {
       pool: NftBuyerGift[],
       fallback: NftBuyerGift[],
     ): NftBuyerGift[] => {
-      return this.mergePoolUnique(pool, fallback, POOL_SIZE);
+      return this.mergePoolUnique(pool, fallback, this.poolSize);
     };
 
     const mergeFromTier = async (baseAmount: number): Promise<void> => {
@@ -196,9 +206,21 @@ export class UpgrateService {
           this.fetchGiftsByPrice(amountLow),
           this.fetchGiftsByPrice(amountMid),
         ]);
-        winGifts = this.mergePoolUnique(winGifts, giftsHigh ?? [], POOL_SIZE);
-        winGifts = this.mergePoolUnique(winGifts, giftsMid ?? [], POOL_SIZE);
-        loseGifts = this.mergePoolUnique(loseGifts, giftsLow ?? [], POOL_SIZE);
+        winGifts = this.mergePoolUnique(
+          winGifts,
+          giftsHigh ?? [],
+          this.poolSize,
+        );
+        winGifts = this.mergePoolUnique(
+          winGifts,
+          giftsMid ?? [],
+          this.poolSize,
+        );
+        loseGifts = this.mergePoolUnique(
+          loseGifts,
+          giftsLow ?? [],
+          this.poolSize,
+        );
       } catch (err) {
         this.logger.warn(
           `getChance by-price failed at baseAmount=${b}: ${(err as Error).message}`,
@@ -211,7 +233,10 @@ export class UpgrateService {
 
     let fillBase = targetTon;
     for (let i = 0; i < MAX_ITERATIONS; i++) {
-      if (winGifts.length >= POOL_SIZE && loseGifts.length >= POOL_SIZE) {
+      if (
+        winGifts.length >= this.poolSize &&
+        loseGifts.length >= this.poolSize
+      ) {
         break;
       }
       fillBase = Math.max(minPriceTon, fillBase / 2);
@@ -219,7 +244,7 @@ export class UpgrateService {
     }
 
     // Финальный фолбек: добить пулы с пола цен, не удаляя уже найденные
-    if (winGifts.length < POOL_SIZE || loseGifts.length < POOL_SIZE) {
+    if (winGifts.length < this.poolSize || loseGifts.length < this.poolSize) {
       try {
         const fallback = await this.fetchGiftsByPrice(minPriceTon);
         winGifts = ensurePoolSize(winGifts, fallback);
@@ -231,7 +256,7 @@ export class UpgrateService {
       }
     }
 
-    if (winGifts.length < POOL_SIZE || loseGifts.length < POOL_SIZE) {
+    if (winGifts.length < this.poolSize || loseGifts.length < this.poolSize) {
       this.logger.warn(
         `Upgrate pools incomplete after fallback: win=${winGifts.length}, lose=${loseGifts.length}`,
       );
