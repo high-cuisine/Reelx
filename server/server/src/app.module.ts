@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
+import { existsSync } from 'fs';
+import { resolve } from 'path';
 import { UsersModule } from './users/users.module';
 import { GiftsModule } from './gifts/gifts.module';
 import { PromocodeModule } from './promocode/promocode.module';
@@ -11,11 +13,16 @@ import { UpgrateModule } from './upgrate/Upgrate.module';
 import { MultiplayerModule } from './multiplayer/multiplayer.module';
 import { WinsModule } from './wins/wins.module';
 
+const envFilePaths = [
+  resolve(process.cwd(), '../.env'),
+  resolve(process.cwd(), '.env'),
+].filter((path) => existsSync(path));
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: envFilePaths.length ? envFilePaths : undefined,
     }),
     PrismaModule,
     RedisModule,

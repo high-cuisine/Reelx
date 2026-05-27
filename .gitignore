@@ -1,8 +1,5 @@
 server/.env
-server/nftbuyber/.env
-server/server/.env
 server/server/libs/infrustructure/prisma/migrations
-server/adminClient/.env
 client/.env
 client/.next
 client/node_modules
