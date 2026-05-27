@@ -158,6 +158,27 @@ export class GiftsService {
 
     if (amount <= 5) {
       const totalSlots = 20;
+
+      // Ставка ровно 1 TON: только Telegram-подарки (медведь, сердце) + no-loot, без NFT
+      if (amountTon <= 1 + Number.EPSILON) {
+        if (onOriginalData) onOriginalData([]);
+        const TG_SLOTS = 14; // 70 % — медведь, сердце и т.д.
+        const telegramSlices =
+          await this.telegramStarGiftsService.buildCheapestWheelSlices(TG_SLOTS);
+        const slots: any[] = telegramSlices.map((slice) => ({
+          type: 'telegram-gift',
+          telegramGiftId: slice.telegramGiftId,
+          starCount: slice.starCount,
+          name: slice.name,
+          image: slice.image ?? '',
+          price: slice.starCount,
+        }));
+        while (slots.length < totalSlots) {
+          slots.push({ type: 'no-loot', price: 0, image: '', name: 'No loot' });
+        }
+        return slots;
+      }
+
       const isMinimalStake = amountTon <= minPriceTon + Number.EPSILON;
 
       const nanoPrice = (g: any) => {
