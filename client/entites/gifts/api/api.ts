@@ -118,6 +118,14 @@ class GiftsService {
         return response.data;
     }
 
+    async claimTelegramGift(action: 'gift' | 'currency'): Promise<{ success: boolean; credited?: number }> {
+        const response = await api.$authHost.post<{ success: boolean; credited?: number }>(
+            '/gifts/claim-telegram-gift',
+            { action },
+        );
+        return response.data;
+    }
+
     async getMinPrice(): Promise<MinPriceResponse> {
         const response = await api.$host.get<MinPriceResponse>('/gifts/min-price');
         return response.data;

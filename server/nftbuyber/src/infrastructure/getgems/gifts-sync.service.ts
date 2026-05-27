@@ -10,6 +10,7 @@ export class GiftsSyncService implements OnModuleInit, OnModuleDestroy {
   private readonly SYNC_INTERVAL = 30 * 60 * 1000; // 30 минут в миллисекундах
   private isRunning = false;
   private syncInterval: NodeJS.Timeout | null = null;
+  private syncPromise: Promise<void> | null = null;
 
   constructor(
     private readonly getGemsClient: GetGemsApiClient,
@@ -42,6 +43,21 @@ export class GiftsSyncService implements OnModuleInit, OnModuleDestroy {
 
   // Также можно запускать вручную через этот метод
   async syncCollections(): Promise<void> {
+    if (this.syncPromise) {
+      this.logger.warn('Sync already in progress, waiting...');
+      return this.syncPromise;
+    }
+
+    this.syncPromise = this.runSyncCollections();
+
+    try {
+      await this.syncPromise;
+    } finally {
+      this.syncPromise = null;
+    }
+  }
+
+  private async runSyncCollections(): Promise<void> {
     if (this.isRunning) {
       this.logger.warn('Sync already in progress, skipping...');
       return;
@@ -90,25 +106,23 @@ export class GiftsSyncService implements OnModuleInit, OnModuleDestroy {
 
   async getAllCollections(): Promise<GiftCollection[]> {
     try {
-      const cached = await this.redisService.get(this.REDIS_KEY);
-      
+      let cached = await this.redisService.get(this.REDIS_KEY);
+
       if (!cached) {
         this.logger.warn('No cached collections found, triggering sync...');
         await this.syncCollections();
-        
-        // Пробуем получить еще раз после синхронизации
-        const cachedAfterSync = await this.redisService.get(this.REDIS_KEY);
-        if (!cachedAfterSync) {
-          return [];
-        }
-        
-        const data: GiftCollectionCache = JSON.parse(cachedAfterSync);
-        return data.collections;
+        cached = await this.redisService.get(this.REDIS_KEY);
+      }
+
+      if (!cached) {
+        return [];
       }
 
       const data: GiftCollectionCache = JSON.parse(cached);
-      this.logger.debug(`Retrieved ${data.collections.length} collections from cache (last updated: ${new Date(data.lastUpdated).toISOString()})`);
-      
+      this.logger.debug(
+        `Retrieved ${data.collections.length} collections from cache (last updated: ${new Date(data.lastUpdated).toISOString()})`,
+      );
+
       return data.collections;
     } catch (error) {
       this.logger.error(`Error getting collections from cache: ${error.message}`);

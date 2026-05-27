@@ -501,6 +501,45 @@ export class GiftsService {
     }
   }
 
+  async claimTelegramGift(
+    userId: string,
+    action: 'gift' | 'currency',
+  ): Promise<{ success: boolean; credited?: number }> {
+    const pendingKey = `pending-tg-gift:${userId}`;
+    const raw = await this.redisService.get(pendingKey);
+    if (!raw) {
+      throw new HttpException(
+        'Ожидающий подарок не найден или срок его хранения истёк',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    const pending: {
+      telegramGiftId: string;
+      telegramUserId: string;
+      starCount: number;
+      name: string;
+      image: string;
+    } = JSON.parse(raw);
+
+    await this.redisService.del(pendingKey);
+
+    if (action === 'gift') {
+      this.scheduleTelegramGiftDelivery(
+        pending.telegramUserId,
+        pending.telegramGiftId,
+        userId,
+      );
+      return { success: true };
+    } else {
+      await this.usersService.updateStarsBalance(userId, pending.starCount);
+      this.logger.debug(
+        `User ${userId} exchanged telegram gift for ${pending.starCount} stars`,
+      );
+      return { success: true, credited: pending.starCount };
+    }
+  }
+
   /**
    * Отправка подарка в Telegram не блокирует ответ startGame (колесо не ждёт паузу).
    */
@@ -731,10 +770,17 @@ export class GiftsService {
           name: tgPrize.name,
         });
 
-        this.scheduleTelegramGiftDelivery(
-          user.telegramId,
-          tgPrize.telegramGiftId,
-          userId,
+        // Сохраняем ожидающий выбор пользователя в Redis (TTL 24ч)
+        await this.redisService.set(
+          `pending-tg-gift:${userId}`,
+          JSON.stringify({
+            telegramGiftId: tgPrize.telegramGiftId,
+            telegramUserId: user.telegramId,
+            starCount: tgPrize.starCount,
+            name: tgPrize.name,
+            image: tgPrize.image ?? '',
+          }),
+          86400,
         );
 
         return {

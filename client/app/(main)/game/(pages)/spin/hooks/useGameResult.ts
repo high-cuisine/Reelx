@@ -190,6 +190,7 @@ export const useGameResult = () => {
             rolls: result.rolls,
             totalPrice: result.totalPrice,
             giftId: giftId ?? undefined,
+            isTelegramGift: result.selectedItem.type === 'telegram-gift',
         });
 
         giftIdRef.current = null;

@@ -91,6 +91,17 @@
     }
 }
 
+.segmentMediaTelegramGift {
+    width: calc(18vw * 2.5);
+    height: calc(18vw * 2.5);
+    overflow: visible;
+
+    @media (max-width: 700px) and (min-width: 400px) {
+        width: calc(13vw * 2.5);
+        height: calc(13vw * 2.5);
+    }
+}
+
 /* Эмодзи Telegram-подарка — тот же контейнер, что у NFT (segmentMedia), чуть меньше глиф */
 .segmentEmojiGift {
     font-size: clamp(18px, 5vw, 36px);
@@ -129,6 +140,15 @@
     @media (max-width: 700px) and (min-width: 400px) {
         width: 13vw;
         height: 13vw;
+    }
+}
+
+.segmentImageTelegramGift {
+    width: calc(18vw * 2.5);
+    height: calc(18vw * 2.5);
+    @media (max-width: 700px) and (min-width: 400px) {
+        width: calc(13vw * 2.5);
+        height: calc(13vw * 2.5);
     }
 }
 

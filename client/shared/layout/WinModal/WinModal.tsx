@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useTonWallet, TonConnectUIContext } from '@tonconnect/ui-react';
 import { eventBus, MODAL_EVENTS } from '@/features/eventBus/eventBus';
 import { nftWithdrawService } from '@/features/nft/nft';
+import { giftsService } from '@/entites/gifts/api/api';
 import { updateUserBalance } from '@/features/user/user';
 import { Button } from '@/shared/ui/Button/Button';
 import { GiftImageOrLottie } from '@/shared/ui/GiftImageOrLottie/GiftImageOrLottie';
@@ -19,6 +20,7 @@ interface WinData {
     rolls: number;
     totalPrice: number;
     giftId?: string;
+    isTelegramGift?: boolean;
 }
 
 const TonIcon = () => (
@@ -36,6 +38,8 @@ const WinModal = () => {
     const [winData, setWinData] = useState<WinData | null>(null);
     const [isSelling, setIsSelling] = useState(false);
     const [sellError, setSellError] = useState<string | null>(null);
+    const [isClaiming, setIsClaiming] = useState(false);
+    const [claimError, setClaimError] = useState<string | null>(null);
 
     const isWalletConnected = !!wallet;
     const walletDisplayAddress = wallet?.account?.address
@@ -75,7 +79,25 @@ const WinModal = () => {
     const handleClose = () => {
         setIsOpen(false);
         setSellError(null);
+        setClaimError(null);
         setTimeout(() => setWinData(null), 300);
+    };
+
+    const handleClaimTelegramGift = async (action: 'gift' | 'currency') => {
+        setIsClaiming(true);
+        setClaimError(null);
+        try {
+            const res = await giftsService.claimTelegramGift(action);
+            if (action === 'currency' && res.credited) {
+                updateUserBalance(res.credited, 'stars');
+            }
+            handleClose();
+        } catch (error: any) {
+            const message = error.response?.data?.message ?? error.message ?? 'Ошибка при получении';
+            setClaimError(message);
+        } finally {
+            setIsClaiming(false);
+        }
     };
 
     const handleSell = async () => {
@@ -112,9 +134,10 @@ const WinModal = () => {
 
     if (!winData) return null;
 
-    const { selectedItem } = winData;
+    const { selectedItem, isTelegramGift } = winData;
     const isNoLoot = selectedItem.name === 'NO LOOT';
     const sellPrice = selectedItem.price ? selectedItem.price.toFixed(2) : '0.00';
+    const starsPrice = selectedItem.price ? Math.round(selectedItem.price) : 0;
 
     return (
         <div className={`${cls.winModal} ${isOpen ? cls.open : ''}`}>
@@ -155,7 +178,35 @@ const WinModal = () => {
             </div>
 
             <div className={cls.actions}>
-                {!isNoLoot ? (
+                {isNoLoot ? (
+                    <button className={cls.sellButton} onClick={handleClose}>
+                        Попробовать снова
+                    </button>
+                ) : isTelegramGift ? (
+                    <>
+                        <button
+                            className={cls.sellButton}
+                            onClick={() => handleClaimTelegramGift('gift')}
+                            disabled={isClaiming}
+                        >
+                            <span>{isClaiming ? 'Отправляем...' : 'Получить подарок в Telegram'}</span>
+                        </button>
+
+                        <button
+                            className={cls.claimButton}
+                            onClick={() => handleClaimTelegramGift('currency')}
+                            disabled={isClaiming}
+                        >
+                            <span>Получить {starsPrice} ⭐ Stars</span>
+                        </button>
+
+                        {claimError && <div className={cls.errorMessage}>{claimError}</div>}
+
+                        <button type="button" className={cls.backButton} onClick={handleClose}>
+                            Назад
+                        </button>
+                    </>
+                ) : (
                     <>
                         <button
                             className={cls.sellButton}
@@ -200,10 +251,6 @@ const WinModal = () => {
                             </div>
                         )}
                     </>
-                ) : (
-                    <button className={cls.sellButton} onClick={handleClose}>
-                        Попробовать снова
-                    </button>
                 )}
             </div>
         </div>

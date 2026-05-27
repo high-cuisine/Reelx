@@ -11,6 +11,10 @@ class WithdrawGiftsDto {
   giftIds: string[];
 }
 
+class ClaimTelegramGiftDto {
+  action: 'gift' | 'currency';
+}
+
 @Controller('gifts')
 export class GiftsController {
   constructor(
@@ -36,6 +40,15 @@ export class GiftsController {
   @UseGuards(JwtAuthGuard)
   async startGame(@CurrentUser() userId: string) {
     return this.giftsService.startGame(userId);
+  }
+
+  @Post('claim-telegram-gift')
+  @UseGuards(JwtAuthGuard)
+  async claimTelegramGift(
+    @CurrentUser() userId: string,
+    @Body() body: ClaimTelegramGiftDto,
+  ) {
+    return this.giftsService.claimTelegramGift(userId, body.action);
   }
 
   @Post('withdraw')
