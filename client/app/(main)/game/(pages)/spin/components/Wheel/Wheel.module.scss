@@ -92,13 +92,13 @@
 }
 
 .segmentMediaTelegramGift {
-    width: calc(18vw * 2.5);
-    height: calc(18vw * 2.5);
+    width: calc(18vw * 3.75);
+    height: calc(18vw * 3.75);
     overflow: visible;
 
     @media (max-width: 700px) and (min-width: 400px) {
-        width: calc(13vw * 2.5);
-        height: calc(13vw * 2.5);
+        width: calc(13vw * 3.75);
+        height: calc(13vw * 3.75);
     }
 }
 
@@ -144,11 +144,11 @@
 }
 
 .segmentImageTelegramGift {
-    width: calc(18vw * 2.5);
-    height: calc(18vw * 2.5);
+    width: calc(18vw * 3.75);
+    height: calc(18vw * 3.75);
     @media (max-width: 700px) and (min-width: 400px) {
-        width: calc(13vw * 2.5);
-        height: calc(13vw * 2.5);
+        width: calc(13vw * 3.75);
+        height: calc(13vw * 3.75);
     }
 }
 
