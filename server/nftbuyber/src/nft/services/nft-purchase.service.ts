@@ -239,22 +239,25 @@ export class NftPurchaseService implements OnModuleInit {
       try {
         return await operation();
       } catch (error: any) {
-        const isRateLimit = 
-          error?.status === 429 || 
-          error?.response?.status === 429 ||
+        const status = error?.response?.status ?? error?.status;
+        const isRateLimit =
+          status === 429 ||
           error?.message?.includes('429') ||
           error?.message?.includes('rate limit') ||
           error?.message?.includes('Too Many Requests');
 
-        if (isRateLimit && attempt < retries) {
-          const delay = this.retryDelay * Math.pow(2, attempt); // Экспоненциальная задержка
+        const isRetryable = isRateLimit || this.isRetryableTonError(error);
+
+        if (isRetryable && attempt < retries) {
+          const delay = this.retryDelay * Math.pow(2, attempt);
+          const reason = isRateLimit ? '429 rate limit' : `HTTP ${status ?? error?.code ?? error?.message}`;
           this.logger.warn(
-            `${operationName} rate limited (429). Retry ${attempt + 1}/${retries} after ${delay}ms...`
+            `${operationName} failed (${reason}). Retry ${attempt + 1}/${retries} after ${delay}ms...`
           );
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
-        
+
         throw error;
       }
     }
