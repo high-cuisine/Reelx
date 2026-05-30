@@ -54,6 +54,8 @@ services:
       REDIS_PORT: 6379
       # Внутри сети compose localhost — это сам server; nftbuyber слушает 3001 (см. nftbuyber/src/main.ts + ports в сервисе nftbuyber)
       NFT_BUYER_URL: ${NFT_BUYER_URL:-http://nftbuyber:3001}
+      ADMIN_LOGIN: ${ADMIN_LOGIN}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
     ports:
       - '${PORT}:${PORT}'
       - '${ADMIN_PORT:-3333}:${ADMIN_PORT:-3333}'

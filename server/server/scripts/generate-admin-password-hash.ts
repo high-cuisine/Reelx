@@ -27,11 +27,11 @@ async function generateHash() {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(hash);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-    console.log('Добавьте в .env файл (ВАЖНО: используйте одинарные кавычки!):');
+    console.log('Добавьте в server/.env для Docker Compose (каждый $ → $$):');
     console.log(`ADMIN_LOGIN=your_admin_login`);
-    console.log(`ADMIN_PASSWORD_HASH='${hash}'\n`);
-    console.log('Или экранируйте $ символы:');
-    console.log(`ADMIN_PASSWORD_HASH=\\$${hash.substring(1)}\n`);
+    console.log(`ADMIN_PASSWORD_HASH=${hash.replace(/\$/g, '$$')}\n`);
+    console.log('Для локального npm run start:dev (без Docker) — один $:');
+    console.log(`ADMIN_PASSWORD_HASH=${hash}\n`);
   } catch (error) {
     console.error('Ошибка при генерации хэша:', error);
     process.exit(1);

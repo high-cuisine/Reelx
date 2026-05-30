@@ -152,12 +152,14 @@ export class GiftsService {
     // Правила формирования слотов:
     // 1) amount <= 5: solo
     //    — минимальная ставка: Telegram + 1–2 самых дешёвых NFT (несколько секторов на каждый)
-    //    — иначе: до 7 NFT + Telegram из доли no-loot + no-loot
+    //    — иначе: до 7 NFT (при 5 TON — до 6) + Telegram из доли no-loot + no-loot
     // 2) 10 <= amount < 20: 9 слотов подарков без no-loot
     // 3) остальное — старая логика (getCountGifts)
 
     if (amount <= 5) {
       const totalSlots = 20;
+      const isFiveTonStake =
+        amountTon >= 5 - Number.EPSILON && amountTon <= 5 + Number.EPSILON;
 
       // Ставка ровно 1 TON: только Telegram-подарки (медведь, сердце) + no-loot, без NFT
       if (amountTon <= 1 + Number.EPSILON) {
@@ -292,7 +294,7 @@ export class GiftsService {
         return slots;
       }
 
-      const maxGifts = Math.min(7, sortedRaw.length);
+      const maxGifts = Math.min(isFiveTonStake ? 6 : 7, sortedRaw.length);
       originalGifts = sortedRaw.slice(0, maxGifts);
 
       if (onOriginalData) {
