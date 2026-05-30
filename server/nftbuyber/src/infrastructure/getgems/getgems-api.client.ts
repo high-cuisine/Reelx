@@ -20,7 +20,7 @@ export class GetGemsApiClient {
       baseURL: 'https://api.getgems.io/public-api/v1',
       headers: {
         'accept': 'application/json',
-        'Authorization': this.apiKey,
+        'Authorization': `Bearer ${this.apiKey}`,
       },
       timeout: 30000,
     });
