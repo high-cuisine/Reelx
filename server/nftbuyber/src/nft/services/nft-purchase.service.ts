@@ -4,6 +4,8 @@ import { TonClient, WalletContractV4, Address } from '@ton/ton';
 import { internal, beginCell, toNano, Cell } from '@ton/core';
 import { mnemonicToWalletKey } from 'ton-crypto';
 import { getHttpEndpoint } from '@orbs-network/ton-access';
+import * as bip39 from 'bip39';
+import { derivePath, getPublicKey } from 'ed25519-hd-key';
 import axios from 'axios';
 import { BuyNftResponse } from '../dto/buy-nft.dto';
 import { TransferNftResponse } from '../dto/transfer-nft.dto';
@@ -50,8 +52,8 @@ export class NftPurchaseService implements OnModuleInit {
       const mnemonicString = this.configService.get<string>('WALLET_MNEMONIC');
       if (mnemonicString) {
         this.mnemonic = mnemonicString.split(' ').filter(word => word.trim().length > 0);
-        if (this.mnemonic.length !== 12) {
-          this.logger.error(`Invalid mnemonic: expected 12 words, got ${this.mnemonic.length}`);
+        if (this.mnemonic.length !== 12 && this.mnemonic.length !== 24) {
+          this.logger.error(`Invalid mnemonic: expected 12 or 24 words, got ${this.mnemonic.length}`);
           this.mnemonic = [];
         } else {
           this.logger.debug('Wallet mnemonic loaded successfully');
@@ -317,7 +319,7 @@ export class NftPurchaseService implements OnModuleInit {
       }
 
       // Проверяем наличие mnemonic
-      if (!this.mnemonic || this.mnemonic.length !== 12) {
+      if (!this.mnemonic || this.mnemonic.length !== 12 && this.mnemonic.length !== 24) {
         return {
           success: false,
           error: 'Wallet mnemonic not configured. Set WALLET_MNEMONIC in environment variables.',
@@ -358,7 +360,7 @@ export class NftPurchaseService implements OnModuleInit {
       }
 
       // Создаем кошелек
-      const keyPair = await mnemonicToWalletKey(this.mnemonic);
+      const keyPair = await this.getWalletKeyPair();
       const wallet = WalletContractV4.create({
         workchain: 0,
         publicKey: keyPair.publicKey,
@@ -442,7 +444,7 @@ export class NftPurchaseService implements OnModuleInit {
         };
       }
   
-      if (!this.mnemonic || this.mnemonic.length !== 12) {
+      if (!this.mnemonic || this.mnemonic.length !== 12 && this.mnemonic.length !== 24) {
         return { success: false, error: 'Wallet mnemonic not configured' };
       }
   
@@ -451,7 +453,7 @@ export class NftPurchaseService implements OnModuleInit {
   
       this.logger.log(`NFT12: ${nftAddress}`);
       // --- wallet ---
-      const keyPair = await mnemonicToWalletKey(this.mnemonic);
+      const keyPair = await this.getWalletKeyPair();
       const wallet = WalletContractV4.create({
         workchain: 0,
         publicKey: keyPair.publicKey,
@@ -539,6 +541,20 @@ export class NftPurchaseService implements OnModuleInit {
     }
   }
   
+  /** Derives wallet keypair: BIP44 (Trust Wallet, 12 words) or TON-native (24 words). */
+  private async getWalletKeyPair(): Promise<{ publicKey: Buffer; secretKey: Buffer }> {
+    if (this.mnemonic.length === 12) {
+      const seed = await bip39.mnemonicToSeed(this.mnemonic.join(' '));
+      const { key } = derivePath("m/44'/607'/0'", seed.toString('hex'));
+      const pubKey = getPublicKey(key, false);
+      return {
+        publicKey: Buffer.from(pubKey),
+        secretKey: Buffer.concat([Buffer.from(key), Buffer.from(pubKey)]),
+      };
+    }
+    return mnemonicToWalletKey(this.mnemonic);
+  }
+
   /** Для синка: можно ли проверять тип контракта (нужен инициализированный TON client). */
   isClientInitialized(): boolean {
     return this.isInitialized && this.client !== null;
