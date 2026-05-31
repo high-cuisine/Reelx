@@ -171,16 +171,32 @@ export class GiftsService {
           return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
         };
 
-        // Запрашиваем ВСЕ синхронизированные NFT без фильтра по цене — берём 4 самых дешёвых
+        // Коллекции исключённые из пула 1 TON (дорогие/престижные)
+        const EXCLUDED_COLLECTIONS = [
+          "durov's cap",
+          'durov cap',
+          'durov',
+          'dogs',
+          'notcoin',
+          'hamster',
+          'major',
+        ];
+        const isExcluded = (nft: any): boolean => {
+          const col = (nft?.collection?.name ?? nft?.name ?? '').toLowerCase();
+          return EXCLUDED_COLLECTIONS.some((ex) => col.includes(ex));
+        };
+
+        // Запрашиваем ВСЕ синхронизированные NFT без фильтра по цене — берём 5 самых дешёвых
         let allNftsForCheap: any[] = [];
         try {
           const cheapResp = await this.axiosInstance.post(url, {});
           allNftsForCheap = cheapResp.data?.gifts ?? [];
         } catch {
-          allNftsForCheap = allRawGifts; // fallback на уже загруженные
+          allNftsForCheap = allRawGifts;
         }
 
         const cheapestNfts = [...allNftsForCheap]
+          .filter((nft) => !isExcluded(nft))
           .sort((a, b) => nftNanoPrice(a) - nftNanoPrice(b))
           .slice(0, 5);
 
