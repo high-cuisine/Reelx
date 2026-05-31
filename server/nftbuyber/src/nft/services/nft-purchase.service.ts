@@ -517,7 +517,7 @@ export class NftPurchaseService implements OnModuleInit {
   
       let seqno: number;
       try {
-        seqno = await walletContract.getSeqno();
+        seqno = await this.retryOnRateLimit(() => walletContract.getSeqno(), 'getSeqno');
       } catch {
         seqno = 0;
         this.logger.warn('Wallet uninitialized, using seqno=0 (stateInit will be included)');

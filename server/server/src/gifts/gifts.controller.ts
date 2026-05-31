@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { IsIn, IsArray, IsString } from 'class-validator';
 import { GiftsService } from './gifts.service';
 import { GetGiftsByPriceDto } from './dto/get-gifts-by-price.dto';
 import { WithdrawNftDto } from './dto/withdraw-nft.dto';
@@ -8,10 +9,13 @@ import { WithdrawGiftsService } from './withdraw-gifts.service';
 import { BuyNFTDto } from './dto/buy-nft.dto';
 
 class WithdrawGiftsDto {
+  @IsArray()
+  @IsString({ each: true })
   giftIds: string[];
 }
 
 class ClaimTelegramGiftDto {
+  @IsIn(['gift', 'currency'])
   action: 'gift' | 'currency';
 }
 

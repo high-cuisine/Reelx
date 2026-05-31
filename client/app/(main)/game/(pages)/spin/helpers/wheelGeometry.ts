@@ -47,34 +47,12 @@ export function buildWheelGroups(items: GiftItem[]): WheelGroup[] {
     return groups;
 }
 
-/** Визуальные веса групп (±20% для gift), сумма = totalItemsCount — как в Wheel.tsx. */
+/** Визуальные веса групп — пропорционально вероятности (count), без искусственных отклонений. */
 export function computeGroupVisualSizes(
     groups: WheelGroup[],
     totalItemsCount: number,
 ): number[] {
-    if (totalItemsCount <= 0) {
-        return groups.map((g) => g.count);
-    }
-
-    const baseTotal = groups.reduce((sum, group) => sum + group.count, 0) || totalItemsCount;
-    const giftGroupCount = groups.filter(
-        (g) => g.item.type === 'gift' || g.item.type === 'telegram-gift',
-    ).length;
-
-    let giftIndex = 0;
-    const rawWeights = groups.map((group) => {
-        if (group.item.type === 'gift' || group.item.type === 'telegram-gift') {
-            const t = giftGroupCount > 1 ? giftIndex / (giftGroupCount - 1) : 0.5;
-            const multiplier = 0.8 + 0.4 * t;
-            giftIndex += 1;
-            return group.count * multiplier;
-        }
-        return group.count;
-    });
-
-    const rawTotal = rawWeights.reduce((sum, w) => sum + w, 0);
-    const scale = rawTotal > 0 ? baseTotal / rawTotal : 1;
-    return rawWeights.map((w) => w * scale);
+    return groups.map((g) => g.count);
 }
 
 /** Центр сектора группы в градусах (0° = сверху), как getSegmentCenterAngle в Wheel. */
