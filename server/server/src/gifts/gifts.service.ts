@@ -182,7 +182,7 @@ export class GiftsService {
 
         const cheapestNfts = [...allNftsForCheap]
           .sort((a, b) => nftNanoPrice(a) - nftNanoPrice(b))
-          .slice(0, 4);
+          .slice(0, 5);
 
         if (onOriginalData) onOriginalData(cheapestNfts);
 

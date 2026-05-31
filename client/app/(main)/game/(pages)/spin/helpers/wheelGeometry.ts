@@ -47,12 +47,14 @@ export function buildWheelGroups(items: GiftItem[]): WheelGroup[] {
     return groups;
 }
 
-/** Визуальные веса групп — пропорционально вероятности (count), без искусственных отклонений. */
+/** Визуальные веса групп — все сектора одинаковые по размеру. */
 export function computeGroupVisualSizes(
     groups: WheelGroup[],
     totalItemsCount: number,
 ): number[] {
-    return groups.map((g) => g.count);
+    if (groups.length === 0) return [];
+    const equalSize = totalItemsCount / groups.length;
+    return groups.map(() => equalSize);
 }
 
 /** Центр сектора группы в градусах (0° = сверху), как getSegmentCenterAngle в Wheel. */
