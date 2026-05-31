@@ -161,23 +161,45 @@ export class GiftsService {
       const isFiveTonStake =
         amountTon >= 5 - Number.EPSILON && amountTon <= 5 + Number.EPSILON;
 
-      // Ставка ровно 1 TON: только Telegram-подарки (медведь, сердце) + no-loot, без NFT
+      // Ставка ровно 1 TON: Telegram-подарки + 4 NFT с малым шансом (1 слот каждый) + no-loot
       if (amountTon <= 1 + Number.EPSILON) {
-        if (onOriginalData) onOriginalData([]);
-        const TG_SLOTS = 14; // 70 % — медведь, сердце и т.д.
+        const nftNanoPrice = (g: any) => {
+          const p = g?.price;
+          if (p == null) return Number.POSITIVE_INFINITY;
+          const n = typeof p === 'string' ? Number(p) : Number(p);
+          return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
+        };
+        const sortedForOneTon = [...allRawGifts].sort((a, b) => nftNanoPrice(a) - nftNanoPrice(b));
+        const cheapestNfts = sortedForOneTon.slice(0, 4);
+
+        if (onOriginalData) onOriginalData(cheapestNfts);
+
+        const NFT_SLOTS = cheapestNfts.length; // 1 слот на каждый NFT → малый шанс
+        const TG_SLOTS = 14 - NFT_SLOTS;       // уступаем место NFT
         const telegramSlices =
           await this.telegramStarGiftsService.buildCheapestWheelSlices(TG_SLOTS);
-        const slots: any[] = telegramSlices.map((slice) => ({
-          type: 'telegram-gift',
-          telegramGiftId: slice.telegramGiftId,
-          starCount: slice.starCount,
-          name: slice.name,
-          image: slice.image ?? '',
-          price: slice.starCount,
-        }));
+
+        const slots: any[] = [];
+
+        for (const nft of cheapestNfts) {
+          slots.push(formatGiftItem(nft, 'gift'));
+        }
+
+        for (const slice of telegramSlices) {
+          slots.push({
+            type: 'telegram-gift',
+            telegramGiftId: slice.telegramGiftId,
+            starCount: slice.starCount,
+            name: slice.name,
+            image: slice.image ?? '',
+            price: slice.starCount,
+          });
+        }
+
         while (slots.length < totalSlots) {
           slots.push({ type: 'no-loot', price: 0, image: '', name: 'No loot' });
         }
+
         return slots;
       }
 
