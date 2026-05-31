@@ -161,7 +161,7 @@ export class GiftsService {
       const isFiveTonStake =
         amountTon >= 5 - Number.EPSILON && amountTon <= 5 + Number.EPSILON;
 
-      // Ставка ровно 1 TON: Telegram-подарки + 4 NFT с малым шансом (1 слот каждый) + no-loot
+      // Ставка ровно 1 TON: Telegram-подарки + 4 самых дешёвых NFT (1 слот каждый) + no-loot
       // Используем amount (оригинальная ставка), а не amountTon (clamped к minPriceTon)
       if (amount <= 1 + Number.EPSILON) {
         const nftNanoPrice = (g: any) => {
@@ -170,13 +170,23 @@ export class GiftsService {
           const n = typeof p === 'string' ? Number(p) : Number(p);
           return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
         };
-        // allRawGifts уже содержит NFT по цене minPriceTon — самые дешёвые на рынке
-        const sortedForOneTon = [...allRawGifts].sort((a, b) => nftNanoPrice(a) - nftNanoPrice(b));
-        const cheapestNfts = sortedForOneTon.slice(0, 4);
+
+        // Запрашиваем ВСЕ синхронизированные NFT без фильтра по цене — берём 4 самых дешёвых
+        let allNftsForCheap: any[] = [];
+        try {
+          const cheapResp = await this.axiosInstance.post(url, {});
+          allNftsForCheap = cheapResp.data?.gifts ?? [];
+        } catch {
+          allNftsForCheap = allRawGifts; // fallback на уже загруженные
+        }
+
+        const cheapestNfts = [...allNftsForCheap]
+          .sort((a, b) => nftNanoPrice(a) - nftNanoPrice(b))
+          .slice(0, 4);
 
         if (onOriginalData) onOriginalData(cheapestNfts);
 
-        const NFT_SLOTS = cheapestNfts.length; // 1 слот на каждый NFT → малый шанс
+        const NFT_SLOTS = cheapestNfts.length; // 1 слот на каждый NFT → малый шанс ~5% каждый
         const TG_SLOTS = 14 - NFT_SLOTS;       // уступаем место NFT
         const telegramSlices =
           await this.telegramStarGiftsService.buildCheapestWheelSlices(TG_SLOTS);
