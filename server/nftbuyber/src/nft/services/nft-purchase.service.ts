@@ -368,11 +368,14 @@ export class NftPurchaseService implements OnModuleInit {
 
       const walletContract = this.client.open(wallet);
       
-      // Получаем seqno с retry логикой
-      const seqno = await this.retryOnRateLimit(
-        () => walletContract.getSeqno(),
-        'getSeqno'
-      );
+      // Получаем seqno (0 если кошелёк ещё не задеплоен — sendTransfer добавит stateInit)
+      let seqno: number;
+      try {
+        seqno = await this.retryOnRateLimit(() => walletContract.getSeqno(), 'getSeqno');
+      } catch {
+        seqno = 0;
+        this.logger.warn('Wallet uninitialized, using seqno=0 (stateInit will be included)');
+      }
 
       this.logger.log(`Buying NFT on-chain…`);
       this.logger.log(`Sale: ${saleAddress}`);
@@ -512,8 +515,14 @@ export class NftPurchaseService implements OnModuleInit {
         this.logger.warn(`⚠️ Could not get NFT owner via API`);
       }
   
-      const seqno = await walletContract.getSeqno();
-  
+      let seqno: number;
+      try {
+        seqno = await walletContract.getSeqno();
+      } catch {
+        seqno = 0;
+        this.logger.warn('Wallet uninitialized, using seqno=0 (stateInit will be included)');
+      }
+
       await walletContract.sendTransfer({
         seqno,
         secretKey: keyPair.secretKey,
