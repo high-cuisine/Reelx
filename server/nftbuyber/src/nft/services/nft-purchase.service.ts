@@ -537,18 +537,23 @@ export class NftPurchaseService implements OnModuleInit {
         this.logger.warn('Wallet uninitialized, using seqno=0 (stateInit will be included)');
       }
 
-      await walletContract.sendTransfer({
-        seqno,
-        secretKey: keyPair.secretKey,
-        messages: [
-          internal({
-            to: nftAddr,
-            value: gasAmount,
-            bounce: false, // 🔥 КРИТИЧЕСКИ ВАЖНО
-            body: transferPayload,
-          }),
-        ],
-      });
+      this.logger.log(`Transfer seqno: ${seqno}`);
+
+      await this.retryOnRateLimit(
+        () => walletContract.sendTransfer({
+          seqno,
+          secretKey: keyPair.secretKey,
+          messages: [
+            internal({
+              to: nftAddr,
+              value: gasAmount,
+              bounce: false,
+              body: transferPayload,
+            }),
+          ],
+        }),
+        'sendTransfer (NFT)',
+      );
   
       return {
         success: true,
@@ -583,11 +588,11 @@ export class NftPurchaseService implements OnModuleInit {
     return this.isInitialized && this.client !== null;
   }
 
-  /** Retryable TON API errors (502/503, timeouts, connection resets). */
+  /** Retryable TON API errors (500/502/503, timeouts, connection resets). */
   private isRetryableTonError(e: any): boolean {
     const status = e?.response?.status ?? e?.status;
     const code = e?.code ?? e?.response?.data?.error;
-    if (status === 502 || status === 503) return true;
+    if (status === 500 || status === 502 || status === 503) return true;
     if (code === 'ECONNRESET' || code === 'ETIMEDOUT' || code === 'ECONNREFUSED') return true;
     return false;
   }
