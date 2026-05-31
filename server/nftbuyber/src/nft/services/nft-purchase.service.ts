@@ -372,7 +372,14 @@ export class NftPurchaseService implements OnModuleInit {
       let seqno: number;
       try {
         seqno = await this.retryOnRateLimit(() => walletContract.getSeqno(), 'getSeqno');
-      } catch {
+      } catch (e: any) {
+        const errMsg = String(e?.message ?? '');
+        const isUninitialized =
+          errMsg.includes('exit_code') ||
+          errMsg.includes('uninitialized') ||
+          errMsg.includes('no code') ||
+          errMsg.includes('contract not found');
+        if (!isUninitialized) throw e;
         seqno = 0;
         this.logger.warn('Wallet uninitialized, using seqno=0 (stateInit will be included)');
       }
@@ -518,7 +525,14 @@ export class NftPurchaseService implements OnModuleInit {
       let seqno: number;
       try {
         seqno = await this.retryOnRateLimit(() => walletContract.getSeqno(), 'getSeqno');
-      } catch {
+      } catch (e: any) {
+        const errMsg = String(e?.message ?? '');
+        const isUninitialized =
+          errMsg.includes('exit_code') ||
+          errMsg.includes('uninitialized') ||
+          errMsg.includes('no code') ||
+          errMsg.includes('contract not found');
+        if (!isUninitialized) throw e;
         seqno = 0;
         this.logger.warn('Wallet uninitialized, using seqno=0 (stateInit will be included)');
       }

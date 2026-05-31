@@ -162,13 +162,15 @@ export class GiftsService {
         amountTon >= 5 - Number.EPSILON && amountTon <= 5 + Number.EPSILON;
 
       // Ставка ровно 1 TON: Telegram-подарки + 4 NFT с малым шансом (1 слот каждый) + no-loot
-      if (amountTon <= 1 + Number.EPSILON) {
+      // Используем amount (оригинальная ставка), а не amountTon (clamped к minPriceTon)
+      if (amount <= 1 + Number.EPSILON) {
         const nftNanoPrice = (g: any) => {
           const p = g?.price;
           if (p == null) return Number.POSITIVE_INFINITY;
           const n = typeof p === 'string' ? Number(p) : Number(p);
           return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
         };
+        // allRawGifts уже содержит NFT по цене minPriceTon — самые дешёвые на рынке
         const sortedForOneTon = [...allRawGifts].sort((a, b) => nftNanoPrice(a) - nftNanoPrice(b));
         const cheapestNfts = sortedForOneTon.slice(0, 4);
 
