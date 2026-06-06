@@ -4,9 +4,11 @@ import cls from './Bets.module.scss';
 import { Button } from '@/shared/ui/Button/Button';
 import { eventBus, MODAL_EVENTS } from '@/features/eventBus/eventBus';
 import type { CurrencyType } from '../../hooks/useCurrency';
+import { formatStakeAmount, isSameStake } from '../../constants/stakeTiers';
 
 interface WheelItem {
     name: string;
+    type?: string;
     price?: number;
     image?: string;
     lottie?: string;
@@ -34,7 +36,7 @@ const Bets: React.FC<BetsProps> = ({
     rolls,
     pricePerRoll,
     totalPrice,
-    minStake = 1,
+    minStake = 0.2,
     maxStake = Number.POSITIVE_INFINITY,
     giftCount,
     isSpinning,
@@ -78,6 +80,7 @@ const Bets: React.FC<BetsProps> = ({
         const seen = new Set<string>();
 
         for (const item of wheelItems) {
+            if (item.type === 'no-loot' || item.name === 'No loot') continue;
             // Дедупликация по имени
             if (seen.has(item.name)) continue;
             seen.add(item.name);
@@ -104,6 +107,11 @@ const Bets: React.FC<BetsProps> = ({
         }
     };
 
+    const stakeLabel = formatStakeAmount(totalPrice, currency);
+    const currencyLabel = currency === 'stars' ? 'STARS' : 'TON';
+    const isAtMinStake = isSameStake(totalPrice, minStake);
+    const isAtMaxStake = Number.isFinite(maxStake) && isSameStake(totalPrice, maxStake);
+
     return (
         <div className={cls.bets}>
             <div className={cls.topRow}>
@@ -122,12 +130,12 @@ const Bets: React.FC<BetsProps> = ({
                     <button 
                         className={cls.controlButton}
                         onClick={onDecreaseRolls}
-                        disabled={isSpinning || isAwaitingServer || totalPrice <= minStake}
+                        disabled={isSpinning || isAwaitingServer || isAtMinStake}
                     >
                         <span className={cls.minus}>−</span>
                     </button>
                     <div className={cls.rollInfo}>
-                        <span className={cls.rollText}>1 Roll за {totalPrice} {currency === 'stars' ? 'STARS' : 'TON'}</span>
+                        <span className={cls.rollText}>1 Roll за {stakeLabel} {currencyLabel}</span>
                     </div>
                     <button 
                         className={cls.controlButton}
@@ -135,7 +143,7 @@ const Bets: React.FC<BetsProps> = ({
                         disabled={
                             isSpinning ||
                             isAwaitingServer ||
-                            totalPrice >= maxStake
+                            isAtMaxStake
                         }
                     >
                         <span className={cls.plus}>+</span>

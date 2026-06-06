@@ -22,6 +22,13 @@ import { CurrancyService } from '../../libs/common/modules/Currancy/services/Cur
 import { GiftsRepository } from './repositorys/gifts.repository';
 import { WinsService } from '../wins/wins.service';
 import { TelegramStarGiftsService } from './services/telegram-star-gifts.service';
+import {
+  SOLO_WHEEL_TOTAL_SLOTS,
+  matchTelegramOnlyStakeTier,
+  isNftSoloStake,
+  MIN_PRODUCT_STAKE_TON,
+  MIN_PRODUCT_STAKE_STARS,
+} from './constants/stake-tiers.config';
 
 @Injectable()
 export class GiftsService {
@@ -84,26 +91,45 @@ export class GiftsService {
       const amount = Number(body?.amount || 0);
       const currencyType = body?.type; // 'ton' | 'stars' из запроса
 
-      const tonAmount = await this.getTonAmount(amount, currencyType as 'ton' | 'stars');
-
-      console.log('tonAmount', tonAmount);
+      const telegramOnlySlots = matchTelegramOnlyStakeTier(
+        amount,
+        currencyType as 'ton' | 'stars' | undefined,
+      );
 
       let originalData: any[] = [];
-      let result = await this.getGiftsPrices(tonAmount, 'ton', (data) => {
-        originalData = data;
-      });
+      let result: any[];
 
-      if (
-        tonAmount > this.moneyMixMinTon &&
-        Array.isArray(result) &&
-        result.length > 0
-      ) {
-        result = await this.mergeMoneyIntoGiftWheel(result, tonAmount);
+      if (telegramOnlySlots !== null) {
+        result = await this.buildTelegramOnlyWheel(telegramOnlySlots, (data) => {
+          originalData = data;
+        });
+      } else {
+        const tonAmount = await this.getTonAmount(amount, currencyType as 'ton' | 'stars');
+
+        console.log('tonAmount', tonAmount);
+
+        result = await this.getGiftsPrices(tonAmount, 'ton', (data) => {
+          originalData = data;
+        });
+
+        if (
+          tonAmount > this.moneyMixMinTon &&
+          Array.isArray(result) &&
+          result.length > 0
+        ) {
+          result = await this.mergeMoneyIntoGiftWheel(result, tonAmount);
+        }
+
+        this.logger.debug(
+          `Wheel for amount ${amount} ${currencyType || 'ton'} (ton≈${tonAmount}), moneyMix=${tonAmount > this.moneyMixMinTon}`,
+        );
       }
 
-      this.logger.debug(
-        `Wheel for amount ${amount} ${currencyType || 'ton'} (ton≈${tonAmount}), moneyMix=${tonAmount > this.moneyMixMinTon}`,
-      );
+      if (telegramOnlySlots !== null) {
+        this.logger.debug(
+          `Wheel for amount ${amount} ${currencyType || 'ton'} (telegram-only, ${telegramOnlySlots} TG slots)`,
+        );
+      }
 
       // Сохраняем барабан в Redis, если есть userId
       if (userId && result && Array.isArray(result)) {
@@ -128,6 +154,42 @@ export class GiftsService {
     }
   }
 
+  private async buildTelegramOnlyWheel(
+    telegramSlotCount: number,
+    onOriginalData?: (data: any[]) => void,
+  ): Promise<any[]> {
+    if (onOriginalData) {
+      onOriginalData([]);
+    }
+
+    const telegramSlices =
+      await this.telegramStarGiftsService.buildCheapestWheelSlices(telegramSlotCount);
+
+    const slots: any[] = [];
+
+    for (const slice of telegramSlices) {
+      slots.push({
+        type: 'telegram-gift',
+        telegramGiftId: slice.telegramGiftId,
+        starCount: slice.starCount,
+        name: slice.name,
+        image: slice.image ?? '',
+        price: slice.starCount,
+      });
+    }
+
+    while (slots.length < SOLO_WHEEL_TOTAL_SLOTS) {
+      slots.push({
+        type: 'no-loot',
+        price: 0,
+        image: '',
+        name: 'No loot',
+      });
+    }
+
+    return slots;
+  }
+
   private async getGiftsPrices(
     amount: number,
     currencyType?: 'ton' | 'stars',
@@ -136,6 +198,7 @@ export class GiftsService {
     const url = `${this.nftBuyerUrl}/api/nft/gifts/by-price`;
     const inputCurrency = currencyType === 'stars' ? 'stars' : 'ton';
     let amountTon = convertAmountToTon(amount, inputCurrency);
+
     const minPriceTon = await this.getMinPriceTon();
     amountTon = Math.max(amountTon, minPriceTon);
 
@@ -150,88 +213,15 @@ export class GiftsService {
     let originalGifts: any[] = [];
 
     // Правила формирования слотов:
-    // 1) amount <= 5: solo
-    //    — минимальная ставка: Telegram + 1–2 самых дешёвых NFT (несколько секторов на каждый)
-    //    — иначе: до 7 NFT (при 5 TON — до 6) + Telegram из доли no-loot + no-loot
-    // 2) 10 <= amount < 20: 9 слотов подарков без no-loot
-    // 3) остальное — старая логика (getCountGifts)
+    // 1) 0.2 / 0.5 / 1 TON: только Telegram-подарки + no-loot
+    // 2) 2 <= amount <= 5: solo — до 7 NFT (при 5 TON — до 6) + Telegram из доли no-loot + no-loot
+    // 3) 10 <= amount < 20: 9 слотов подарков без no-loot
+    // 4) остальное — старая логика (getCountGifts)
 
-    if (amount <= 5) {
-      const totalSlots = 20;
+    if (isNftSoloStake(amount)) {
+      const totalSlots = SOLO_WHEEL_TOTAL_SLOTS;
       const isFiveTonStake =
         amountTon >= 5 - Number.EPSILON && amountTon <= 5 + Number.EPSILON;
-
-      // Ставка ровно 1 TON: Telegram-подарки + 4 самых дешёвых NFT (1 слот каждый) + no-loot
-      // Используем amount (оригинальная ставка), а не amountTon (clamped к minPriceTon)
-      if (amount <= 1 + Number.EPSILON) {
-        const nftNanoPrice = (g: any) => {
-          const p = g?.price;
-          if (p == null) return Number.POSITIVE_INFINITY;
-          const n = typeof p === 'string' ? Number(p) : Number(p);
-          return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
-        };
-
-        // Коллекции исключённые из пула 1 TON (дорогие/престижные)
-        const EXCLUDED_COLLECTIONS = [
-          "durov's cap",
-          'durov cap',
-          'durov',
-          'dogs',
-          'notcoin',
-          'hamster',
-          'major',
-        ];
-        const isExcluded = (nft: any): boolean => {
-          const col = (nft?.collection?.name ?? nft?.name ?? '').toLowerCase();
-          return EXCLUDED_COLLECTIONS.some((ex) => col.includes(ex));
-        };
-
-        // Запрашиваем ВСЕ синхронизированные NFT без фильтра по цене — берём 5 самых дешёвых
-        let allNftsForCheap: any[] = [];
-        try {
-          const cheapResp = await this.axiosInstance.post(url, {});
-          allNftsForCheap = cheapResp.data?.gifts ?? [];
-        } catch {
-          allNftsForCheap = allRawGifts;
-        }
-
-        const cheapestNfts = [...allNftsForCheap]
-          .filter((nft) => !isExcluded(nft))
-          .sort((a, b) => nftNanoPrice(a) - nftNanoPrice(b))
-          .slice(0, 5);
-
-        if (onOriginalData) onOriginalData(cheapestNfts);
-
-        const NFT_SLOTS = cheapestNfts.length; // 1 слот на каждый NFT → малый шанс ~5% каждый
-        const TG_SLOTS = 14 - NFT_SLOTS;       // уступаем место NFT
-        const telegramSlices =
-          await this.telegramStarGiftsService.buildCheapestWheelSlices(TG_SLOTS);
-
-        const slots: any[] = [];
-
-        for (const nft of cheapestNfts) {
-          slots.push(formatGiftItem(nft, 'gift'));
-        }
-
-        for (const slice of telegramSlices) {
-          slots.push({
-            type: 'telegram-gift',
-            telegramGiftId: slice.telegramGiftId,
-            starCount: slice.starCount,
-            name: slice.name,
-            image: slice.image ?? '',
-            price: slice.starCount,
-          });
-        }
-
-        while (slots.length < totalSlots) {
-          slots.push({ type: 'no-loot', price: 0, image: '', name: 'No loot' });
-        }
-
-        return slots;
-      }
-
-      const isMinimalStake = amountTon <= minPriceTon + Number.EPSILON;
 
       const nanoPrice = (g: any) => {
         const p = g?.price;
@@ -242,107 +232,6 @@ export class GiftsService {
       const sortedRaw = [...allRawGifts].sort((a, b) => nanoPrice(a) - nanoPrice(b));
 
       const slots: any[] = [];
-
-      if (isMinimalStake) {
-        // Два самых дешёвых NFT (если есть в выдаче) + Telegram + немного no-loot
-        const MINIMAL_NO_LOOT_SHARE = 0.08;
-        const hasTwoCheapest = sortedRaw.length >= 2;
-        /** Секторов под NFT: один тип — 4; два типа — 5 (2+3) */
-        const cheapestNftSectorBudget = hasTwoCheapest ? 5 : 4;
-
-        originalGifts =
-          sortedRaw.length >= 2
-            ? [sortedRaw[0], sortedRaw[1]]
-            : sortedRaw.length > 0
-              ? [sortedRaw[0]]
-              : [];
-
-        if (onOriginalData) {
-          onOriginalData(originalGifts);
-        }
-
-        const formattedCheapest =
-          originalGifts.length > 0
-            ? originalGifts.map((g: any) =>
-                formatGiftItem(g, 'gift'),
-              )
-            : [];
-
-        const noLootSlotsCount = Math.max(1, Math.round(totalSlots * MINIMAL_NO_LOOT_SHARE));
-        const telegramCountForNftCase = Math.max(
-          0,
-          totalSlots - noLootSlotsCount - cheapestNftSectorBudget,
-        );
-
-        const telegramSlices =
-          formattedCheapest.length === 0
-            ? await this.telegramStarGiftsService.buildCheapestWheelSlices(
-                Math.max(0, totalSlots - noLootSlotsCount),
-              )
-            : await this.telegramStarGiftsService.buildCheapestWheelSlices(
-                telegramCountForNftCase,
-              );
-
-        if (formattedCheapest.length === 0) {
-          for (const slice of telegramSlices) {
-            slots.push({
-              type: 'telegram-gift',
-              telegramGiftId: slice.telegramGiftId,
-              starCount: slice.starCount,
-              name: slice.name,
-              image: slice.image ?? '',
-              price: slice.starCount,
-            });
-          }
-          while (slots.length < totalSlots) {
-            slots.push({
-              type: 'no-loot',
-              price: 0,
-              image: '',
-              name: 'No loot',
-            });
-          }
-          return slots;
-        }
-
-        if (hasTwoCheapest && formattedCheapest.length >= 2) {
-          const nftA = formattedCheapest[0];
-          const nftB = formattedCheapest[1];
-          for (let i = 0; i < 2; i++) {
-            slots.push(nftA);
-          }
-          for (let i = 0; i < 3; i++) {
-            slots.push(nftB);
-          }
-        } else {
-          const oneNft = formattedCheapest[0];
-          for (let i = 0; i < cheapestNftSectorBudget; i++) {
-            slots.push(oneNft);
-          }
-        }
-
-        for (const slice of telegramSlices) {
-          slots.push({
-            type: 'telegram-gift',
-            telegramGiftId: slice.telegramGiftId,
-            starCount: slice.starCount,
-            name: slice.name,
-            image: slice.image ?? '',
-            price: slice.starCount,
-          });
-        }
-
-        while (slots.length < totalSlots) {
-          slots.push({
-            type: 'no-loot',
-            price: 0,
-            image: '',
-            name: 'No loot',
-          });
-        }
-
-        return slots;
-      }
 
       const maxGifts = Math.min(isFiveTonStake ? 6 : 7, sortedRaw.length);
       originalGifts = sortedRaw.slice(0, maxGifts);
@@ -1060,8 +949,8 @@ export class GiftsService {
    */
   async getMinPrice(): Promise<{ ton: number; stars: number }> {
     return {
-      ton: 1,
-      stars: 90,
+      ton: MIN_PRODUCT_STAKE_TON,
+      stars: MIN_PRODUCT_STAKE_STARS,
     };
   }
 

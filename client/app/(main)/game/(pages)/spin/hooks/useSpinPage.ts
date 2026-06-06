@@ -6,7 +6,11 @@ import { useMinPrice } from './useMinPrice';
 import { useUserStore } from '@/entites/user/model/user';
 import { updateUserBalance } from '@/features/user/user';
 import { useEffect, useMemo, useState } from 'react';
-import { STAKE_TIERS_STARS, STAKE_TIERS_TON } from '../constants/stakeTiers';
+import {
+    STAKE_TIERS_STARS,
+    STAKE_TIERS_TON,
+    formatStakeAmount,
+} from '../constants/stakeTiers';
 
 export const useSpinPage = () => {
     const { currency, toggleCurrency } = useCurrency();
@@ -47,6 +51,7 @@ export const useSpinPage = () => {
     } = useSpinGame(
         {
             stakeTiers,
+            currency,
             giftCount: 1,
         },
         (result) => {
@@ -80,7 +85,7 @@ export const useSpinPage = () => {
             const currencyName = currency === 'stars' ? 'STARS' : 'TON';
             alert(
                 `Недостаточный баланс!\n` +
-                `Требуется: ${totalPrice} ${currencyName}\n` +
+                `Требуется: ${formatStakeAmount(totalPrice, currency)} ${currencyName}\n` +
                 `Доступно: ${userBalance} ${currencyName}`
             );
             return;

@@ -183,6 +183,7 @@ const Wheel = ({
                     const y = 50 + radius * Math.sin(radian - Math.PI / 2);
                     const item = group.item;
                     const segmentLabel = String(item.name ?? '');
+                    const isNoLoot = item.type === 'no-loot' || segmentLabel === 'No loot';
                     const segmentKey =
                         item.type === 'telegram-gift' && item.telegramGiftId
                             ? `tg-${item.telegramGiftId}-${item.price}-${index}`
@@ -200,7 +201,9 @@ const Wheel = ({
                                 transform: `translate(-50%, -50%) rotate(${-rotation}deg)`,
                             }}
                         >
-                            {item.type === 'money' ? (
+                            {isNoLoot ? (
+                                <span className={cls.segmentNoLoot} aria-hidden />
+                            ) : item.type === 'money' ? (
                                 <MoneyBadge item={item} />
                             ) : item.type === 'telegram-gift' ? (
                                 item.image || item.lottie ? (

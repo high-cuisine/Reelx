@@ -43,6 +43,9 @@ export const useGameResult = () => {
 
             // Находим индекс приза в колесе по имени и типу
             const targetIndex = wheelItems.findIndex((item) => {
+                if (result.name === 'No loot') {
+                    return item.type === 'no-loot' || item.name === 'No loot';
+                }
                 if (result.type === 'money') {
                     const currencyName = result.currencyType === 'ton' ? 'TON' : 'STARS';
                     // Для money сравниваем по типу и имени, а также по цене (amount)

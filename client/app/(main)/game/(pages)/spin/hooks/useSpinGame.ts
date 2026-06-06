@@ -1,9 +1,17 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { GiftItem } from '@/entites/gifts/interfaces/giftItem.interface';
+import {
+    findStakeTierIndex,
+    mapStakeToCurrency,
+    STAKE_TIERS_TON,
+    type StakeCurrency,
+} from '../constants/stakeTiers';
 
 interface SpinGameConfig {
     /** Уровни ставки по возрастанию (кнопки + / − переключают между ними) */
     stakeTiers?: number[];
+    /** Валюта ставки — для переключения TON ↔ Stars по индексу тира */
+    currency?: StakeCurrency;
     giftCount?: number;
     /** @deprecated используется minStake/step */
     defaultRolls?: number;
@@ -42,12 +50,13 @@ export const useSpinGame = (
 ): UseSpinGameReturn => {
     const {
         stakeTiers: stakeTiersProp,
+        currency = 'ton',
         giftCount: initialGiftCount = 5,
     } = config;
 
-    const stakeTiers = stakeTiersProp?.length ? stakeTiersProp : [1, 5, 10, 15, 20];
+    const stakeTiers = stakeTiersProp?.length ? stakeTiersProp : [...STAKE_TIERS_TON];
 
-    const tiers = stakeTiers;
+    const tiers = useMemo(() => stakeTiers, [stakeTiers]);
     const minStake = tiers[0];
     const maxStake = tiers[tiers.length - 1];
 
@@ -59,39 +68,41 @@ export const useSpinGame = (
     const totalPrice = stake;
     const rolls = 1;
     const pricePerRoll = stake;
-    const canPlay = !isSpinning && stake >= minStake;
+    const canPlay = !isSpinning && findStakeTierIndex(tiers, stake) >= 0;
+
+    const prevCurrencyRef = useRef<StakeCurrency>(currency);
 
     useEffect(() => {
-        const t = stakeTiers.length > 0 ? stakeTiers : [1];
-        const first = t[0];
+        if (prevCurrencyRef.current === currency) return;
+        setStake((prev: number) =>
+            mapStakeToCurrency(prev, prevCurrencyRef.current, currency),
+        );
+        prevCurrencyRef.current = currency;
+    }, [currency]);
+
+    useEffect(() => {
+        const t = stakeTiers.length > 0 ? stakeTiers : [...STAKE_TIERS_TON];
         setStake((prev: number) => {
-            if (t.includes(prev)) return prev;
-            let best = first;
-            for (const x of t) {
-                if (x <= prev) best = x;
-                else break;
-            }
-            return best;
+            if (findStakeTierIndex(t, prev) >= 0) return prev;
+            return t[0];
         });
     }, [stakeTiers]);
 
     const handleIncreaseRolls = useCallback(() => {
         if (isSpinning) return;
         setStake((prev: number) => {
-            const next = tiers.find((x) => x > prev);
-            return next ?? prev;
+            const idx = findStakeTierIndex(tiers, prev);
+            if (idx < 0 || idx >= tiers.length - 1) return prev;
+            return tiers[idx + 1];
         });
     }, [isSpinning, tiers]);
 
     const handleDecreaseRolls = useCallback(() => {
         if (isSpinning) return;
         setStake((prev: number) => {
-            let best = tiers[0];
-            for (const x of tiers) {
-                if (x < prev) best = x;
-                else break;
-            }
-            return best;
+            const idx = findStakeTierIndex(tiers, prev);
+            if (idx <= 0) return tiers[0];
+            return tiers[idx - 1];
         });
     }, [isSpinning, tiers]);
 

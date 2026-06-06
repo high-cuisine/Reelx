@@ -63,14 +63,26 @@ class GiftsService {
                         ? String(rawName)
                         : '';
 
-            const priceNumber =
-                typeof rawPrice === 'string'
-                    ? Number(rawPrice) / 1_000_000_000
-                    : Number(rawPrice ?? 0);
-
             const isMoney = rawType === 'ton' || rawType === 'star' || rawType === 'money';
+            const isTelegramGift = rawType === 'telegram-gift';
+            const isNoLoot = rawType === 'no-loot' || nameStr.trim() === 'No loot';
 
-            if (rawType === 'telegram-gift') {
+            const priceNumber = isTelegramGift || isNoLoot
+                ? Number(rawPrice ?? 0)
+                : typeof rawPrice === 'string'
+                  ? Number(rawPrice) / 1_000_000_000
+                  : Number(rawPrice ?? 0);
+
+            if (isNoLoot) {
+                return {
+                    type: 'no-loot',
+                    price: 0,
+                    image: rawImage || '',
+                    name: 'No loot',
+                };
+            }
+
+            if (isTelegramGift) {
                 return {
                     type: 'telegram-gift',
                     price: priceNumber,
