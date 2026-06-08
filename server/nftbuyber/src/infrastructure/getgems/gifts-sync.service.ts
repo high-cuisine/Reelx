@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TonApiClient } from '../tonapi/tonapi.client';
-import { GetGemsGraphQlClient } from './getgems-graphql.client';
+import { FragmentClient } from './fragment.client';
 import { RedisService } from '../redis/redis.service';
 import { GiftCollection, GiftCollectionCache } from './interfaces/getgems-response.interface';
 
@@ -16,7 +16,7 @@ export class GiftsSyncService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly tonApiClient: TonApiClient,
-    private readonly graphQlClient: GetGemsGraphQlClient,
+    private readonly fragmentClient: FragmentClient,
     private readonly redisService: RedisService,
     private readonly configService: ConfigService,
   ) {}
@@ -66,10 +66,10 @@ export class GiftsSyncService implements OnModuleInit, OnModuleDestroy {
     try {
       const startTime = Date.now();
 
-      // 1. Пробуем получить коллекции из GetGems GraphQL (без ключа)
-      let collections = await this.fetchViaGraphQL();
+      // 1. Пробуем получить коллекции через Fragment.com (без ключа)
+      let collections = await this.fetchViaFragment();
 
-      // 2. Если GraphQL не дал результатов — используем адреса из конфига, детали из TonApi
+      // 2. Если Fragment не дал результатов — используем адреса из конфига, детали из TonApi
       if (collections.length === 0) {
         collections = await this.fetchViaConfig();
       }
@@ -104,15 +104,15 @@ export class GiftsSyncService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Автодискавери через GetGems GraphQL (не требует API-ключа).
+   * Автодискавери через Fragment.com (Telegram-маркетплейс, без ключа).
    * Возвращает пустой массив при любой ошибке — следующий слой подхватит.
    */
-  private async fetchViaGraphQL(): Promise<GiftCollection[]> {
+  private async fetchViaFragment(): Promise<GiftCollection[]> {
     try {
-      this.logger.log('Trying GetGems GraphQL for collection discovery...');
-      return await this.graphQlClient.getAllGiftCollections();
+      this.logger.log('Trying Fragment.com for collection discovery...');
+      return await this.fragmentClient.getAllGiftCollections();
     } catch (error) {
-      this.logger.warn(`GetGems GraphQL unavailable: ${error.message}`);
+      this.logger.warn(`Fragment.com unavailable: ${error.message}`);
       return [];
     }
   }
