@@ -4,6 +4,9 @@ import axios, { AxiosInstance } from 'axios';
 import {
   TonApiNftDetailsResponse,
   TonApiAccountNftsResponse,
+  TonApiCollectionResponse,
+  TonApiCollectionItemsResponse,
+  TonApiNftItem,
 } from './tonapi-response.interface';
 
 @Injectable()
@@ -27,9 +30,7 @@ export class TonApiClient {
     }
   }
 
-  /**
-   * GET /v2/nfts/{address} — детали NFT, включая sale (маркетплейс).
-   */
+  /** GET /v2/nfts/{address} — детали NFT, включая sale. */
   async getNftByAddress(address: string): Promise<TonApiNftDetailsResponse | null> {
     try {
       const { data } = await this.api.get<TonApiNftDetailsResponse>(`/v2/nfts/${address}`);
@@ -43,9 +44,7 @@ export class TonApiClient {
     }
   }
 
-  /**
-   * GET /v2/accounts/{address}/nfts — список NFT предметов аккаунта.
-   */
+  /** GET /v2/accounts/{address}/nfts — список NFT аккаунта. */
   async getAccountNfts(accountAddress: string): Promise<TonApiNftDetailsResponse[]> {
     try {
       const { data } = await this.api.get<TonApiAccountNftsResponse>(
@@ -59,5 +58,69 @@ export class TonApiClient {
       );
       throw error;
     }
+  }
+
+  /** GET /v2/nfts/collections/{account_id} — данные о коллекции. */
+  async getCollectionInfo(collectionAddress: string): Promise<TonApiCollectionResponse | null> {
+    try {
+      const { data } = await this.api.get<TonApiCollectionResponse>(
+        `/v2/nfts/collections/${collectionAddress}`,
+      );
+      return data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return null;
+      }
+      this.logger.warn(`TonApi getCollectionInfo ${collectionAddress}: ${error.response?.status ?? error.message}`);
+      return null;
+    }
+  }
+
+  /** GET /v2/nfts/collections/{account_id}/items — страница предметов коллекции. */
+  async getCollectionItems(
+    collectionAddress: string,
+    offset = 0,
+    limit = 1000,
+  ): Promise<TonApiNftItem[]> {
+    try {
+      const { data } = await this.api.get<TonApiCollectionItemsResponse>(
+        `/v2/nfts/collections/${collectionAddress}/items`,
+        { params: { limit, offset } },
+      );
+      return data?.nft_items ?? [];
+    } catch (error: any) {
+      this.logger.warn(
+        `TonApi getCollectionItems ${collectionAddress}: ${error.response?.status ?? error.message}`,
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Перебирает все предметы коллекции и возвращает только те, у которых есть sale.address.
+   * Максимум 5000 предметов на коллекцию.
+   */
+  async getAllCollectionItemsOnSale(collectionAddress: string): Promise<TonApiNftItem[]> {
+    const onSale: TonApiNftItem[] = [];
+    const pageSize = 1000;
+    const maxItems = 5000;
+    let offset = 0;
+
+    while (offset < maxItems) {
+      const items = await this.getCollectionItems(collectionAddress, offset, pageSize);
+      if (items.length === 0) break;
+
+      for (const item of items) {
+        if (item.sale?.address) {
+          onSale.push(item);
+        }
+      }
+
+      if (items.length < pageSize) break;
+      offset += pageSize;
+      await new Promise((r) => setTimeout(r, 300));
+    }
+
+    return onSale;
   }
 }

@@ -1,13 +1,13 @@
 /**
- * Ответы TonApi.io (v2) для проверки sale и фильтрации nft_sale_getgems_v4.
+ * Ответы TonApi.io (v2).
  * Документация: https://docs.tonconsole.com/tonapi/rest-api/nft
  */
 
 export interface TonApiSale {
   address?: string;
-  marketplace?: string;
-  market?: string;
-  price?: { amount?: string; token?: string };
+  market?: { address?: string; name?: string; icon?: string };
+  owner?: { address?: string };
+  price?: { token_name?: string; value?: string; amount?: string; token?: string };
   [key: string]: unknown;
 }
 
@@ -15,8 +15,8 @@ export interface TonApiNftItem {
   address: string;
   owner?: { address: string };
   collection?: { address: string; name?: string };
-  metadata?: { name?: string; image?: string; description?: string };
-  previews?: Array<{ url: string }>;
+  metadata?: { name?: string; image?: string; description?: string; attributes?: Array<{ trait_type?: string; value?: string }> };
+  previews?: Array<{ resolution?: string; url: string }>;
   sale?: TonApiSale;
   [key: string]: unknown;
 }
@@ -28,4 +28,20 @@ export interface TonApiNftDetailsResponse extends TonApiNftItem {}
 export interface TonApiAccountNftsResponse {
   nft_items?: TonApiNftItem[];
   [key: string]: unknown;
+}
+
+/** GET /v2/nfts/collections/{account_id} — данные коллекции */
+export interface TonApiCollectionResponse {
+  address: string;
+  owner?: { address: string };
+  last_activity?: number;
+  metadata?: { name?: string; description?: string; image?: string; [key: string]: unknown };
+  previews?: Array<{ resolution?: string; url: string }>;
+  approvedBy?: string[];
+  [key: string]: unknown;
+}
+
+/** GET /v2/nfts/collections/{account_id}/items — предметы коллекции */
+export interface TonApiCollectionItemsResponse {
+  nft_items: TonApiNftItem[];
 }

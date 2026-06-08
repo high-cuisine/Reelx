@@ -1,11 +1,3 @@
-export interface GetGemsCollectionsResponse {
-  success: boolean;
-  response: {
-    cursor: string | null;
-    items: GiftCollection[];
-  };
-}
-
 export interface GiftCollection {
   address: string;
   ownerAddress: string;
@@ -21,14 +13,6 @@ export interface GiftCollection {
 export interface GiftCollectionCache {
   collections: GiftCollection[];
   lastUpdated: number;
-}
-
-// NFT On Sale
-export interface GetGemsNftsOnSaleResponse {
-  success: boolean;
-  response: {
-    items: NftOnSale[];
-  };
 }
 
 export interface NftOnSale {
@@ -79,14 +63,3 @@ export interface NftOnSaleData {
   lottie?: string;
 }
 
-/** Листинг NFT только с контрактом продажи типа nft_sale_getgems_v4 (TonApi + фильтр) */
-export interface GetGemsNftListing {
-  nftAddress: string;
-  saleContractAddress: string;
-  ownerAddress: string;
-  marketplace: 'getgems_v4';
-  price: { amount: string; token: 'TON' };
-  collection?: { name: string; address: string };
-  metadata?: { name: string; image: string; description?: string };
-  lastUpdated: Date;
-}
