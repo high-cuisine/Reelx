@@ -108,7 +108,10 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
       image: item.metadata?.image ?? item.previews?.[0]?.url ?? '',
       name: item.metadata?.name ?? '',
       description: item.metadata?.description ?? '',
-      attributes: item.metadata?.attributes ?? [],
+      attributes: (item.metadata?.attributes ?? []).map((a) => ({
+        traitType: a.trait_type ?? '',
+        value: a.value ?? '',
+      })),
       sale: {
         type: 'fix_price',
         fullPrice: price,
