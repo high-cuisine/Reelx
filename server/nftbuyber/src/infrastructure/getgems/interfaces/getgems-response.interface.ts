@@ -1,11 +1,3 @@
-export interface GetGemsCollectionsResponse {
-  success: boolean;
-  response: {
-    cursor: string | null;
-    items: GiftCollection[];
-  };
-}
-
 export interface GiftCollection {
   address: string;
   ownerAddress: string;
@@ -21,13 +13,6 @@ export interface GiftCollection {
 export interface GiftCollectionCache {
   collections: GiftCollection[];
   lastUpdated: number;
-}
-
-export interface GetGemsNftsOnSaleResponse {
-  success: boolean;
-  response: {
-    items: NftOnSale[];
-  };
 }
 
 export interface NftOnSale {

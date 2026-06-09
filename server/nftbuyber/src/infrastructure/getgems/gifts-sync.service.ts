@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { GetGemsApiClient } from './getgems-api.client';
+import { TonApiClient } from '../tonapi/tonapi.client';
+import { FragmentClient } from './fragment.client';
 import { RedisService } from '../redis/redis.service';
 import { GiftCollection, GiftCollectionCache } from './interfaces/getgems-response.interface';
 
@@ -13,7 +14,8 @@ export class GiftsSyncService implements OnModuleInit, OnModuleDestroy {
   private syncPromise: Promise<void> | null = null;
 
   constructor(
-    private readonly getGemsClient: GetGemsApiClient,
+    private readonly fragmentClient: FragmentClient,
+    private readonly tonApiClient: TonApiClient,
     private readonly redisService: RedisService,
   ) {}
 
@@ -60,11 +62,68 @@ export class GiftsSyncService implements OnModuleInit, OnModuleDestroy {
     this.isRunning = true;
 
     try {
-      this.logger.log('Starting gifts collections synchronization...');
+      this.logger.log('Starting gifts collections synchronization via Fragment + TonApi...');
       const startTime = Date.now();
 
-      const collections = await this.getGemsClient.getAllGiftsCollections();
+      // Шаг 1: Fragment → типы подарков + пример NFT-адреса для каждого типа
+      const giftTypes = await this.fragmentClient.getGiftTypeNftAddresses();
 
+      if (giftTypes.length === 0) {
+        this.logger.warn('Fragment returned no gift types; sync aborted');
+        return;
+      }
+
+      // Шаг 2: TonApi: NFT-адрес → адрес коллекции → детали коллекции
+      const collections: GiftCollection[] = [];
+
+      for (const { slug, nftAddress } of giftTypes) {
+        try {
+          const nft = await this.tonApiClient.getNftByAddress(nftAddress);
+          const collectionAddress = nft?.collection?.address;
+
+          if (!collectionAddress) {
+            this.logger.warn(`No collection address for gift type "${slug}" (NFT ${nftAddress})`);
+            continue;
+          }
+
+          const info = await this.tonApiClient.getCollectionInfo(collectionAddress);
+          if (!info) {
+            this.logger.warn(`Collection ${collectionAddress} not found in TonApi`);
+            continue;
+          }
+
+          const preview96 =
+            info.previews?.find((p) => p.resolution === '100x100') ?? info.previews?.[0];
+          const preview352 =
+            info.previews?.find(
+              (p) => p.resolution === '500x500' || p.resolution === '352x352',
+            ) ?? info.previews?.[info.previews.length - 1];
+
+          collections.push({
+            address: info.address,
+            ownerAddress: info.owner?.address ?? '',
+            name: info.metadata?.name ?? slug,
+            description: (info.metadata?.description as string) ?? '',
+            image: (info.metadata?.image as string) ?? preview96?.url ?? '',
+            imageSizes: {
+              ...(preview96 ? { 96: preview96.url } : {}),
+              ...(preview352 ? { 352: preview352.url } : {}),
+            },
+          });
+
+          this.logger.debug(`Resolved "${slug}" → collection ${collectionAddress}`);
+          await new Promise((r) => setTimeout(r, 300));
+        } catch (error) {
+          this.logger.error(`Error resolving gift type "${slug}": ${error.message}`);
+        }
+      }
+
+      if (collections.length === 0) {
+        this.logger.warn('No collections resolved from Fragment data');
+        return;
+      }
+
+      // Шаг 3: сохранить в Redis
       const cacheData: GiftCollectionCache = {
         collections,
         lastUpdated: Date.now(),
@@ -79,7 +138,7 @@ export class GiftsSyncService implements OnModuleInit, OnModuleDestroy {
 
       const duration = Date.now() - startTime;
       this.logger.log(
-        `Successfully synced ${collections.length} gift collections in ${duration}ms`,
+        `Successfully synced ${collections.length}/${giftTypes.length} gift collections in ${duration}ms`,
       );
     } catch (error) {
       this.logger.error(`Error syncing gift collections: ${error.message}`, error.stack);

@@ -1,11 +1,11 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy, Inject, forwardRef } from '@nestjs/common';
 import { Address } from '@ton/ton';
-import { GetGemsApiClient } from './getgems-api.client';
+import { TonApiClient } from '../tonapi/tonapi.client';
+import { TonApiNftItem } from '../tonapi/tonapi-response.interface';
 import { TonCenterClient } from './toncenter.client';
 import { RedisService } from '../redis/redis.service';
 import { GiftsSyncService } from './gifts-sync.service';
 import { NftOnSale, NftOnSaleData } from './interfaces/getgems-response.interface';
-import { TonApiClient } from '../tonapi/tonapi.client';
 import { NftPurchaseService } from '../../nft/services/nft-purchase.service';
 
 @Injectable()
@@ -18,11 +18,10 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
   private isRunning = false;
 
   constructor(
-    private readonly getGemsClient: GetGemsApiClient,
+    private readonly tonApiClient: TonApiClient,
     private readonly tonCenterClient: TonCenterClient,
     private readonly redisService: RedisService,
     private readonly giftsSyncService: GiftsSyncService,
-    private readonly tonApiClient: TonApiClient,
     @Inject(forwardRef(() => NftPurchaseService))
     private readonly nftPurchaseService: NftPurchaseService,
   ) {}
@@ -75,10 +74,10 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
 
       for (const collection of collections) {
         try {
-          const nfts = await this.syncCollectionNfts(collection.address, collection.name);
-          totalNfts += nfts;
+          const saved = await this.syncCollectionNfts(collection.address, collection.name);
+          totalNfts += saved;
           successfulCollections++;
-          await new Promise((resolve) => setTimeout(resolve, 200));
+          await new Promise((r) => setTimeout(r, 200));
         } catch (error) {
           failedCollections++;
           this.logger.error(
@@ -98,32 +97,49 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  private mapTonApiItemToNftOnSale(item: TonApiNftItem): NftOnSale {
+    const price = item.sale?.price?.value ?? item.sale?.price?.amount ?? '0';
+    return {
+      address: item.address,
+      kind: 'nft',
+      collectionAddress: item.collection?.address ?? '',
+      ownerAddress: item.owner?.address ?? '',
+      actualOwnerAddress: item.owner?.address ?? '',
+      image: item.metadata?.image ?? item.previews?.[0]?.url ?? '',
+      name: item.metadata?.name ?? '',
+      description: item.metadata?.description ?? '',
+      attributes: (item.metadata?.attributes ?? []).map((a) => ({
+        traitType: a.trait_type ?? '',
+        value: a.value ?? '',
+      })),
+      sale: {
+        type: 'fix_price',
+        fullPrice: price,
+        currency: 'TON',
+        contractAddress: item.sale?.address ?? null,
+      },
+    };
+  }
+
   private async syncCollectionNfts(
     collectionAddress: string,
     collectionName: string,
   ): Promise<number> {
-    const response = await this.getGemsClient.getNftsOnSale(collectionAddress);
+    const items = await this.tonApiClient.getAllCollectionItemsOnSale(collectionAddress);
 
-    if (!response.success || !response.response.items) {
-      return 0;
-    }
-
-    const nfts = response.response.items;
+    if (items.length === 0) return 0;
 
     const canCheckContractType = this.nftPurchaseService.isClientInitialized();
     if (!canCheckContractType) {
       this.logger.debug(
-        `TON client not initialized: syncing NFTs without contract type check (collection ${collectionAddress})`,
+        `TON client not initialized: syncing without contract type check (collection ${collectionAddress})`,
       );
     }
 
     let saved = 0;
-    for (const nft of nfts) {
-      const saleAddress = nft.sale?.contractAddress;
-      if (!saleAddress) {
-        this.logger.debug(`Skipping NFT ${nft.address}: no sale contract address`);
-        continue;
-      }
+    for (const item of items) {
+      const saleAddress = item.sale?.address;
+      if (!saleAddress) continue;
 
       if (canCheckContractType) {
         try {
@@ -132,24 +148,25 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
           );
           if (!isGetGemsV4) {
             this.logger.debug(
-              `Skipping NFT ${nft.address}: not nft_sale_getgems_v4 (code hash check)`,
+              `Skipping NFT ${item.address}: not nft_sale_getgems_v4 (code hash check)`,
             );
             continue;
           }
-        } catch (e) {
-          this.logger.debug(`Skipping NFT ${nft.address}: checkNftContractType failed`);
+        } catch {
+          this.logger.debug(`Skipping NFT ${item.address}: checkNftContractType failed`);
           continue;
         }
       }
 
-      const lottie = await this.tonCenterClient.getNftLottie(nft.address);
+      const nft = this.mapTonApiItemToNftOnSale(item);
+      const lottie = await this.tonCenterClient.getNftLottie(item.address);
       await this.saveNftToRedis(nft, collectionName, lottie);
       saved++;
       await new Promise((r) => setTimeout(r, 100));
     }
 
     this.logger.debug(
-      `Synced ${saved}/${nfts.length} getgems_v4 NFTs for collection ${collectionAddress}`,
+      `Synced ${saved}/${items.length} getgems_v4 NFTs for collection ${collectionAddress}`,
     );
     return saved;
   }
@@ -180,8 +197,7 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
       };
 
       await this.redisService.zadd(this.ZSET_KEY, priceInTon, nftAddress);
-      const nftKey = `${this.NFTS_KEY_PREFIX}${nftAddress}`;
-      await this.redisService.set(nftKey, JSON.stringify(nftData));
+      await this.redisService.set(`${this.NFTS_KEY_PREFIX}${nftAddress}`, JSON.stringify(nftData));
     } catch (error) {
       this.logger.error(`Error saving NFT ${nft.address} to Redis: ${error.message}`);
     }
@@ -189,15 +205,11 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
 
   async getNftsByPriceRange(minPrice: number, maxPrice: number): Promise<NftOnSaleData[]> {
     try {
-      const nftAddresses = await this.redisService.zrangeByScore(
-        this.ZSET_KEY,
-        minPrice,
-        maxPrice,
-      );
+      const addresses = await this.redisService.zrangeByScore(this.ZSET_KEY, minPrice, maxPrice);
       const nfts: NftOnSaleData[] = [];
-      for (const address of nftAddresses) {
-        const nftData = await this.getNftByAddress(address);
-        if (nftData) nfts.push(nftData);
+      for (const addr of addresses) {
+        const d = await this.getNftByAddress(addr);
+        if (d) nfts.push(d);
       }
       return nfts;
     } catch (error) {
@@ -206,32 +218,22 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async getNftsByExactPrice(price: number, rangePercent: number = 20): Promise<NftOnSaleData[]> {
-    try {
-      const range = price * (rangePercent / 100);
-      const minPrice = Math.max(0, price - range);
-      const maxPrice = price + range;
-      this.logger.debug(
-        `Getting NFTs with price ${price} TON (±${rangePercent}%): ${minPrice} - ${maxPrice} TON`,
-      );
-      return await this.getNftsByPriceRange(minPrice, maxPrice);
-    } catch (error) {
-      this.logger.error(`Error getting NFTs by exact price: ${error.message}`);
-      return [];
-    }
+  async getNftsByExactPrice(price: number, rangePercent = 20): Promise<NftOnSaleData[]> {
+    const range = price * (rangePercent / 100);
+    return this.getNftsByPriceRange(Math.max(0, price - range), price + range);
   }
 
   async getAllNfts(): Promise<NftOnSaleData[]> {
     try {
-      const nftAddresses = await this.redisService.zrangeByScore(
+      const addresses = await this.redisService.zrangeByScore(
         this.ZSET_KEY,
         0,
         Number.POSITIVE_INFINITY,
       );
       const nfts: NftOnSaleData[] = [];
-      for (const address of nftAddresses) {
-        const nftData = await this.getNftByAddress(address);
-        if (nftData) nfts.push(nftData);
+      for (const addr of addresses) {
+        const d = await this.getNftByAddress(addr);
+        if (d) nfts.push(d);
       }
       return nfts;
     } catch (error) {
@@ -240,13 +242,13 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async getCheapestNfts(limit: number = 10): Promise<NftOnSaleData[]> {
+  async getCheapestNfts(limit = 10): Promise<NftOnSaleData[]> {
     try {
-      const nftAddresses = await this.redisService.zrange(this.ZSET_KEY, 0, limit - 1);
+      const addresses = await this.redisService.zrange(this.ZSET_KEY, 0, limit - 1);
       const nfts: NftOnSaleData[] = [];
-      for (const address of nftAddresses) {
-        const nftData = await this.getNftByAddress(address);
-        if (nftData) nfts.push(nftData);
+      for (const addr of addresses) {
+        const d = await this.getNftByAddress(addr);
+        if (d) nfts.push(d);
       }
       return nfts;
     } catch (error) {
@@ -257,8 +259,7 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
 
   async getNftByAddress(nftAddress: string): Promise<NftOnSaleData | null> {
     try {
-      const nftKey = `${this.NFTS_KEY_PREFIX}${nftAddress}`;
-      const data = await this.redisService.get(nftKey);
+      const data = await this.redisService.get(`${this.NFTS_KEY_PREFIX}${nftAddress}`);
       if (!data) return null;
       return JSON.parse(data);
     } catch (error) {
@@ -281,9 +282,7 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
       const totalNfts = await this.getTotalNftsCount();
       let lastUpdated: Date | null = null;
       const recentNfts = await this.getCheapestNfts(1);
-      if (recentNfts.length > 0) {
-        lastUpdated = new Date(recentNfts[0].lastUpdated);
-      }
+      if (recentNfts.length > 0) lastUpdated = new Date(recentNfts[0].lastUpdated);
       return { totalNfts, lastUpdated };
     } catch (error) {
       this.logger.error(`Error getting sync info: ${error.message}`);
