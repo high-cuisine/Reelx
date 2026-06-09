@@ -1,11 +1,11 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy, Inject, forwardRef } from '@nestjs/common';
 import { Address } from '@ton/ton';
-import { TonApiClient } from '../tonapi/tonapi.client';
-import { TonApiNftItem } from '../tonapi/tonapi-response.interface';
+import { GetGemsApiClient } from './getgems-api.client';
 import { TonCenterClient } from './toncenter.client';
 import { RedisService } from '../redis/redis.service';
 import { GiftsSyncService } from './gifts-sync.service';
 import { NftOnSale, NftOnSaleData } from './interfaces/getgems-response.interface';
+import { TonApiClient } from '../tonapi/tonapi.client';
 import { NftPurchaseService } from '../../nft/services/nft-purchase.service';
 
 @Injectable()
@@ -18,10 +18,11 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
   private isRunning = false;
 
   constructor(
-    private readonly tonApiClient: TonApiClient,
+    private readonly getGemsClient: GetGemsApiClient,
     private readonly tonCenterClient: TonCenterClient,
     private readonly redisService: RedisService,
     private readonly giftsSyncService: GiftsSyncService,
+    private readonly tonApiClient: TonApiClient,
     @Inject(forwardRef(() => NftPurchaseService))
     private readonly nftPurchaseService: NftPurchaseService,
   ) {}
@@ -74,10 +75,10 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
 
       for (const collection of collections) {
         try {
-          const saved = await this.syncCollectionNfts(collection.address, collection.name);
-          totalNfts += saved;
+          const nfts = await this.syncCollectionNfts(collection.address, collection.name);
+          totalNfts += nfts;
           successfulCollections++;
-          await new Promise((r) => setTimeout(r, 200));
+          await new Promise((resolve) => setTimeout(resolve, 200));
         } catch (error) {
           failedCollections++;
           this.logger.error(
@@ -97,39 +98,17 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private mapTonApiItemToNftOnSale(item: TonApiNftItem): NftOnSale {
-    const price = item.sale?.price?.value ?? item.sale?.price?.amount ?? '0';
-    return {
-      address: item.address,
-      kind: 'nft',
-      collectionAddress: item.collection?.address ?? '',
-      ownerAddress: item.owner?.address ?? '',
-      actualOwnerAddress: item.owner?.address ?? '',
-      image: item.metadata?.image ?? item.previews?.[0]?.url ?? '',
-      name: item.metadata?.name ?? '',
-      description: item.metadata?.description ?? '',
-      attributes: (item.metadata?.attributes ?? []).map((a) => ({
-        traitType: a.trait_type ?? '',
-        value: a.value ?? '',
-      })),
-      sale: {
-        type: 'fix_price',
-        fullPrice: price,
-        currency: 'TON',
-        contractAddress: item.sale?.address ?? null,
-      },
-    };
-  }
-
   private async syncCollectionNfts(
     collectionAddress: string,
     collectionName: string,
   ): Promise<number> {
-    const items = await this.tonApiClient.getAllCollectionItemsOnSale(collectionAddress);
+    const response = await this.getGemsClient.getNftsOnSale(collectionAddress);
 
-    if (items.length === 0) {
+    if (!response.success || !response.response.items) {
       return 0;
     }
+
+    const nfts = response.response.items;
 
     const canCheckContractType = this.nftPurchaseService.isClientInitialized();
     if (!canCheckContractType) {
@@ -139,9 +118,12 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
     }
 
     let saved = 0;
-    for (const item of items) {
-      const saleAddress = item.sale?.address;
-      if (!saleAddress) continue;
+    for (const nft of nfts) {
+      const saleAddress = nft.sale?.contractAddress;
+      if (!saleAddress) {
+        this.logger.debug(`Skipping NFT ${nft.address}: no sale contract address`);
+        continue;
+      }
 
       if (canCheckContractType) {
         try {
@@ -150,25 +132,24 @@ export class NftsSyncService implements OnModuleInit, OnModuleDestroy {
           );
           if (!isGetGemsV4) {
             this.logger.debug(
-              `Skipping NFT ${item.address}: not nft_sale_getgems_v4 (code hash check)`,
+              `Skipping NFT ${nft.address}: not nft_sale_getgems_v4 (code hash check)`,
             );
             continue;
           }
-        } catch {
-          this.logger.debug(`Skipping NFT ${item.address}: checkNftContractType failed`);
+        } catch (e) {
+          this.logger.debug(`Skipping NFT ${nft.address}: checkNftContractType failed`);
           continue;
         }
       }
 
-      const nft = this.mapTonApiItemToNftOnSale(item);
-      const lottie = await this.tonCenterClient.getNftLottie(item.address);
+      const lottie = await this.tonCenterClient.getNftLottie(nft.address);
       await this.saveNftToRedis(nft, collectionName, lottie);
       saved++;
       await new Promise((r) => setTimeout(r, 100));
     }
 
     this.logger.debug(
-      `Synced ${saved}/${items.length} getgems_v4 NFTs for collection ${collectionAddress}`,
+      `Synced ${saved}/${nfts.length} getgems_v4 NFTs for collection ${collectionAddress}`,
     );
     return saved;
   }

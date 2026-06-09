@@ -1,3 +1,11 @@
+export interface GetGemsCollectionsResponse {
+  success: boolean;
+  response: {
+    cursor: string | null;
+    items: GiftCollection[];
+  };
+}
+
 export interface GiftCollection {
   address: string;
   ownerAddress: string;
@@ -13,6 +21,13 @@ export interface GiftCollection {
 export interface GiftCollectionCache {
   collections: GiftCollection[];
   lastUpdated: number;
+}
+
+export interface GetGemsNftsOnSaleResponse {
+  success: boolean;
+  response: {
+    items: NftOnSale[];
+  };
 }
 
 export interface NftOnSale {
@@ -34,7 +49,7 @@ export interface NftOnSale {
   }>;
   sale: {
     type: string;
-    fullPrice: string; // в nanoTON
+    fullPrice: string;
     currency: string;
     marketplaceFee?: string;
     marketplaceFeeAddress?: string;
@@ -55,11 +70,9 @@ export interface NftOnSaleData {
   image: string;
   name: string;
   description: string;
-  priceInTon: number; // в TON
-  fullPrice: string; // в nanoTON
-  saleAddress?: string; // contractAddress из sale
+  priceInTon: number;
+  fullPrice: string;
+  saleAddress?: string;
   lastUpdated: number;
-  /** URL lottie-анимации из TonCenter metadata (extra.lottie) */
   lottie?: string;
 }
-
