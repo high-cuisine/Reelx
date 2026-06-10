@@ -35,3 +35,6 @@ server/adminClient/dist
 server/adminClient/build
 server/adminClient/coverage
 server/adminClient/dist-ssr
+.env
+*/.env
+server/server/.env
