@@ -9,7 +9,6 @@ export class GiftsSyncService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(GiftsSyncService.name);
   private readonly REDIS_KEY = 'gifts:collections:all';
   private readonly SYNC_INTERVAL = 30 * 60 * 1000;
-  private isRunning = false;
   private syncInterval: NodeJS.Timeout | null = null;
   private syncPromise: Promise<void> | null = null;
 
@@ -55,34 +54,25 @@ export class GiftsSyncService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async runSyncCollections(): Promise<void> {
-    if (this.isRunning) {
-      this.logger.warn('Sync already in progress, skipping...');
-      return;
-    }
-    this.isRunning = true;
-
     try {
       this.logger.log('Starting gifts collections synchronization via Fragment + TonApi...');
       const startTime = Date.now();
 
-      // Шаг 1: Fragment → типы подарков + пример NFT-адреса для каждого типа
-      const giftTypes = await this.fragmentClient.getGiftTypeNftAddresses();
+      const slugs = await this.fragmentClient.getGiftSlugs();
 
-      if (giftTypes.length === 0) {
-        this.logger.warn('Fragment returned no gift types; sync aborted');
+      if (slugs.length === 0) {
+        this.logger.warn('Fragment returned no gift slugs; sync aborted');
         return;
       }
 
-      // Шаг 2: TonApi: NFT-адрес → адрес коллекции → детали коллекции
       const collections: GiftCollection[] = [];
 
-      for (const { slug, nftAddress } of giftTypes) {
+      for (const slug of slugs) {
         try {
-          const nft = await this.tonApiClient.getNftByAddress(nftAddress);
-          const collectionAddress = nft?.collection?.address;
+          const collectionAddress = await this.findCollectionBySlug(slug);
 
           if (!collectionAddress) {
-            this.logger.warn(`No collection address for gift type "${slug}" (NFT ${nftAddress})`);
+            this.logger.warn(`Could not find collection for gift type "${slug}"`);
             continue;
           }
 
@@ -119,11 +109,10 @@ export class GiftsSyncService implements OnModuleInit, OnModuleDestroy {
       }
 
       if (collections.length === 0) {
-        this.logger.warn('No collections resolved from Fragment data');
+        this.logger.warn('No collections resolved');
         return;
       }
 
-      // Шаг 3: сохранить в Redis
       const cacheData: GiftCollectionCache = {
         collections,
         lastUpdated: Date.now(),
@@ -138,13 +127,37 @@ export class GiftsSyncService implements OnModuleInit, OnModuleDestroy {
 
       const duration = Date.now() - startTime;
       this.logger.log(
-        `Successfully synced ${collections.length}/${giftTypes.length} gift collections in ${duration}ms`,
+        `Successfully synced ${collections.length}/${slugs.length} gift collections in ${duration}ms`,
       );
     } catch (error) {
       this.logger.error(`Error syncing gift collections: ${error.message}`, error.stack);
-    } finally {
-      this.isRunning = false;
     }
+  }
+
+  /**
+   * Ищет адрес коллекции Telegram-подарка по slug через TonAPI.
+   * Верификация: у настоящей коллекции image содержит nft.fragment.com/collection/{slug}
+   */
+  private async findCollectionBySlug(slug: string): Promise<string | null> {
+    const candidates = await this.tonApiClient.searchAccounts(slug);
+
+    for (const candidate of candidates) {
+      try {
+        const info = await this.tonApiClient.getCollectionInfo(candidate.address);
+        if (!info) continue;
+
+        const image = (info.metadata?.image as string) ?? '';
+        if (image.includes(`nft.fragment.com/collection/${slug}`)) {
+          this.logger.debug(`Fragment: "${slug}" → collection ${candidate.address} (${candidate.name})`);
+          return candidate.address;
+        }
+      } catch {
+        // Not a valid collection, skip
+      }
+      await new Promise((r) => setTimeout(r, 150));
+    }
+
+    return null;
   }
 
   async getAllCollections(): Promise<GiftCollection[]> {

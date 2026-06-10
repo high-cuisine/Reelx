@@ -96,6 +96,21 @@ export class TonApiClient {
     }
   }
 
+  /** GET /v2/accounts/search?name={name} — поиск аккаунтов/коллекций по имени. */
+  async searchAccounts(
+    name: string,
+  ): Promise<Array<{ address: string; name: string; trust: string }>> {
+    try {
+      const { data } = await this.api.get<{
+        addresses: Array<{ address: string; name: string; trust: string }>;
+      }>('/v2/accounts/search', { params: { name } });
+      return data?.addresses ?? [];
+    } catch (error: any) {
+      this.logger.warn(`TonApi searchAccounts "${name}": ${error.response?.status ?? error.message}`);
+      return [];
+    }
+  }
+
   /**
    * Перебирает все предметы коллекции и возвращает только те, у которых есть sale.address.
    * Максимум 5000 предметов на коллекцию.
