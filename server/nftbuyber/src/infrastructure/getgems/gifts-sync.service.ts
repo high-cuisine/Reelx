@@ -102,7 +102,7 @@ export class GiftsSyncService implements OnModuleInit, OnModuleDestroy {
           });
 
           this.logger.debug(`Resolved "${slug}" → collection ${collectionAddress}`);
-          await new Promise((r) => setTimeout(r, 300));
+          await new Promise((r) => setTimeout(r, 1000));
         } catch (error) {
           this.logger.error(`Error resolving gift type "${slug}": ${error.message}`);
         }
@@ -137,14 +137,24 @@ export class GiftsSyncService implements OnModuleInit, OnModuleDestroy {
   /**
    * Ищет адрес коллекции Telegram-подарка по slug через TonAPI.
    * Верификация: у настоящей коллекции image содержит nft.fragment.com/collection/{slug}
+   * Стратегия: whitelist-кандидаты проверяются первыми, max 12 кандидатов суммарно.
    */
   private async findCollectionBySlug(slug: string): Promise<string | null> {
-    const candidates = await this.tonApiClient.searchAccounts(slug);
+    let candidates = await this.tonApiClient.searchAccounts(slug);
+    if (candidates.length === 0) return null;
+
+    // Whitelist-кандидаты имеют приоритет
+    const whitelisted = candidates.filter((c) => c.trust === 'whitelist');
+    const others = candidates.filter((c) => c.trust !== 'whitelist' && c.trust !== 'blacklist');
+    candidates = [...whitelisted, ...others].slice(0, 12);
 
     for (const candidate of candidates) {
       try {
         const info = await this.tonApiClient.getCollectionInfo(candidate.address);
-        if (!info) continue;
+        if (!info) {
+          await new Promise((r) => setTimeout(r, 400));
+          continue;
+        }
 
         const image = (info.metadata?.image as string) ?? '';
         if (image.includes(`nft.fragment.com/collection/${slug}`)) {
@@ -154,7 +164,7 @@ export class GiftsSyncService implements OnModuleInit, OnModuleDestroy {
       } catch {
         // Not a valid collection, skip
       }
-      await new Promise((r) => setTimeout(r, 150));
+      await new Promise((r) => setTimeout(r, 600));
     }
 
     return null;

@@ -94,6 +94,7 @@ services:
       WALLET_MNEMONIC: ${WALLET_MNEMONIC}
       REDIS_URL: redis://redis:6379
       GETGEMS_API_KEY: ${GETGEMS_API_KEY}
+      TONAPI_IO_KEY: ${TONAPI_IO_KEY}
     ports:
       - '${NFTBUYBER_PORT:-3334}:3001'
     networks:

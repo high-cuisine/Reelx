@@ -60,20 +60,26 @@ export class TonApiClient {
     }
   }
 
-  /** GET /v2/nfts/collections/{account_id} — данные о коллекции. */
+  /** GET /v2/nfts/collections/{account_id} — данные о коллекции. Retry при 429. */
   async getCollectionInfo(collectionAddress: string): Promise<TonApiCollectionResponse | null> {
-    try {
-      const { data } = await this.api.get<TonApiCollectionResponse>(
-        `/v2/nfts/collections/${collectionAddress}`,
-      );
-      return data;
-    } catch (error: any) {
-      if (error.response?.status === 404) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const { data } = await this.api.get<TonApiCollectionResponse>(
+          `/v2/nfts/collections/${collectionAddress}`,
+        );
+        return data;
+      } catch (error: any) {
+        const status = error.response?.status;
+        if (status === 404) return null;
+        if (status === 429 && attempt === 0) {
+          await new Promise((r) => setTimeout(r, 3000));
+          continue;
+        }
+        this.logger.warn(`TonApi getCollectionInfo ${collectionAddress}: ${status ?? error.message}`);
         return null;
       }
-      this.logger.warn(`TonApi getCollectionInfo ${collectionAddress}: ${error.response?.status ?? error.message}`);
-      return null;
     }
+    return null;
   }
 
   /** GET /v2/nfts/collections/{account_id}/items — страница предметов коллекции. */
