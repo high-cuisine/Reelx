@@ -3,9 +3,9 @@ export const SOLO_WHEEL_TOTAL_SLOTS = 20;
 
 /** Ставки только с Telegram-подарками + no-loot (без NFT) */
 export const TELEGRAM_ONLY_STAKE_TIERS = [
-  { ton: 0.2, stars: 18, telegramSlots: 4 },
-  { ton: 0.5, stars: 45, telegramSlots: 6 },
-  { ton: 1, stars: 90, telegramSlots: 10 },
+  { ton: 0.2, stars: 18, telegramSlots: 4, maxGiftStars: 15 },
+  { ton: 0.5, stars: 45, telegramSlots: 6, maxGiftStars: 25 },
+  { ton: 1, stars: 90, telegramSlots: 10, maxGiftStars: 50 },
 ] as const;
 
 /** Дискретные уровни ставки для UI (+ / −) */
@@ -30,11 +30,18 @@ export function matchTelegramOnlyStakeTier(
   amount: number,
   currency: 'ton' | 'stars' | undefined,
 ): number | null {
+  return getTelegramOnlyTierConfig(amount, currency)?.telegramSlots ?? null;
+}
+
+export function getTelegramOnlyTierConfig(
+  amount: number,
+  currency: 'ton' | 'stars' | undefined,
+): (typeof TELEGRAM_ONLY_STAKE_TIERS)[number] | null {
   if (currency === 'stars') {
-    const tier = TELEGRAM_ONLY_STAKE_TIERS.find((t) => t.stars === amount);
-    return tier?.telegramSlots ?? null;
+    return TELEGRAM_ONLY_STAKE_TIERS.find((t) => t.stars === amount) ?? null;
   }
-  return matchTelegramOnlyTier(amount);
+  const rounded = Math.round(amount * 10) / 10;
+  return TELEGRAM_ONLY_STAKE_TIERS.find((t) => t.ton === rounded) ?? null;
 }
 
 export function isNftSoloStake(amountTon: number): boolean {

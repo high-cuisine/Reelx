@@ -25,6 +25,7 @@ import { TelegramStarGiftsService } from './services/telegram-star-gifts.service
 import {
   SOLO_WHEEL_TOTAL_SLOTS,
   matchTelegramOnlyStakeTier,
+  getTelegramOnlyTierConfig,
   isNftSoloStake,
   MIN_PRODUCT_STAKE_TON,
   MIN_PRODUCT_STAKE_STARS,
@@ -91,18 +92,21 @@ export class GiftsService {
       const amount = Number(body?.amount || 0);
       const currencyType = body?.type; // 'ton' | 'stars' из запроса
 
-      const telegramOnlySlots = matchTelegramOnlyStakeTier(
+      const telegramOnlyTier = getTelegramOnlyTierConfig(
         amount,
         currencyType as 'ton' | 'stars' | undefined,
       );
+      const telegramOnlySlots = telegramOnlyTier?.telegramSlots ?? null;
 
       let originalData: any[] = [];
       let result: any[];
 
-      if (telegramOnlySlots !== null) {
-        result = await this.buildTelegramOnlyWheel(telegramOnlySlots, (data) => {
-          originalData = data;
-        });
+      if (telegramOnlyTier !== null) {
+        result = await this.buildTelegramOnlyWheel(
+          telegramOnlyTier.telegramSlots,
+          telegramOnlyTier.maxGiftStars,
+          (data) => { originalData = data; },
+        );
       } else {
         const tonAmount = await this.getTonAmount(amount, currencyType as 'ton' | 'stars');
 
@@ -156,6 +160,7 @@ export class GiftsService {
 
   private async buildTelegramOnlyWheel(
     telegramSlotCount: number,
+    maxGiftStars: number,
     onOriginalData?: (data: any[]) => void,
   ): Promise<any[]> {
     if (onOriginalData) {
@@ -163,7 +168,7 @@ export class GiftsService {
     }
 
     const telegramSlices =
-      await this.telegramStarGiftsService.buildCheapestWheelSlices(telegramSlotCount);
+      await this.telegramStarGiftsService.buildWheelSlices(maxGiftStars, telegramSlotCount);
 
     const slots: any[] = [];
 

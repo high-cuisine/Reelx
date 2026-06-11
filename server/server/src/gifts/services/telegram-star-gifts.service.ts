@@ -77,6 +77,24 @@ export class TelegramStarGiftsService {
     return pool.filter((g) => g.star_count === minStars);
   }
 
+  /** Подарки с ценой ≤ maxStars (для дифференциации ставок). */
+  private pickGiftsUpToStars(gifts: TelegramApiGift[], maxStars: number): TelegramApiGift[] {
+    const sendable = gifts.filter(
+      (g) =>
+        g.personal_remaining_count === undefined ||
+        g.personal_remaining_count === null ||
+        g.personal_remaining_count > 0,
+    );
+    const pool = sendable.length > 0 ? sendable : gifts;
+    const filtered = pool.filter((g) => g.star_count <= maxStars);
+    // Если ни одного подарка не попало — fallback на cheapest
+    if (filtered.length === 0) {
+      const minStars = Math.min(...pool.map((g) => g.star_count));
+      return pool.filter((g) => g.star_count === minStars);
+    }
+    return filtered;
+  }
+
   private toWheelItem(g: TelegramApiGift): WheelTelegramGiftItem {
     const name = g.sticker?.emoji?.trim() || 'Gift';
     return {
@@ -92,17 +110,24 @@ export class TelegramStarGiftsService {
    * Готовит слоты барабана: несколько вариантов из самого дешёвого тира (медведь, сердце и т.д.).
    */
   async buildCheapestWheelSlices(maxCount: number): Promise<WheelTelegramGiftItem[]> {
+    return this.buildWheelSlices(15, maxCount);
+  }
+
+  /**
+   * Готовит слоты барабана из подарков с ценой ≤ maxStars.
+   * Используется для дифференциации ставок: 0.2→15★, 0.5→25★, 1→50★.
+   */
+  async buildWheelSlices(maxStars: number, maxCount: number): Promise<WheelTelegramGiftItem[]> {
     if (!this.apiBase || maxCount <= 0) {
       return [];
     }
     const gifts = await this.fetchAvailableGifts();
-    const cheapest = this.pickCheapestTier(gifts);
-    if (cheapest.length === 0) {
+    const pool = this.pickGiftsUpToStars(gifts, maxStars);
+    if (pool.length === 0) {
       return [];
     }
 
-    // Перемешиваем, чтобы на барабане чередовались разные дешёвые подарки
-    const shuffled = [...cheapest];
+    const shuffled = [...pool];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
