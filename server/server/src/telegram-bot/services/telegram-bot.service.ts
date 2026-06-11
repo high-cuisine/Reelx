@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
 import { Context } from 'telegraf';
 import { InjectBot } from 'nestjs-telegraf';
 import { Telegraf } from 'telegraf';
@@ -8,8 +8,9 @@ import * as https from 'https';
 import { UsersService } from '@/src/users/services/users.service';
 
 @Injectable()
-export class TelegramBotService {
+export class TelegramBotService implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly staticsPath = path.join(process.cwd(), 'libs', 'statics');
+  private readonly logger = new Logger(TelegramBotService.name);
 
   constructor(
     @InjectBot() private readonly bot: Telegraf,
@@ -17,6 +18,32 @@ export class TelegramBotService {
   ) {
     if (!fs.existsSync(this.staticsPath)) {
       fs.mkdirSync(this.staticsPath, { recursive: true });
+    }
+  }
+
+  onApplicationBootstrap() {
+    this.launchWithRetry();
+  }
+
+  onApplicationShutdown() {
+    this.bot.stop('SIGTERM');
+  }
+
+  private async launchWithRetry() {
+    while (true) {
+      try {
+        this.logger.log('Starting Telegram bot polling...');
+        await this.bot.launch({ dropPendingUpdates: true });
+        break;
+      } catch (err: any) {
+        if (err?.response?.error_code === 409) {
+          this.logger.warn('Bot 409 conflict — another instance still running. Retrying in 65s...');
+          await new Promise((r) => setTimeout(r, 65_000));
+        } else {
+          this.logger.error(`Bot launch failed: ${err.message}`);
+          break;
+        }
+      }
     }
   }
 

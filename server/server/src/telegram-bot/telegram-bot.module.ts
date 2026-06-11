@@ -15,7 +15,7 @@ import { UsersModule } from '../users/users.module';
         }
         return {
           token,
-          launchOptions: { dropPendingUpdates: true },
+          launchOptions: false, // запуск вручную с retry — см. TelegramBotService.onApplicationBootstrap
         };
       },
     }),
