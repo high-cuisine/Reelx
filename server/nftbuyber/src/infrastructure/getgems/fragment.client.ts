@@ -8,29 +8,38 @@ const HEADERS = {
   'Accept-Language': 'en-US,en;q=0.9',
 };
 
+// Все известные Telegram-подарки. Fragment.com/gifts показывает только активные продажи,
+// поэтому держим полный список чтобы не пропускать коллекции без текущих объявлений.
+const KNOWN_TELEGRAM_GIFT_SLUGS = [
+  'plushpepe', 'swisswatch', 'heartlocket', 'scaredcat', 'lootbag',
+  'sakuraflower', 'lowrider', 'durovscap', 'crystalball', 'diamondring',
+  'eternalrose', 'hangingstar', 'kissedfrog', 'spyagaric', 'toybear',
+  'trappedheart', 'voodoodoll', 'bunnymuffin', 'cookieheart', 'electricskull',
+  'homemadecake', 'snowglobe',
+];
+
 @Injectable()
 export class FragmentClient {
   private readonly logger = new Logger(FragmentClient.name);
 
   /**
-   * Парсит fragment.com/gifts → уникальные slug'и типов подарков.
+   * Возвращает все slug'и типов подарков:
+   * парсит fragment.com/gifts (активные продажи) + дополняет известным списком.
    */
   async getGiftSlugs(): Promise<string[]> {
-    const html = await this.fetchPage('https://fragment.com/gifts');
+    const slugs = new Set<string>(KNOWN_TELEGRAM_GIFT_SLUGS);
 
-    const allLinks = [...html.matchAll(/\/gift\/([a-zA-Z]+)-(\d+)/g)];
-    const slugs = new Set<string>();
-    for (const [, slug] of allLinks) {
-      slugs.add(slug);
-    }
-
-    if (slugs.size === 0) {
-      this.logger.warn('Fragment: no gift type links found on /gifts page');
-      return [];
+    try {
+      const html = await this.fetchPage('https://fragment.com/gifts');
+      for (const [, slug] of html.matchAll(/\/gift\/([a-zA-Z]+)-(\d+)/g)) {
+        slugs.add(slug);
+      }
+    } catch (error: any) {
+      this.logger.warn(`Fragment: could not fetch /gifts page: ${error.message}`);
     }
 
     this.logger.log(
-      `Fragment: found ${slugs.size} gift types: ${[...slugs].join(', ')}`,
+      `Fragment: ${slugs.size} gift types to sync: ${[...slugs].join(', ')}`,
     );
 
     return [...slugs];

@@ -67,44 +67,47 @@ export class GiftsSyncService implements OnModuleInit, OnModuleDestroy {
 
       const collections: GiftCollection[] = [];
 
-      for (const slug of slugs) {
+      for (let i = 0; i < slugs.length; i++) {
+        const slug = slugs[i];
         try {
           const collectionAddress = await this.findCollectionBySlug(slug);
 
           if (!collectionAddress) {
             this.logger.warn(`Could not find collection for gift type "${slug}"`);
-            continue;
+          } else {
+            const info = await this.tonApiClient.getCollectionInfo(collectionAddress);
+            if (!info) {
+              this.logger.warn(`Collection ${collectionAddress} not found in TonApi`);
+            } else {
+              const preview96 =
+                info.previews?.find((p) => p.resolution === '100x100') ?? info.previews?.[0];
+              const preview352 =
+                info.previews?.find(
+                  (p) => p.resolution === '500x500' || p.resolution === '352x352',
+                ) ?? info.previews?.[info.previews.length - 1];
+
+              collections.push({
+                address: info.address,
+                ownerAddress: info.owner?.address ?? '',
+                name: info.metadata?.name ?? slug,
+                description: (info.metadata?.description as string) ?? '',
+                image: (info.metadata?.image as string) ?? preview96?.url ?? '',
+                imageSizes: {
+                  ...(preview96 ? { 96: preview96.url } : {}),
+                  ...(preview352 ? { 352: preview352.url } : {}),
+                },
+              });
+
+              this.logger.debug(`Resolved "${slug}" → collection ${collectionAddress}`);
+            }
           }
-
-          const info = await this.tonApiClient.getCollectionInfo(collectionAddress);
-          if (!info) {
-            this.logger.warn(`Collection ${collectionAddress} not found in TonApi`);
-            continue;
-          }
-
-          const preview96 =
-            info.previews?.find((p) => p.resolution === '100x100') ?? info.previews?.[0];
-          const preview352 =
-            info.previews?.find(
-              (p) => p.resolution === '500x500' || p.resolution === '352x352',
-            ) ?? info.previews?.[info.previews.length - 1];
-
-          collections.push({
-            address: info.address,
-            ownerAddress: info.owner?.address ?? '',
-            name: info.metadata?.name ?? slug,
-            description: (info.metadata?.description as string) ?? '',
-            image: (info.metadata?.image as string) ?? preview96?.url ?? '',
-            imageSizes: {
-              ...(preview96 ? { 96: preview96.url } : {}),
-              ...(preview352 ? { 352: preview352.url } : {}),
-            },
-          });
-
-          this.logger.debug(`Resolved "${slug}" → collection ${collectionAddress}`);
-          await new Promise((r) => setTimeout(r, 1000));
         } catch (error) {
           this.logger.error(`Error resolving gift type "${slug}": ${error.message}`);
+        }
+
+        // Пауза между slug'ами чтобы не превышать rate limit TonAPI
+        if (i < slugs.length - 1) {
+          await new Promise((r) => setTimeout(r, 2000));
         }
       }
 
