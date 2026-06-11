@@ -46,6 +46,7 @@ services:
       dockerfile: Dockerfile
     container_name: gifts-server
     restart: unless-stopped
+    stop_grace_period: 30s
     env_file:
       - ./.env
     environment:

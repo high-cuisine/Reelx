@@ -15,6 +15,7 @@ import { UsersModule } from '../users/users.module';
         }
         return {
           token,
+          launchOptions: { dropPendingUpdates: true },
         };
       },
     }),
