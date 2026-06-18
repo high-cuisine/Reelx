@@ -225,9 +225,9 @@ export class NftService {
         this.logger.log('Fetching all gifts (no price filter)');
         nftsOnSale = await this.nftsSyncService.getAllNfts();
       } else {
-        // Если цена передана - возвращаем NFT с диапазоном ±20%
-        this.logger.log(`Fetching gifts with price: ${amount} TON (±20%)`);
-        nftsOnSale = await this.nftsSyncService.getNftsByExactPrice(amount, 20);
+        // Возвращаем все NFT с ценой от 0 до amount TON
+        this.logger.log(`Fetching gifts with price up to: ${amount} TON`);
+        nftsOnSale = await this.nftsSyncService.getNftsByPriceRange(0, amount);
       }
 
       if (nftsOnSale.length === 0) {
@@ -259,7 +259,7 @@ export class NftService {
         };
       });
 
-      this.logger.log(`Found ${gifts.length} NFTs${amount ? ` with price ${amount} TON (±20%)` : ' (all)'}`);
+      this.logger.log(`Found ${gifts.length} NFTs${amount ? ` with price up to ${amount} TON` : ' (all)'}`);
       
       return {
         success: true,
