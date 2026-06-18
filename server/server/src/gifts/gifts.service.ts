@@ -1,7 +1,6 @@
 import { BadRequestException, Injectable, Logger, HttpException, HttpStatus, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
-import { getCountGifts } from './helpers/getCountGifts.helper';
 import { getMoneyPrices } from './helpers/getMoneyPrices.helper';
 import { formatGiftItem, formatMoneyItem } from './helpers/formatGiftItem.helper';
 import { convertAmountToTon } from './helpers/convertAmountToTon.helper';
@@ -117,7 +116,7 @@ export class GiftsService {
         });
 
         if (
-          tonAmount > this.moneyMixMinTon &&
+          tonAmount >= this.moneyMixMinTon &&
           Array.isArray(result) &&
           result.length > 0
         ) {
@@ -215,78 +214,48 @@ export class GiftsService {
 
     const allRawGifts: any[] = response.data.gifts || [];
 
-    let originalGifts: any[] = [];
+    // Shuffle для максимального разнообразия на каждом спине
+    const shuffled = [...allRawGifts];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
 
-    // Правила формирования слотов:
-    // 1) 0.2 / 0.5 / 1 TON: только Telegram-подарки + no-loot
-    // 2) 2 <= amount <= 5: solo — до 7 NFT (при 5 TON — до 6) + Telegram из доли no-loot + no-loot
-    // 3) 10 <= amount < 20: 9 слотов подарков без no-loot
-    // 4) остальное — старая логика (getCountGifts)
+    let originalGifts: any[] = [];
 
     if (isNftSoloStake(amount)) {
       const totalSlots = SOLO_WHEEL_TOTAL_SLOTS;
-      const isFiveTonStake =
-        amountTon >= 5 - Number.EPSILON && amountTon <= 5 + Number.EPSILON;
-
-      const nanoPrice = (g: any) => {
-        const p = g?.price;
-        if (p == null) return Number.POSITIVE_INFINITY;
-        const n = typeof p === 'string' ? Number(p) : Number(p);
-        return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
-      };
-      const sortedRaw = [...allRawGifts].sort((a, b) => nanoPrice(a) - nanoPrice(b));
-
       const slots: any[] = [];
 
-      const maxGifts = Math.min(isFiveTonStake ? 6 : 7, sortedRaw.length);
-      originalGifts = sortedRaw.slice(0, maxGifts);
+      const noLootShare = 0.5;
+      const initialNoLootSlots = Math.round(totalSlots * noLootShare); // = 10
+      const telegramSlices = await this.telegramStarGiftsService.buildCheapestWheelSlices(
+        Math.min(initialNoLootSlots, 6),
+      );
+      const telegramSlotsCount = telegramSlices.length;
+      const giftSlotsToDistribute = Math.max(0, totalSlots - initialNoLootSlots); // = 10
+
+      // Берём уникальных NFT ровно столько, сколько подарочных слотов — каждый появляется 1 раз
+      const nftCount = Math.min(giftSlotsToDistribute, shuffled.length);
+      originalGifts = shuffled.slice(0, nftCount);
 
       if (onOriginalData) {
         onOriginalData(originalGifts);
       }
 
-      const formattedGifts = originalGifts.map((g: any) =>
-        formatGiftItem(g, 'gift'),
-      );
+      const formattedGifts = originalGifts.map((g: any) => formatGiftItem(g, 'gift'));
 
-      // Для ставки выше минимума в solo — прежняя логика no-loot / Telegram из доли пустых слотов
-      const noLootShare = 0.5;
-      const initialNoLootSlots = Math.round(totalSlots * noLootShare);
-      const telegramSlices = await this.telegramStarGiftsService.buildCheapestWheelSlices(
-        Math.min(initialNoLootSlots, 6),
-      );
-      const telegramSlotsCount = telegramSlices.length;
-      const noLootSlotsCount = Math.max(0, initialNoLootSlots - telegramSlotsCount);
-      const giftSlotsToDistribute = Math.max(0, totalSlots - initialNoLootSlots);
-
-      // Если подарков нет — весь барабан no-loot
       if (formattedGifts.length === 0) {
         for (let i = 0; i < totalSlots; i++) {
-          slots.push({
-            type: 'no-loot',
-            price: 0,
-            image: '',
-            name: 'No loot',
-          });
+          slots.push({ type: 'no-loot', price: 0, image: '', name: 'No loot' });
         }
         return slots;
       }
 
-      const baseSlotsPerGift = Math.floor(giftSlotsToDistribute / formattedGifts.length);
-      let extraSlots = giftSlotsToDistribute % formattedGifts.length;
+      // Каждый подарок ровно в 1 слот
+      formattedGifts.forEach((gift) => slots.push(gift));
 
-      formattedGifts.forEach((gift) => {
-        let slotsForThisGift = baseSlotsPerGift;
-        if (extraSlots > 0) {
-          slotsForThisGift += 1;
-          extraSlots -= 1;
-        }
-
-        for (let i = 0; i < slotsForThisGift; i++) {
-          slots.push(gift);
-        }
-      });
-
+      // Telegram-подарки
       for (const slice of telegramSlices) {
         slots.push({
           type: 'telegram-gift',
@@ -298,13 +267,10 @@ export class GiftsService {
         });
       }
 
-      for (let i = 0; i < noLootSlotsCount; i++) {
-        slots.push({
-          type: 'no-loot',
-          price: 0,
-          image: '',
-          name: 'No loot',
-        });
+      // No-loot заполняет остаток (включая «лишние» подарочные слоты если NFT меньше giftSlotsToDistribute)
+      const filledSoFar = formattedGifts.length + telegramSlotsCount;
+      for (let i = filledSoFar; i < totalSlots; i++) {
+        slots.push({ type: 'no-loot', price: 0, image: '', name: 'No loot' });
       }
 
       return slots;
@@ -312,34 +278,28 @@ export class GiftsService {
 
     if (amount >= 10 && amount < 20) {
       const desiredSlots = 9;
-      const baseGifts = allRawGifts.slice(0, Math.max(1, Math.min(desiredSlots, allRawGifts.length)));
-
-      // Дублируем подарки, если их меньше 10, чтобы набрать 10 слотов
-      while (baseGifts.length < desiredSlots && allRawGifts.length > 0) {
-        baseGifts.push(allRawGifts[baseGifts.length % allRawGifts.length]);
-      }
-
-      originalGifts = baseGifts;
+      // Уникальные NFT — каждый в 1 слот; если меньше 9, дублируем по кругу
+      originalGifts = shuffled.slice(0, Math.min(desiredSlots, shuffled.length));
 
       if (onOriginalData) {
         onOriginalData(originalGifts);
       }
 
-      return originalGifts.map((g: any) =>
-        formatGiftItem(g, 'gift'),
-      );
+      const formatted = originalGifts.map((g: any) => formatGiftItem(g, 'gift'));
+      while (formatted.length < desiredSlots && formatted.length > 0) {
+        formatted.push(formatted[formatted.length % originalGifts.length]);
+      }
+      return formatted;
     }
 
-    // Дефолтный случай — старая логика
-    originalGifts = allRawGifts.slice(0, Math.min(getCountGifts(amount), 9));
-    
+    // 20+ TON: до 9 уникальных NFT (+ money mix снаружи)
+    originalGifts = shuffled.slice(0, Math.min(9, shuffled.length));
+
     if (onOriginalData) {
       onOriginalData(originalGifts);
     }
 
-    return originalGifts.map((g: any) =>
-      formatGiftItem(g, 'gift'),
-    );
+    return originalGifts.map((g: any) => formatGiftItem(g, 'gift'));
   }
 
   private async getRawMoneyPrices(amount: number) {

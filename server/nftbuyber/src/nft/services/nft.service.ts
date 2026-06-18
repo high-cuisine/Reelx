@@ -221,13 +221,20 @@ export class NftService {
       let nftsOnSale: any[];
       
       if (amount === undefined || amount === null) {
-        // Если цена не передана - возвращаем все NFT
         this.logger.log('Fetching all gifts (no price filter)');
         nftsOnSale = await this.nftsSyncService.getAllNfts();
       } else {
-        // Возвращаем все NFT с ценой от 0 до amount TON
-        this.logger.log(`Fetching gifts with price up to: ${amount} TON`);
-        nftsOnSale = await this.nftsSyncService.getNftsByPriceRange(0, amount);
+        // ±20% от ставки; если пусто — расширяем до ±50%, затем берём самые дешёвые
+        this.logger.log(`Fetching gifts for stake ${amount} TON (±20%)`);
+        nftsOnSale = await this.nftsSyncService.getNftsByExactPrice(amount, 20);
+        if (nftsOnSale.length === 0) {
+          this.logger.log(`No gifts at ±20%, trying ±50% for ${amount} TON`);
+          nftsOnSale = await this.nftsSyncService.getNftsByExactPrice(amount, 50);
+        }
+        if (nftsOnSale.length === 0) {
+          this.logger.log(`No gifts at ±50%, falling back to cheapest available`);
+          nftsOnSale = await this.nftsSyncService.getCheapestNfts(20);
+        }
       }
 
       if (nftsOnSale.length === 0) {
@@ -259,7 +266,7 @@ export class NftService {
         };
       });
 
-      this.logger.log(`Found ${gifts.length} NFTs${amount ? ` with price up to ${amount} TON` : ' (all)'}`);
+      this.logger.log(`Found ${gifts.length} NFTs${amount ? ` for stake ${amount} TON` : ' (all)'}`);
       
       return {
         success: true,

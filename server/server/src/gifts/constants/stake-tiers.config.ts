@@ -9,8 +9,8 @@ export const TELEGRAM_ONLY_STAKE_TIERS = [
 ] as const;
 
 /** Дискретные уровни ставки для UI (+ / −) */
-export const STAKE_TIERS_TON = [0.2, 0.5, 1, 2, 5, 10, 15, 20] as const;
-export const STAKE_TIERS_STARS = [18, 45, 90, 180, 200, 400, 600, 800] as const;
+export const STAKE_TIERS_TON = [0.2, 0.5, 1, 2, 5, 10, 15, 20, 50] as const;
+export const STAKE_TIERS_STARS = [18, 45, 90, 180, 200, 400, 600, 800, 2000] as const;
 
 /** С этой ставки (TON) — прежняя solo-логика с NFT */
 export const NFT_SOLO_STAKE_MIN_TON = 2;

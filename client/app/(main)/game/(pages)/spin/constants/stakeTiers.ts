@@ -1,8 +1,8 @@
 /** Дискретные уровни ставки (+ / −), порядок по возрастанию */
-export const STAKE_TIERS_TON = [0.2, 0.5, 1, 2, 5, 10, 15, 20] as const;
+export const STAKE_TIERS_TON = [0.2, 0.5, 1, 2, 5, 10, 15, 20, 50] as const;
 
 /** Эквивалент TON-уровней в Stars (согласовано с server stake-tiers.config) */
-export const STAKE_TIERS_STARS = [18, 45, 90, 180, 200, 400, 600, 800] as const;
+export const STAKE_TIERS_STARS = [18, 45, 90, 180, 200, 400, 600, 800, 2000] as const;
 
 /** Только Telegram-подарки + no-loot (без NFT) */
 export const TELEGRAM_ONLY_STAKE_TIERS = [
