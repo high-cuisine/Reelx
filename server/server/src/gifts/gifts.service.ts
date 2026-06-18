@@ -235,8 +235,8 @@ export class GiftsService {
       const telegramSlotsCount = telegramSlices.length;
       const giftSlotsToDistribute = Math.max(0, totalSlots - initialNoLootSlots); // = 10
 
-      // Берём уникальных NFT ровно столько, сколько подарочных слотов — каждый появляется 1 раз
-      const nftCount = Math.min(giftSlotsToDistribute, shuffled.length);
+      // Берём уникальных NFT — на 1 меньше подарочных слотов (остаток уйдёт в no-loot)
+      const nftCount = Math.min(giftSlotsToDistribute - 1, shuffled.length);
       originalGifts = shuffled.slice(0, nftCount);
 
       if (onOriginalData) {
@@ -277,7 +277,7 @@ export class GiftsService {
     }
 
     if (amount >= 10 && amount < 20) {
-      const desiredSlots = 9;
+      const desiredSlots = 8;
       // Уникальные NFT — каждый в 1 слот; если меньше 9, дублируем по кругу
       originalGifts = shuffled.slice(0, Math.min(desiredSlots, shuffled.length));
 
@@ -292,8 +292,8 @@ export class GiftsService {
       return formatted;
     }
 
-    // 20+ TON: до 9 уникальных NFT (+ money mix снаружи)
-    originalGifts = shuffled.slice(0, Math.min(9, shuffled.length));
+    // 20+ TON: до 8 уникальных NFT (+ money mix снаружи)
+    originalGifts = shuffled.slice(0, Math.min(8, shuffled.length));
 
     if (onOriginalData) {
       onOriginalData(originalGifts);
