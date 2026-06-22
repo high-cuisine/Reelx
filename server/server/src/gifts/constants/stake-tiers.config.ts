@@ -1,5 +1,8 @@
-/** Всего секторов на solo-барабане */
-export const SOLO_WHEEL_TOTAL_SLOTS = 20;
+/** Максимум уникальных секторов на барабане */
+export const MAX_WHEEL_SECTORS = 8;
+
+/** Всего слотов на solo-барабане */
+export const SOLO_WHEEL_TOTAL_SLOTS = MAX_WHEEL_SECTORS;
 
 /** Ставки только с Telegram-подарками + no-loot (без NFT) */
 export const TELEGRAM_ONLY_STAKE_TIERS = [

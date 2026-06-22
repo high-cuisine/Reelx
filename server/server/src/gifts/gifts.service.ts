@@ -6,6 +6,7 @@ import { formatGiftItem, formatMoneyItem } from './helpers/formatGiftItem.helper
 import { convertAmountToTon } from './helpers/convertAmountToTon.helper';
 import { RedisService } from '../../libs/infrustructure/redis/redis.service';
 import { formatWheelItem } from './helpers/formatWheelItem.helper';
+import { capWheelToMaxSectors } from './helpers/capWheelSectors.helper';
 import {
   WheelItem,
   WheelGiftItem,
@@ -23,6 +24,7 @@ import { WinsService } from '../wins/wins.service';
 import { TelegramStarGiftsService } from './services/telegram-star-gifts.service';
 import {
   SOLO_WHEEL_TOTAL_SLOTS,
+  MAX_WHEEL_SECTORS,
   matchTelegramOnlyStakeTier,
   getTelegramOnlyTierConfig,
   isNftSoloStake,
@@ -134,6 +136,10 @@ export class GiftsService {
         );
       }
 
+      if (result && Array.isArray(result)) {
+        result = capWheelToMaxSectors(result, MAX_WHEEL_SECTORS);
+      }
+
       // Сохраняем барабан в Redis, если есть userId
       if (userId && result && Array.isArray(result)) {
         await this.saveWheelToRedis(userId, result, originalData, amount, currencyType || 'ton');
@@ -167,7 +173,10 @@ export class GiftsService {
     }
 
     const telegramSlices =
-      await this.telegramStarGiftsService.buildWheelSlices(maxGiftStars, telegramSlotCount);
+      await this.telegramStarGiftsService.buildWheelSlices(
+        maxGiftStars,
+        Math.min(telegramSlotCount, SOLO_WHEEL_TOTAL_SLOTS - 1),
+      );
 
     const slots: any[] = [];
 
@@ -228,15 +237,18 @@ export class GiftsService {
       const slots: any[] = [];
 
       const noLootShare = 0.5;
-      const initialNoLootSlots = Math.round(totalSlots * noLootShare); // = 10
+      const initialNoLootSlots = Math.round(totalSlots * noLootShare);
       const telegramSlices = await this.telegramStarGiftsService.buildCheapestWheelSlices(
-        Math.min(initialNoLootSlots, 6),
+        Math.min(initialNoLootSlots, Math.max(1, MAX_WHEEL_SECTORS - 2)),
       );
       const telegramSlotsCount = telegramSlices.length;
-      const giftSlotsToDistribute = Math.max(0, totalSlots - initialNoLootSlots); // = 10
+      const giftSlotsToDistribute = Math.max(0, totalSlots - initialNoLootSlots);
 
-      // Берём уникальных NFT — на 1 меньше подарочных слотов (остаток уйдёт в no-loot)
-      const nftCount = Math.min(giftSlotsToDistribute - 1, shuffled.length);
+      const nftCount = Math.min(
+        giftSlotsToDistribute - 1,
+        shuffled.length,
+        Math.max(0, MAX_WHEEL_SECTORS - 1 - telegramSlotsCount),
+      );
       originalGifts = shuffled.slice(0, nftCount);
 
       if (onOriginalData) {

@@ -1,4 +1,12 @@
 import type { GiftItem } from '@/entites/gifts/interfaces/giftItem.interface';
+import { MAX_WHEEL_SECTORS } from '../constants/wheelConfig';
+
+const NO_LOOT_ITEM: GiftItem = {
+    type: 'no-loot',
+    price: 0,
+    image: '',
+    name: 'No loot',
+};
 
 export type WheelGroup = {
     item: GiftItem;
@@ -45,6 +53,24 @@ export function buildWheelGroups(items: GiftItem[]): WheelGroup[] {
     });
 
     return groups;
+}
+
+/** Ограничивает число уникальных секторов; лишние группы заменяются на no-loot. */
+export function capWheelItemsToMaxSectors(
+    items: GiftItem[],
+    maxSectors: number = MAX_WHEEL_SECTORS,
+): GiftItem[] {
+    if (items.length === 0 || maxSectors <= 0) {
+        return items;
+    }
+
+    const groups = buildWheelGroups(items);
+    if (groups.length <= maxSectors) {
+        return items;
+    }
+
+    const keptKeys = new Set(groups.slice(0, maxSectors).map((group) => itemKey(group.item)));
+    return items.map((item) => (keptKeys.has(itemKey(item)) ? item : { ...NO_LOOT_ITEM }));
 }
 
 /** Визуальные веса групп — все сектора одинаковые по размеру. */

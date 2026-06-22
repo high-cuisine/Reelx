@@ -146,26 +146,34 @@ const WinModal = () => {
             <div className={cls.giftCard}>
                 {!isNoLoot ? (
                     <>
-                        <GiftImageOrLottie
-                            image={selectedItem.image}
-                            lottieUrl={selectedItem.lottie}
-                            alt={selectedItem.name}
-                            fillContainer
-                            loop={false}
-                            className={cls.giftCardMedia}
-                            imageClassName={cls.giftImage}
-                            placeholder={<div className={cls.giftPlaceholder}>🎁</div>}
-                        />
-                        <div className={cls.giftName}>
-                            {selectedItem.name.includes('#') ? (
-                                <>
-                                    <span className={cls.giftNameTitle}>{selectedItem.name.split('#')[0].trim()}</span>
-                                    <span className={cls.giftNameSubtitle}>#{selectedItem.name.split('#')[1]}</span>
-                                </>
-                            ) : (
-                                <span className={cls.giftNameTitle}>{selectedItem.name}</span>
-                            )}
-                        </div>
+                        {isTelegramGift && !selectedItem.image && !selectedItem.lottie ? (
+                            <div className={cls.telegramGiftEmoji} aria-hidden>
+                                {selectedItem.name}
+                            </div>
+                        ) : (
+                            <GiftImageOrLottie
+                                image={selectedItem.image}
+                                lottieUrl={selectedItem.lottie}
+                                alt={selectedItem.name}
+                                fillContainer
+                                loop={false}
+                                className={cls.giftCardMedia}
+                                imageClassName={cls.giftImage}
+                                placeholder={<div className={cls.giftPlaceholder}>🎁</div>}
+                            />
+                        )}
+                        {!(isTelegramGift && !selectedItem.image && !selectedItem.lottie) && (
+                            <div className={cls.giftName}>
+                                {selectedItem.name.includes('#') ? (
+                                    <>
+                                        <span className={cls.giftNameTitle}>{selectedItem.name.split('#')[0].trim()}</span>
+                                        <span className={cls.giftNameSubtitle}>#{selectedItem.name.split('#')[1]}</span>
+                                    </>
+                                ) : (
+                                    <span className={cls.giftNameTitle}>{selectedItem.name}</span>
+                                )}
+                            </div>
+                        )}
                     </>
                 ) : (
                     <>

@@ -73,9 +73,12 @@
     z-index: 2;
 }
 
+$segment-size-max: 68px;
+$telegram-gift-scale: 6.7575;
+
 .segmentMedia {
-    width: 18vw;
-    height: 18vw;
+    width: min(18vw, $segment-size-max);
+    height: min(18vw, $segment-size-max);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -86,19 +89,19 @@
     background: transparent;
 
     @media (max-width: 700px) and (min-width: 400px) {
-        width: 13vw;
-        height: 13vw;
+        width: min(13vw, $segment-size-max);
+        height: min(13vw, $segment-size-max);
     }
 }
 
 .segmentMediaTelegramGift {
-    width: calc(18vw * 6.7575);
-    height: calc(18vw * 6.7575);
+    width: min(calc(18vw * #{$telegram-gift-scale}), calc(#{$segment-size-max} * #{$telegram-gift-scale}));
+    height: min(calc(18vw * #{$telegram-gift-scale}), calc(#{$segment-size-max} * #{$telegram-gift-scale}));
     overflow: visible;
 
     @media (max-width: 700px) and (min-width: 400px) {
-        width: calc(13vw * 6.7575);
-        height: calc(13vw * 6.7575);
+        width: min(calc(13vw * #{$telegram-gift-scale}), calc(#{$segment-size-max} * #{$telegram-gift-scale}));
+        height: min(calc(13vw * #{$telegram-gift-scale}), calc(#{$segment-size-max} * #{$telegram-gift-scale}));
     }
 }
 
@@ -141,23 +144,23 @@
 }
 
 .segmentImage {
-    width: 18vw;
-    height: 18vw;
+    width: min(18vw, $segment-size-max);
+    height: min(18vw, $segment-size-max);
     border-radius: 50%;
     object-fit: contain;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
     @media (max-width: 700px) and (min-width: 400px) {
-        width: 13vw;
-        height: 13vw;
+        width: min(13vw, $segment-size-max);
+        height: min(13vw, $segment-size-max);
     }
 }
 
 .segmentImageTelegramGift {
-    width: calc(18vw * 6.7575);
-    height: calc(18vw * 6.7575);
+    width: min(calc(18vw * #{$telegram-gift-scale}), calc(#{$segment-size-max} * #{$telegram-gift-scale}));
+    height: min(calc(18vw * #{$telegram-gift-scale}), calc(#{$segment-size-max} * #{$telegram-gift-scale}));
     @media (max-width: 700px) and (min-width: 400px) {
-        width: calc(13vw * 6.7575);
-        height: calc(13vw * 6.7575);
+        width: min(calc(13vw * #{$telegram-gift-scale}), calc(#{$segment-size-max} * #{$telegram-gift-scale}));
+        height: min(calc(13vw * #{$telegram-gift-scale}), calc(#{$segment-size-max} * #{$telegram-gift-scale}));
     }
 }
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { GiftItem } from '@/entites/gifts/interfaces/giftItem.interface';
 import { giftsService } from '@/entites/gifts/api/api';
 import { CurrencyType } from './useCurrency';
+import { capWheelItemsToMaxSectors } from '../helpers/wheelGeometry';
 
 export const useGifts = (currency: CurrencyType, amount?: number) => {
     const [wheelItems, setWheelItems] = useState<GiftItem[]>([]);
@@ -27,7 +28,7 @@ export const useGifts = (currency: CurrencyType, amount?: number) => {
                         return;
                     }
 
-                    setWheelItems(gifts);
+                    setWheelItems(capWheelItemsToMaxSectors(gifts));
                     break;
                 } catch (error: any) {
                     const status = error?.response?.status;
